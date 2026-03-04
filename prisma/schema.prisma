@@ -18,3 +18,19 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model VerificationToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
