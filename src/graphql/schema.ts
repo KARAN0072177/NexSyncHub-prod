@@ -1,12 +1,14 @@
 import { createSchema } from "graphql-yoga";
 import { registerUser } from "./resolvers/auth/registerUser";
 import { verifyEmail } from "./resolvers/auth/verifyEmail";
+import { setupUsername } from "./resolvers/auth/setupUsername";
 
 export const schema = createSchema({
   typeDefs: /* GraphQL */ `
     type User {
       id: ID!
       email: String!
+      username: String
     }
 
     type Query {
@@ -16,6 +18,7 @@ export const schema = createSchema({
     type Mutation {
       registerUser(email: String!, password: String!): User!
       verifyEmail(token: String!): Boolean!
+      setupUsername(email: String!, username: String!): User!
     }
   `,
   resolvers: {
@@ -25,6 +28,7 @@ export const schema = createSchema({
     Mutation: {
       registerUser,
       verifyEmail,
+      setupUsername,
     },
   },
 });
