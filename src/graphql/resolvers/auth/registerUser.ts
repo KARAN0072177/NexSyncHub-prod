@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/hash";
 import { generateToken } from "@/lib/auth/tokens";
+import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail";
 
 export const registerUser = async (_: any, args: any) => {
   const { email, password } = args;
@@ -36,7 +37,7 @@ export const registerUser = async (_: any, args: any) => {
     },
   });
 
-  // later we send email here
+ await sendVerificationEmail(email, token);
 
   return {
     id: user.id,
