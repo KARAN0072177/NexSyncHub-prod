@@ -16,6 +16,8 @@ model User {
   avatar        String?
   emailVerified Boolean  @default(false)
 
+  accounts      Account[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -34,4 +36,17 @@ model PasswordResetToken {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model Account {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @db.ObjectId
+  provider          String
+  providerAccountId String
+
+  user              User     @relation(fields: [userId], references: [id])
+
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
 }
