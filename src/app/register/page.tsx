@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
-  const params = new URLSearchParams(window.location.search);
-  const error = params.get("error");
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,7 +47,8 @@ export default function RegisterPage() {
 
     localStorage.setItem("pendingVerificationEmail", email);
 
-    window.location.href = "/verify-request";
+    const router = useRouter();
+    router.push("/verify-request");
   }
 
   return (
@@ -102,6 +105,13 @@ export default function RegisterPage() {
           className="border p-2 text-center"
         >
           Continue with GitHub
+        </a>
+
+        <a
+          href="/api/auth/microsoft"
+          className="border p-2 text-center"
+        >
+          Continue with Microsoft
         </a>
 
         {message && <p className="text-red-500">{message}</p>}
