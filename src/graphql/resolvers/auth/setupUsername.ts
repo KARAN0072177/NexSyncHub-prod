@@ -1,7 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { verifyJWT } from "@/lib/auth/jwt";
 
-export const setupUsername = async (_: any, args: any) => {
-  const { email, username } = args;
+export const setupUsername = async (_: any, args: any, context: any) => {
+  const { username } = args;
+
+  const token = context.cookies.get("token")?.value;
+
+  if (!token) {
+    throw new Error("Unauthorized");
+  }
+
+  const payload = await verifyJWT(token);
 
   const existing = await prisma.user.findUnique({
     where: { username },
@@ -12,7 +21,7 @@ export const setupUsername = async (_: any, args: any) => {
   }
 
   const user = await prisma.user.update({
-    where: { email },
+    where: { id: payload.userId as string },
     data: { username },
   });
 

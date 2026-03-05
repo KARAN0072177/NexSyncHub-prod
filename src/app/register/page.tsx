@@ -88,6 +88,13 @@ export default function RegisterPage() {
           Register
         </button>
 
+        <a
+          href="/api/auth/google"
+          className="border p-2 text-center"
+        >
+          Continue with Google
+        </a>
+
         {message && <p className="text-red-500">{message}</p>}
       </form>
     </div>

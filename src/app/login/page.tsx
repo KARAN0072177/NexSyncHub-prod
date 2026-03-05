@@ -3,20 +3,20 @@
 import { useState } from "react";
 
 export default function LoginPage() {
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+    const [identifier, setIdentifier] = useState("");
+    const [password, setPassword] = useState("");
+    const [message, setMessage] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
 
-    const res = await fetch("/api/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: `
+        const res = await fetch("/api/graphql", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                query: `
           mutation LoginUser($identifier: String!, $password: String!) {
             loginUser(identifier: $identifier, password: $password) {
               id
@@ -25,52 +25,59 @@ export default function LoginPage() {
             }
           }
         `,
-        variables: { identifier, password },
-      }),
-    });
+                variables: { identifier, password },
+            }),
+        });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    if (data.errors) {
-      setMessage(data.errors[0].message);
-      return;
+        if (data.errors) {
+            setMessage(data.errors[0].message);
+            return;
+        }
+
+        window.location.href = "/";
     }
 
-    window.location.href = "/";
-  }
+    return (
+        <div className="flex min-h-screen items-center justify-center">
+            <form
+                onSubmit={handleSubmit}
+                className="flex flex-col gap-4 w-80"
+            >
+                <h1 className="text-2xl font-bold">Login</h1>
 
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-4 w-80"
-      >
-        <h1 className="text-2xl font-bold">Login</h1>
+                <input
+                    type="text"
+                    placeholder="Email or Username"
+                    required
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    className="border p-2"
+                />
 
-        <input
-          type="text"
-          placeholder="Email or Username"
-          required
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          className="border p-2"
-        />
+                <input
+                    type="password"
+                    placeholder="Password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="border p-2"
+                />
 
-        <input
-          type="password"
-          placeholder="Password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-2"
-        />
+                <button className="bg-black text-white p-2">
+                    Login
+                </button>
 
-        <button className="bg-black text-white p-2">
-          Login
-        </button>
+                <a
+                    href="/api/auth/google"
+                    className="border p-2 text-center"
+                >
+                    Continue with Google
+                </a>
 
-        {message && <p className="text-red-500">{message}</p>}
-      </form>
-    </div>
-  );
+                {message && <p className="text-red-500">{message}</p>}
+            </form>
+        </div>
+    );
 }

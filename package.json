@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@auth/core": "^0.34.3",
     "@prisma/client": "^6.19.2",
     "bcrypt": "^6.0.0",
     "graphql": "^16.13.0",
