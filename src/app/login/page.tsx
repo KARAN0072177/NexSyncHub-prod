@@ -80,6 +80,13 @@ export default function LoginPage() {
                     Continue with Google
                 </a>
 
+                <a
+                    href="/api/auth/github"
+                    className="border p-2 text-center"
+                >
+                    Continue with GitHub
+                </a>
+
                 {message && <p className="text-red-500">{message}</p>}
             </form>
         </div>
