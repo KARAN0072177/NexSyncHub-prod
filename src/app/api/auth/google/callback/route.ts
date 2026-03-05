@@ -4,12 +4,19 @@ import { createJWT } from "@/lib/auth/jwt";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
+  const state = req.nextUrl.searchParams.get("state");
+  const storedState = req.cookies.get("oauth_state")?.value;
+
+  // 🔐 Validate OAuth state (CSRF protection)
+  if (!state || state !== storedState) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
 
   if (!code) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Exchange code for access token
+  // Exchange authorization code for access token
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -29,7 +36,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Fetch Google user profile
+  // Fetch Google profile
   const profileRes = await fetch(
     "https://www.googleapis.com/oauth2/v2/userinfo",
     {
@@ -88,16 +95,23 @@ export async function GET(req: NextRequest) {
   // Create JWT session
   const token = await createJWT({ userId: user!.id });
 
-  // Decide redirect based on username
+  // Decide redirect
   const redirectPath = user?.username ? "/dashboard" : "/setup-profile";
 
   const res = NextResponse.redirect(new URL(redirectPath, req.url));
 
+  // Set auth cookie
   res.cookies.set("token", token, {
     httpOnly: true,
     path: "/",
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
+  });
+
+  // Clear OAuth state cookie
+  res.cookies.set("oauth_state", "", {
+    expires: new Date(0),
+    path: "/",
   });
 
   return res;
