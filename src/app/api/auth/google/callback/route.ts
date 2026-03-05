@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createJWT } from "@/lib/auth/jwt";
+import { isDisposableEmail } from "@/lib/auth/isDisposableEmail";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
@@ -50,6 +51,11 @@ export async function GET(req: NextRequest) {
 
   const email = profile.email;
   const googleId = profile.id;
+
+  // 🚫 Block disposable emails
+  if (isDisposableEmail(email)) {
+    return NextResponse.redirect(new URL("/login?error=disposable_email", req.url));
+  }
 
   let user;
 

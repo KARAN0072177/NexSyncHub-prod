@@ -6,6 +6,8 @@ export default function LoginPage() {
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [message, setMessage] = useState("");
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -88,6 +90,12 @@ export default function LoginPage() {
                 </a>
 
                 {message && <p className="text-red-500">{message}</p>}
+
+                {error === "disposable_email" && (
+                    <p className="text-red-500">
+                        Disposable email addresses are not allowed. Please use a valid email.
+                    </p>
+                )}
             </form>
         </div>
     );

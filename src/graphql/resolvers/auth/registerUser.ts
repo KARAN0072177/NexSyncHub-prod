@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/hash";
 import { generateToken } from "@/lib/auth/tokens";
 import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail";
+import { isDisposableEmail } from "@/lib/auth/isDisposableEmail";
 
 export const registerUser = async (_: any, args: any) => {
   const { email, password } = args;
@@ -17,6 +18,11 @@ export const registerUser = async (_: any, args: any) => {
 
   // hash password
   const passwordHash = await hashPassword(password);
+
+  // check disposable email 
+  if (isDisposableEmail(email)) {
+    throw new Error("Disposable email addresses are not allowed");
+  }
 
   // create user
   const user = await prisma.user.create({
@@ -37,7 +43,7 @@ export const registerUser = async (_: any, args: any) => {
     },
   });
 
- await sendVerificationEmail(email, token);
+  await sendVerificationEmail(email, token);
 
   return {
     id: user.id,
