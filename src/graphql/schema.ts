@@ -3,6 +3,8 @@ import { registerUser } from "./resolvers/auth/registerUser";
 import { verifyEmail } from "./resolvers/auth/verifyEmail";
 import { setupUsername } from "./resolvers/auth/setupUsername";
 import { loginUser } from "./resolvers/auth/loginUser";
+import { me } from "./resolvers/auth/me";
+import { logout } from "./resolvers/auth/logout";
 
 export const schema = createSchema({
   typeDefs: /* GraphQL */ `
@@ -14,6 +16,7 @@ export const schema = createSchema({
 
     type Query {
       hello: String!
+      me: User
     }
 
     type Mutation {
@@ -21,17 +24,20 @@ export const schema = createSchema({
       verifyEmail(token: String!): Boolean!
       setupUsername(email: String!, username: String!): User!
       loginUser(identifier: String!, password: String!): User!
+      logout: Boolean!
     }
   `,
   resolvers: {
     Query: {
       hello: () => "NexSyncHub GraphQL API running 🚀",
+      me
     },
     Mutation: {
       registerUser,
       verifyEmail,
       setupUsername,
       loginUser,
+      logout
     },
   },
 });
