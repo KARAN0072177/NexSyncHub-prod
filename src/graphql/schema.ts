@@ -5,6 +5,9 @@ import { setupUsername } from "./resolvers/auth/setupUsername";
 import { loginUser } from "./resolvers/auth/loginUser";
 import { me } from "./resolvers/auth/me";
 import { logout } from "./resolvers/auth/logout";
+import { requestPasswordReset } from "./resolvers/auth/requestPasswordReset";
+import { verifyResetOtp } from "./resolvers/auth/verifyResetOtp";
+import { resetPassword } from "./resolvers/auth/resetPassword";
 
 export const schema = createSchema({
   typeDefs: /* GraphQL */ `
@@ -25,6 +28,9 @@ export const schema = createSchema({
       setupUsername(email: String!, username: String!): User!
       loginUser(identifier: String!, password: String!): User!
       logout: Boolean!
+      requestPasswordReset(identifier: String!): Boolean!
+      verifyResetOtp(email: String!, otp: String!): Boolean!
+      resetPassword(email: String!, password: String!): Boolean!
     }
   `,
   resolvers: {
@@ -37,7 +43,10 @@ export const schema = createSchema({
       verifyEmail,
       setupUsername,
       loginUser,
-      logout
+      logout,
+      requestPasswordReset,
+      verifyResetOtp,
+      resetPassword
     },
   },
 });

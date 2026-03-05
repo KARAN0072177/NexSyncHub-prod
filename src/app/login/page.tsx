@@ -65,6 +65,10 @@ export default function LoginPage() {
                     className="border p-2"
                 />
 
+                <a href="/forgot-password" className="text-blue-600 text-sm">
+                    Forgot password?
+                </a>
+
                 <button className="bg-black text-white p-2">
                     Login
                 </button>

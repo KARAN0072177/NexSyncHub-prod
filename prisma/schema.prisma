@@ -17,6 +17,7 @@ model User {
   emailVerified Boolean  @default(false)
 
   accounts      Account[]
+  passwordResetTokens PasswordResetToken[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -32,10 +33,12 @@ model VerificationToken {
 
 model PasswordResetToken {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String
-  token     String   @unique
+  userId    String   @db.ObjectId
+  otp       String
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Account {
