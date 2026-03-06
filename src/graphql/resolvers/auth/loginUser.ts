@@ -32,6 +32,13 @@ export const loginUser = async (_: any, args: any, context: any) => {
         throw new Error("Email not verified");
     }
 
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            lastLoginProvider: "manual",
+        },
+    });
+
     const token = await createJWT({ userId: user.id });
 
     context.cookies.set("token", token, {

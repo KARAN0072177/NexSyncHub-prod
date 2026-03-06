@@ -40,5 +40,6 @@ export const config = {
     "/workspaces/:path*",
     "/projects/:path*",
     "/settings/:path*",
+    "/profile/:path*",
   ],
 };

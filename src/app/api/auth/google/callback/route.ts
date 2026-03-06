@@ -98,6 +98,12 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // ⭐ ADD HERE
+  await prisma.user.update({
+    where: { id: user!.id },
+    data: { lastLoginProvider: "google" },
+  });
+
   // Create JWT session
   const token = await createJWT({ userId: user!.id });
 

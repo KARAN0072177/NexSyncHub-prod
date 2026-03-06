@@ -11,6 +11,9 @@ export const me = async (_: any, __: any, context: any) => {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
+      include: {
+        accounts: true,
+      },
     });
 
     return user;

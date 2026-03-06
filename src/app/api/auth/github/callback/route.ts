@@ -111,6 +111,11 @@ export async function GET(req: NextRequest) {
         });
     }
 
+    await prisma.user.update({
+        where: { id: user!.id },
+        data: { lastLoginProvider: "github" },
+    });
+
     const token = await createJWT({ userId: user!.id });
 
     const redirectPath = user?.username ? "/dashboard" : "/setup-profile";

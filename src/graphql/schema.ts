@@ -15,12 +15,19 @@ export const schema = createSchema({
       id: ID!
       email: String!
       username: String
+      lastLoginProvider: String
+      accounts: [Account!]
     }
 
     type Query {
       hello: String!
       me: User
     }
+
+    type Account {
+      provider: String!
+      providerAccountId: String!
+  }
 
     type Mutation {
       registerUser(email: String!, password: String!): User!

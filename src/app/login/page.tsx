@@ -10,6 +10,7 @@ export default function LoginPage() {
     const [message, setMessage] = useState("");
     const searchParams = useSearchParams();
     const error = searchParams.get("error");
+    const router = useRouter();
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -40,8 +41,14 @@ export default function LoginPage() {
             return;
         }
 
-        const router = useRouter();
-        router.push("/verify-request");
+        const user = data.data.loginUser;
+
+        if (!user.username) {
+            router.push("/setup-profile");
+        } else {
+            router.push("/dashboard");
+        }
+
     }
 
     return (

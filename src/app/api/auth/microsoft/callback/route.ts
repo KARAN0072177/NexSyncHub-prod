@@ -131,6 +131,11 @@ export async function GET(req: NextRequest) {
 
   console.log("Generating JWT...");
 
+  await prisma.user.update({
+    where: { id: user!.id },
+    data: { lastLoginProvider: "microsoft" },
+  });
+
   const token = await createJWT({ userId: user!.id });
 
   const redirectPath = user?.username ? "/dashboard" : "/setup-profile";
