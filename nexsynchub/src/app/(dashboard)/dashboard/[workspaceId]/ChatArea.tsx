@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { io } from "socket.io-client";
 
 export default function ChatArea({ channel }: { channel: any }) {
     const [messages, setMessages] = useState<any[]>([]);
     const [content, setContent] = useState("");
     const [loading, setLoading] = useState(false);
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -23,6 +25,22 @@ export default function ChatArea({ channel }: { channel: any }) {
         };
 
         fetchMessages();
+    }, [channel._id]);
+
+    useEffect(() => {
+        if (!channel?._id) return;
+
+        // 🔥 Join channel
+        socket.emit("join_channel", channel._id);
+
+        // 🔥 Listen for messages
+        socket.on("receive_message", (msg) => {
+            setMessages((prev) => [...prev, msg]);
+        });
+
+        return () => {
+            socket.off("receive_message");
+        };
     }, [channel._id]);
 
     // 📌 Auto scroll

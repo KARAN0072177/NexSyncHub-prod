@@ -72,6 +72,23 @@ export async function POST(req: Request) {
             "username email"
         );
 
+        // 🔥 CALL SOCKET SERVER (IMPORTANT)
+        try {
+            await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    channelId,
+                    message: populatedMessage,
+                }),
+            });
+        } catch (err) {
+            console.error("Socket emit failed:", err);
+            // ❗ Don't break API if socket fails
+        }
+
         return NextResponse.json(
             {
                 message: "Message sent",
