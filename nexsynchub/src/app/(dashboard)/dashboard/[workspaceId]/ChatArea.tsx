@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { useSession } from "next-auth/react";
+import { set } from "mongoose";
 
 const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
@@ -12,6 +13,7 @@ export default function ChatArea({ channel }: { channel: any }) {
     const [loading, setLoading] = useState(false);
     const [typingUsers, setTypingUsers] = useState<any[]>([]);
     const typingTimeout = useRef<any>(null);
+    const [seenUsers, setSeenUsers] = useState<Set<string>>(new Set());
 
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -36,15 +38,27 @@ export default function ChatArea({ channel }: { channel: any }) {
     useEffect(() => {
         if (!channel?._id) return;
 
-        fetch("/api/channel/read", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                channelId: channel._id,
-            }),
-        });
+        const markRead = () => {
+            fetch("/api/channel/read", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    channelId: channel._id,
+                }),
+            });
+        };
+
+        // initial
+        markRead();
+
+        // 🔥 when user returns to tab
+        window.addEventListener("focus", markRead);
+
+        return () => {
+            window.removeEventListener("focus", markRead);
+        };
     }, [channel._id]);
 
     useEffect(() => {
@@ -60,10 +74,26 @@ export default function ChatArea({ channel }: { channel: any }) {
                 if (exists) return prev;
                 return [...prev, msg];
             });
+
+            // 🔥 Reset seen users for new message
+            setSeenUsers(new Set());
+
+            // 🔥 MARK AS READ immediately (THIS WAS MISSING)
+            fetch("/api/channel/read", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    channelId: channel._id,
+                }),
+            });
         });
 
         // 🔥 User typing
         socket.on("user_typing", (user) => {
+            if (user.id === userId) return; // ❗ IGNORE SELF
+
             setTypingUsers((prev) => {
                 if (prev.find((u) => u.id === user.id)) return prev;
                 return [...prev, user];
@@ -72,22 +102,17 @@ export default function ChatArea({ channel }: { channel: any }) {
 
         // 🔥 User stopped typing
         socket.on("user_stop_typing", (user) => {
+            if (user.id === userId) return; // ❗ IGNORE SELF
+
             setTypingUsers((prev) =>
                 prev.filter((u) => u.id !== user.id)
             );
         });
 
-        socket.on("message_seen", () => {
-            setMessages((prev) => {
-                if (prev.length === 0) return prev;
-
-                const updated = [...prev];
-
-                // 👉 ONLY last message
-                const lastMsg = updated[updated.length - 1];
-
-                lastMsg.seenCount = (lastMsg.seenCount || 0) + 1;
-
+        socket.on("message_seen", ({ userId }) => {
+            setSeenUsers((prev) => {
+                const updated = new Set(prev);
+                updated.add(userId); // ✅ prevents duplicates
                 return updated;
             });
         });
@@ -96,6 +121,7 @@ export default function ChatArea({ channel }: { channel: any }) {
             socket.off("receive_message");
             socket.off("user_typing");
             socket.off("user_stop_typing");
+            socket.off("message_seen");
         };
     }, [channel._id]);
 
@@ -166,9 +192,9 @@ export default function ChatArea({ channel }: { channel: any }) {
                         {msg.content}
 
                         {/* 👇 Seen count */}
-                        {index === messages.length - 1 && msg.seenCount > 0 && (
+                        {index === messages.length - 1 && seenUsers.size > 0 && (
                             <div className="text-xs text-gray-400">
-                                Seen by {msg.seenCount}
+                                Seen by {seenUsers.size}
                             </div>
                         )}
                     </div>

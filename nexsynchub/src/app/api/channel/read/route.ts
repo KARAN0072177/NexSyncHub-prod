@@ -47,6 +47,7 @@ export async function POST(req: Request) {
       event: "message_seen",
       data: {
         userId: session.user.id,
+        timestamp: new Date(),
       },
     }),
   });
