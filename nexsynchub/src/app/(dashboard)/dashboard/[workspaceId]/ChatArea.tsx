@@ -4,11 +4,12 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { useSession } from "next-auth/react";
 
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
+
 export default function ChatArea({ channel }: { channel: any }) {
     const [messages, setMessages] = useState<any[]>([]);
     const [content, setContent] = useState("");
     const [loading, setLoading] = useState(false);
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
     const [typingUsers, setTypingUsers] = useState<any[]>([]);
     const typingTimeout = useRef<any>(null);
 
@@ -64,6 +65,8 @@ export default function ChatArea({ channel }: { channel: any }) {
 
         return () => {
             socket.off("receive_message");
+            socket.off("user_typing");
+            socket.off("user_stop_typing");
         };
     }, [channel._id]);
 
@@ -105,6 +108,17 @@ export default function ChatArea({ channel }: { channel: any }) {
         setLoading(false);
     };
 
+    const userId = session?.user?.id;
+    const username = session?.user?.username;
+
+    if (!session?.user?.username) {
+        return (
+            <div className="p-6 text-gray-500">
+                Please set your username to start chatting.
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-full">
 
@@ -132,8 +146,9 @@ export default function ChatArea({ channel }: { channel: any }) {
                 {typingUsers.length > 0 && (
                     <div className="text-sm text-gray-500 px-3">
                         {typingUsers.length === 1
-                            ? `${typingUsers[0].username} is typing...`
+                            ? `${typingUsers[0].username || "Someone"} is typing...`
                             : `${typingUsers
+                                .filter((u) => u.username)
                                 .map((u) => u.username)
                                 .join(" and ")} are typing...`}
                     </div>
@@ -143,12 +158,15 @@ export default function ChatArea({ channel }: { channel: any }) {
                     onChange={(e) => {
                         setContent(e.target.value);
 
+                        // ❗ Only emit if session is READY
+                        if (!userId || !username) return;
+
                         // 🔥 Emit typing start
                         socket.emit("typing_start", {
                             channelId: channel._id,
                             user: {
-                                id: session?.user?.id,
-                                username: session?.user?.username,
+                                id: userId,
+                                username: username,
                             },
                         });
 
@@ -162,8 +180,8 @@ export default function ChatArea({ channel }: { channel: any }) {
                             socket.emit("typing_stop", {
                                 channelId: channel._id,
                                 user: {
-                                    id: session?.user?.id,
-                                    username: session?.user?.username,
+                                    id: userId,
+                                    username: username,
                                 },
                             });
                         }, 1500);
