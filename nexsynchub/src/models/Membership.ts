@@ -6,6 +6,7 @@ export interface IMembership {
   user: mongoose.Types.ObjectId;
   workspace: mongoose.Types.ObjectId;
   role: Role;
+  lastReadAt: Date;
 
   createdAt: Date;
   updatedAt: Date;
@@ -32,10 +33,16 @@ const MembershipSchema = new Schema<IMembership>(
       enum: ["OWNER", "ADMIN", "MEMBER"],
       default: "MEMBER",
     },
+
+    lastReadAt: {
+      type: Date,
+      default: null,
+    }
   },
   {
     timestamps: true,
   }
+
 );
 
 // 🔥 Prevent duplicate membership

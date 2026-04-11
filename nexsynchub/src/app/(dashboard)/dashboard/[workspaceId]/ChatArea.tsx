@@ -36,6 +36,20 @@ export default function ChatArea({ channel }: { channel: any }) {
     useEffect(() => {
         if (!channel?._id) return;
 
+        fetch("/api/channel/read", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                channelId: channel._id,
+            }),
+        });
+    }, [channel._id]);
+
+    useEffect(() => {
+        if (!channel?._id) return;
+
         // 🔥 Join channel
         socket.emit("join_channel", channel._id);
 
@@ -135,6 +149,13 @@ export default function ChatArea({ channel }: { channel: any }) {
                             {msg.sender?.username ?? "Unknown"}
                         </span>{" "}
                         {msg.content}
+
+                        {/* 👇 Seen count */}
+                        {msg.seenCount > 0 && (
+                            <div className="text-xs text-gray-400">
+                                Seen by {msg.seenCount}
+                            </div>
+                        )}
                     </div>
                 ))}
                 <div ref={bottomRef} />

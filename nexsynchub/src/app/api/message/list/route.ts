@@ -61,11 +61,35 @@ export async function GET(req: Request) {
       query._id = { $lt: cursor };
     }
 
-    const messages = await Message.find(query)
+    // 🔥 Fetch messages
+    const rawMessages = await Message.find(query)
       .sort({ _id: -1 })
       .limit(PAGE_SIZE)
       .populate("sender", "username email")
       .lean();
+
+    // 🔥 Fetch all members of workspace
+    const members = await Membership.find({
+      workspace: channel.workspace,
+    })
+      .select("user lastReadAt")
+      .lean();
+
+    // 🔥 Add seenCount to each message
+    const messages = rawMessages.map((msg: any) => {
+      const seenCount = members.filter((m: any) => {
+        return (
+          m.user.toString() !== msg.sender._id.toString() && // ❗ exclude sender
+          m.lastReadAt &&
+          new Date(m.lastReadAt) > new Date(msg.createdAt)
+        );
+      }).length;
+
+      return {
+        ...msg,
+        seenCount,
+      };
+    });
 
     return NextResponse.json({
       messages: messages.reverse(), // oldest → newest
