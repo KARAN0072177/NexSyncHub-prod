@@ -35,7 +35,11 @@ export default function ChatArea({ channel }: { channel: any }) {
 
         // 🔥 Listen for messages
         socket.on("receive_message", (msg) => {
-            setMessages((prev) => [...prev, msg]);
+            setMessages((prev) => {
+                const exists = prev.some((m) => m._id === msg._id);
+                if (exists) return prev;
+                return [...prev, msg];
+            });
         });
 
         return () => {
@@ -68,7 +72,11 @@ export default function ChatArea({ channel }: { channel: any }) {
         const data = await res.json();
 
         if (res.ok) {
-            setMessages((prev) => [...prev, data.data]);
+            setMessages((prev) => {
+                const exists = prev.some((m) => m._id === data.data._id);
+                if (exists) return prev;
+                return [...prev, data.data];
+            });
             setContent("");
         } else {
             alert(data.error);
