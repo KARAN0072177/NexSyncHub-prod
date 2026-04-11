@@ -2,14 +2,19 @@
 
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
+import { useSession } from "next-auth/react";
 
 export default function ChatArea({ channel }: { channel: any }) {
     const [messages, setMessages] = useState<any[]>([]);
     const [content, setContent] = useState("");
     const [loading, setLoading] = useState(false);
     const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
+    const [typingUsers, setTypingUsers] = useState<any[]>([]);
+    const typingTimeout = useRef<any>(null);
 
     const bottomRef = useRef<HTMLDivElement>(null);
+
+    const { data: session } = useSession();
 
     // 📩 Fetch messages
     useEffect(() => {
@@ -40,6 +45,21 @@ export default function ChatArea({ channel }: { channel: any }) {
                 if (exists) return prev;
                 return [...prev, msg];
             });
+        });
+
+        // 🔥 User typing
+        socket.on("user_typing", (user) => {
+            setTypingUsers((prev) => {
+                if (prev.find((u) => u.id === user.id)) return prev;
+                return [...prev, user];
+            });
+        });
+
+        // 🔥 User stopped typing
+        socket.on("user_stop_typing", (user) => {
+            setTypingUsers((prev) =>
+                prev.filter((u) => u.id !== user.id)
+            );
         });
 
         return () => {
@@ -108,9 +128,46 @@ export default function ChatArea({ channel }: { channel: any }) {
 
             {/* Input */}
             <div className="border-t p-3 flex gap-2">
+
+                {typingUsers.length > 0 && (
+                    <div className="text-sm text-gray-500 px-3">
+                        {typingUsers.length === 1
+                            ? `${typingUsers[0].username} is typing...`
+                            : `${typingUsers
+                                .map((u) => u.username)
+                                .join(" and ")} are typing...`}
+                    </div>
+                )}
                 <input
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    onChange={(e) => {
+                        setContent(e.target.value);
+
+                        // 🔥 Emit typing start
+                        socket.emit("typing_start", {
+                            channelId: channel._id,
+                            user: {
+                                id: session?.user?.id,
+                                username: session?.user?.username,
+                            },
+                        });
+
+                        // 🔥 Clear previous timeout
+                        if (typingTimeout.current) {
+                            clearTimeout(typingTimeout.current);
+                        }
+
+                        // 🔥 Stop typing after 1.5s
+                        typingTimeout.current = setTimeout(() => {
+                            socket.emit("typing_stop", {
+                                channelId: channel._id,
+                                user: {
+                                    id: session?.user?.id,
+                                    username: session?.user?.username,
+                                },
+                            });
+                        }, 1500);
+                    }}
                     placeholder="Type a message..."
                     className="flex-1 border p-2 rounded"
                 />

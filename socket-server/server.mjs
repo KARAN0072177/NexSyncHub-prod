@@ -13,40 +13,51 @@ app.use(express.json());
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-  },
+    cors: {
+        origin: "http://localhost:3000",
+    },
 });
 
 
 // ✅ SOCKET CONNECTION
 io.on("connection", (socket) => {
-  console.log("Connected:", socket.id);
+    console.log("Connected:", socket.id);
 
-  socket.on("join_channel", (channelId) => {
-    socket.join(channelId);
-  });
+    socket.on("join_channel", (channelId) => {
+        socket.join(channelId);
+    });
 
-  socket.on("disconnect", () => {
-    console.log("Disconnected:", socket.id);
-  });
+    socket.on("disconnect", () => {
+        console.log("Disconnected:", socket.id);
+    });
+
+    // 🔥 Typing start
+    socket.on("typing_start", ({ channelId, user }) => {
+        socket.to(channelId).emit("user_typing", user);
+    });
+
+    // 🔥 Typing stop
+    socket.on("typing_stop", ({ channelId, user }) => {
+        socket.to(channelId).emit("user_stop_typing", user);
+    });
+
 });
 
 
 // ✅ INTERNAL EMIT API (VERY IMPORTANT)
 app.post("/emit", (req, res) => {
-  const { channelId, message } = req.body;
+    const { channelId, message } = req.body;
 
-  if (!channelId || !message) {
-    return res.status(400).json({ error: "Invalid data" });
-  }
+    if (!channelId || !message) {
+        return res.status(400).json({ error: "Invalid data" });
+    }
 
-  io.to(channelId).emit("receive_message", message);
+    io.to(channelId).emit("receive_message", message);
 
-  res.json({ success: true });
+    res.json({ success: true });
 });
 
 
 server.listen(4000, () => {
-  console.log("Socket server running on port 4000");
+    console.log("Socket server running on port 4000");
 });
