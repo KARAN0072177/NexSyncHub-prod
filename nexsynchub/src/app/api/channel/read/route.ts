@@ -39,5 +39,17 @@ export async function POST(req: Request) {
     }
   );
 
+  await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      channelId,
+      event: "message_seen",
+      data: {
+        userId: session.user.id,
+      },
+    }),
+  });
+
   return NextResponse.json({ success: true });
 }

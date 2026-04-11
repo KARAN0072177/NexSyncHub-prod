@@ -44,17 +44,37 @@ io.on("connection", (socket) => {
 });
 
 
-// ✅ INTERNAL EMIT API (VERY IMPORTANT)
+// ✅ INTERNAL EMIT API (VERY IMPORTANT)        old backup logic for reference, in case we want to revert back to a simpler emit structure without custom events and data payloads
+// app.post("/emit", (req, res) => {
+//     const { channelId, message } = req.body;
+
+//     if (!channelId || !message) {
+//         return res.status(400).json({ error: "Invalid data" });
+//     }
+
+//     io.to(channelId).emit("receive_message", message);
+
+//     res.json({ success: true });
+// });
+
 app.post("/emit", (req, res) => {
-    const { channelId, message } = req.body;
+  const { channelId, event, data, message } = req.body;
 
-    if (!channelId || !message) {
-        return res.status(400).json({ error: "Invalid data" });
-    }
+  if (!channelId) {
+    return res.status(400).json({ error: "channelId required" });
+  }
 
+  // ✅ Handle NEW flexible events
+  if (event) {
+    io.to(channelId).emit(event, data);
+  }
+
+  // ✅ Handle OLD message format (BACKWARD COMPATIBLE)
+  if (message) {
     io.to(channelId).emit("receive_message", message);
+  }
 
-    res.json({ success: true });
+  res.json({ success: true });
 });
 
 

@@ -77,6 +77,21 @@ export default function ChatArea({ channel }: { channel: any }) {
             );
         });
 
+        socket.on("message_seen", () => {
+            setMessages((prev) => {
+                if (prev.length === 0) return prev;
+
+                const updated = [...prev];
+
+                // 👉 ONLY last message
+                const lastMsg = updated[updated.length - 1];
+
+                lastMsg.seenCount = (lastMsg.seenCount || 0) + 1;
+
+                return updated;
+            });
+        });
+
         return () => {
             socket.off("receive_message");
             socket.off("user_typing");
@@ -143,7 +158,7 @@ export default function ChatArea({ channel }: { channel: any }) {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                {messages.map((msg) => (
+                {messages.map((msg, index) => (
                     <div key={msg._id} className="text-sm">
                         <span className="font-medium">
                             {msg.sender?.username ?? "Unknown"}
@@ -151,7 +166,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                         {msg.content}
 
                         {/* 👇 Seen count */}
-                        {msg.seenCount > 0 && (
+                        {index === messages.length - 1 && msg.seenCount > 0 && (
                             <div className="text-xs text-gray-400">
                                 Seen by {msg.seenCount}
                             </div>
