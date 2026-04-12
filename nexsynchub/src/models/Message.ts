@@ -1,7 +1,7 @@
 import mongoose, { Schema, models, model } from "mongoose";
 
 export interface IAttachment {
-  url: string;
+  key: string;
   type: "image" | "video" | "file";
   name?: string;
   size?: number;
@@ -20,7 +20,7 @@ export interface IMessage {
 
 const AttachmentSchema = new Schema<IAttachment>(
   {
-    url: { type: String, required: true },
+    key: { type: String, required: true },
 
     type: {
       type: String,

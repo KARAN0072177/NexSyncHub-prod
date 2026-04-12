@@ -5,8 +5,16 @@ import Channel from "@/models/Channel";
 import Membership from "@/models/Membership";
 import "@/models/User";
 
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+
+// 🔥 S3 Client
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+});
 
 export async function GET(req: Request) {
   try {
@@ -21,7 +29,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
 
     const channelId = searchParams.get("channelId");
-    const cursor = searchParams.get("cursor"); // messageId
+    const cursor = searchParams.get("cursor");
 
     if (!channelId) {
       return NextResponse.json(
@@ -68,34 +76,74 @@ export async function GET(req: Request) {
       .populate("sender", "username email")
       .lean();
 
-    // 🔥 Fetch all members of workspace
+    // 🔥 Fetch members (for seen count)
     const members = await Membership.find({
       workspace: channel.workspace,
     })
       .select("user lastReadAt")
       .lean();
 
-    // 🔥 Add seenCount to each message
-    const messages = rawMessages.map((msg: any) => {
-      const seenCount = members.filter((m: any) => {
-        return (
-          m.user.toString() !== msg.sender._id.toString() && // ❗ exclude sender
-          m.lastReadAt &&
-          new Date(m.lastReadAt) > new Date(msg.createdAt)
-        );
-      }).length;
+    // 🔥 Process messages
+    const messagesWithUrls = await Promise.all(
+      rawMessages.map(async (msg: any) => {
+        // 🔥 Handle attachments (OLD + NEW)
+        const attachments = await Promise.all(
+          (msg.attachments || []).map(async (att: any) => {
+            try {
+              // ✅ OLD DATA (already has URL)
+              if (att.url && !att.key) {
+                return att;
+              }
 
-      return {
-        ...msg,
-        seenCount,
-      };
-    });
+              // ❌ No key → skip
+              if (!att.key) return null;
+
+              // ✅ NEW DATA → generate signed URL
+              const command = new GetObjectCommand({
+                Bucket: process.env.AWS_BUCKET_NAME!,
+                Key: att.key,
+              });
+
+              const signedUrl = await getSignedUrl(s3, command, {
+                expiresIn: 3600,
+              });
+
+              return {
+                ...att,
+                url: signedUrl,
+              };
+            } catch (err) {
+              console.error("ATTACHMENT ERROR:", err);
+              return null;
+            }
+          })
+        );
+
+        // 🔥 Remove null attachments
+        const filteredAttachments = attachments.filter(Boolean);
+
+        // 🔥 Calculate seenCount
+        const seenCount = members.filter((m: any) => {
+          return (
+            m.user.toString() !== msg.sender._id.toString() &&
+            m.lastReadAt &&
+            new Date(m.lastReadAt) > new Date(msg.createdAt)
+          );
+        }).length;
+
+        return {
+          ...msg,
+          attachments: filteredAttachments,
+          seenCount,
+        };
+      })
+    );
 
     return NextResponse.json({
-      messages: messages.reverse(), // oldest → newest
+      messages: messagesWithUrls.reverse(), // oldest → newest
       nextCursor:
-        messages.length === PAGE_SIZE
-          ? messages[messages.length - 1]._id
+        messagesWithUrls.length === PAGE_SIZE
+          ? messagesWithUrls[messagesWithUrls.length - 1]._id
           : null,
     });
   } catch (error) {

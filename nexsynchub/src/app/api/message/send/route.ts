@@ -9,6 +9,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { sendMessageSchema } from "@/lib/validators/message";
 
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+const s3 = new S3Client({
+    region: process.env.AWS_REGION,
+});
+
 export async function POST(req: Request) {
     try {
         await connectDB();
@@ -72,6 +79,33 @@ export async function POST(req: Request) {
             "username email"
         );
 
+        console.log(populatedMessage.attachments); // ✅ Check attachments in logs
+
+        const plainMessage = JSON.parse(JSON.stringify(populatedMessage));
+
+        const messageWithUrls = {
+            ...plainMessage,
+            attachments: await Promise.all(
+                (plainMessage.attachments || []).map(async (att: any) => {
+                    if (!att.key) return att;
+
+                    const command = new GetObjectCommand({
+                        Bucket: process.env.AWS_BUCKET_NAME!,
+                        Key: att.key,
+                    });
+
+                    const signedUrl = await getSignedUrl(s3, command, {
+                        expiresIn: 3600,
+                    });
+
+                    return {
+                        ...att,
+                        url: signedUrl,
+                    };
+                })
+            ),
+        };
+
         // 🔥 CALL SOCKET SERVER (IMPORTANT)
         try {
             await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
@@ -81,7 +115,7 @@ export async function POST(req: Request) {
                 },
                 body: JSON.stringify({
                     channelId,
-                    message: populatedMessage,
+                    message: messageWithUrls, // ✅ Send message with URLs
                 }),
             });
         } catch (err) {
@@ -92,7 +126,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
             {
                 message: "Message sent",
-                data: populatedMessage,
+                data: messageWithUrls, // ✅ Return message with URLs
             },
             { status: 201 }
         );
