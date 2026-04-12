@@ -14,6 +14,8 @@ export interface IMessage {
   channel: mongoose.Types.ObjectId;
   sender: mongoose.Types.ObjectId;
 
+  type: "user" | "system"; // ✅ NEW
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,14 +61,23 @@ const MessageSchema = new Schema<IMessage>(
       required: true,
       index: true,
     },
+
+    // 🔥 NEW FIELD
+    type: {
+      type: String,
+      enum: ["user", "system"],
+      default: "user",
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// 🔥 Prevent empty messages
+// 🔥 Prevent empty messages (BUT allow system messages)
 MessageSchema.pre("validate", function (this: any) {
+  if (this.type === "system") return; // ✅ allow system messages
+
   if (!this.content && this.attachments.length === 0) {
     throw new Error("Message cannot be empty");
   }

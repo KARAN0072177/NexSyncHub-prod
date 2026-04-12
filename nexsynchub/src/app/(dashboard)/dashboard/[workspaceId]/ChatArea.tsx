@@ -248,51 +248,70 @@ export default function ChatArea({ channel }: { channel: any }) {
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                {messages.map((msg, index) => (
-                    <div key={msg._id} className="text-sm">
-                        <span className="font-medium">
-                            {msg.sender?.username ?? "Unknown"}
-                        </span>{" "}
-                        {msg.content}
+                {messages.map((msg, index) => {
 
-                        {msg.attachments?.map((att: any, i: number) => {
-                            if (att.type.startsWith("image")) {
-                                return (
-                                    <img
-                                        key={i}
-                                        src={att.url}
-                                        className="max-w-xs rounded"
-                                    />
-                                );
-                            }
+                    // 🔥 SYSTEM MESSAGE UI
+                    if (msg.type === "system") {
+                        return (
+                            <div key={msg._id} className="flex items-center gap-3 my-3">
+                                <div className="flex-1 h-px bg-gray-200" />
 
-                            if (att.type.startsWith("video")) {
-                                return (
-                                    <video key={i} controls className="max-w-xs">
-                                        <source src={att.url} />
-                                    </video>
-                                );
-                            }
+                                <div className="text-xs text-gray-500 whitespace-nowrap">
+                                    {msg.content}
+                                </div>
 
-                            return (
-                                <a
-                                    key={i}
-                                    href={att.url}
-                                    target="_blank"
-                                    className="text-blue-500 underline"
-                                >
-                                    {att.name}
-                                </a>
-                            );
-                        })}
-
-                        {index === messages.length - 1 && seenUsers.size > 0 && (
-                            <div className="text-xs text-gray-400">
-                                Seen by {seenUsers.size}
+                                <div className="flex-1 h-px bg-gray-200" />
                             </div>
-                        )}
-                    </div>
-                ))}
+                        );
+                    }
+
+                    // 🔥 NORMAL MESSAGE
+                    return (
+                        <div key={msg._id} className="text-sm">
+                            <span className="font-medium">
+                                {msg.sender?.username ?? "Unknown"}
+                            </span>{" "}
+                            {msg.content}
+
+                            {msg.attachments?.map((att: any, i: number) => {
+                                if (att.type.startsWith("image")) {
+                                    return (
+                                        <img
+                                            key={i}
+                                            src={att.url}
+                                            className="max-w-xs rounded"
+                                        />
+                                    );
+                                }
+
+                                if (att.type.startsWith("video")) {
+                                    return (
+                                        <video key={i} controls className="max-w-xs">
+                                            <source src={att.url} />
+                                        </video>
+                                    );
+                                }
+
+                                return (
+                                    <a
+                                        key={i}
+                                        href={att.url}
+                                        target="_blank"
+                                        className="text-blue-500 underline"
+                                    >
+                                        {att.name}
+                                    </a>
+                                );
+                            })}
+
+                            {index === messages.length - 1 && seenUsers.size > 0 && (
+                                <div className="text-xs text-gray-400">
+                                    Seen by {seenUsers.size}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
                 <div ref={bottomRef} />
             </div>
 
