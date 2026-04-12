@@ -78,6 +78,8 @@ export async function DELETE(req: Request) {
         type: "system",
       });
 
+      const plainMessage = JSON.parse(JSON.stringify(systemMessage));
+
       // 🔥 EMIT SOCKET
       await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
         method: "POST",
@@ -86,7 +88,7 @@ export async function DELETE(req: Request) {
         },
         body: JSON.stringify({
           channelId: channel._id,
-          message: systemMessage,
+          message: plainMessage,
         }),
       });
 
