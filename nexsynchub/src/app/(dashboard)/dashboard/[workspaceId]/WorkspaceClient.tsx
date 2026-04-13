@@ -37,6 +37,8 @@ export default function WorkspaceClient({
 
   const isMembersPage = pathname.includes("/members");
 
+  const isTasksPage = pathname.includes("/tasks");
+
   return (
     <div className="flex h-[80vh] border rounded overflow-hidden">
 
@@ -54,11 +56,10 @@ export default function WorkspaceClient({
                 setSelectedChannel(ch);
                 router.push(`/dashboard/${workspaceId}`);
               }}
-              className={`p-2 rounded cursor-pointer ${
-                selectedChannel?._id === ch._id && !isMembersPage
-                  ? "bg-gray-200"
-                  : "hover:bg-gray-100"
-              }`}
+              className={`p-2 rounded cursor-pointer ${selectedChannel?._id === ch._id && !isMembersPage
+                ? "bg-gray-200"
+                : "hover:bg-gray-100"
+                }`}
             >
               # {ch.name}
             </div>
@@ -71,15 +72,29 @@ export default function WorkspaceClient({
           {/* Members Section */}
           <h2 className="font-semibold mb-2">Workspace</h2>
 
+          {/* ✅ TASKS */}
+          <div
+            onClick={() =>
+              router.push(`/dashboard/${workspaceId}/tasks`)
+            }
+            className={`p-2 rounded cursor-pointer ${isTasksPage
+              ? "bg-gray-200"
+              : "hover:bg-gray-100"
+              }`}
+          >
+            📋 Tasks
+          </div>
+
+          {/* 👥 MEMBERS */}
+
           <div
             onClick={() =>
               router.push(`/dashboard/${workspaceId}/members`)
             }
-            className={`p-2 rounded cursor-pointer ${
-              isMembersPage
-                ? "bg-gray-200"
-                : "hover:bg-gray-100"
-            }`}
+            className={`p-2 rounded cursor-pointer ${isMembersPage
+              ? "bg-gray-200"
+              : "hover:bg-gray-100"
+              }`}
           >
             👥 Members
           </div>
@@ -91,9 +106,9 @@ export default function WorkspaceClient({
       <div className="flex-1 flex flex-col">
 
         {/* If user is on members page → don't show chat */}
-        {isMembersPage ? (
+        {(isMembersPage || isTasksPage) ? (
           <div className="p-4 text-gray-500">
-            Redirecting to members...
+            Redirecting...
           </div>
         ) : selectedChannel ? (
           <ChatArea channel={selectedChannel} />

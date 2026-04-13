@@ -14,6 +14,8 @@ export default function ChatArea({ channel }: { channel: any }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const socketRef = useRef<any>(null);
     const [uploading, setUploading] = useState(false);
+    const [selectedMessage, setSelectedMessage] = useState<any>(null);
+    const [showTaskModal, setShowTaskModal] = useState(false);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const { data: session } = useSession();
@@ -41,6 +43,9 @@ export default function ChatArea({ channel }: { channel: any }) {
 
     // 📩 Fetch messages
     useEffect(() => {
+
+        if (!channel?._id) return;
+        
         const fetchMessages = async () => {
             const res = await fetch(
                 `/api/message/list?channelId=${channel._id}`
@@ -198,6 +203,42 @@ export default function ChatArea({ channel }: { channel: any }) {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    // 🔥 Open task modal 
+    const openTaskModal = (msg: any) => { // SAFETY CHECK
+        if (!msg) return;
+        setSelectedMessage(msg);
+        setShowTaskModal(true);
+    };
+
+    // 🔥 Create task from message
+    const handleCreateTask = async () => {
+
+        if (!selectedMessage || !channel) return;
+
+        const res = await fetch("/api/task/create", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                title: selectedMessage.content,
+                workspaceId: channel.workspace,
+                channelId: channel._id,
+                priority: selectedMessage.priority,
+                linkedMessage: selectedMessage?._id, // LINK TO ORIGINAL MESSAGE
+            }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error);
+            return;
+        }
+
+        setShowTaskModal(false);
+    };
+
     // ✉️ Send message
     const handleSend = async () => {
         if (!content.trim() && attachments.length === 0) return;
@@ -240,6 +281,10 @@ export default function ChatArea({ channel }: { channel: any }) {
         );
     }
 
+    if (!channel || !channel._id) {
+        return <div className="p-4">Loading channel...</div>;
+    }
+
     return (
         <div className="flex flex-col h-full">
 
@@ -267,7 +312,17 @@ export default function ChatArea({ channel }: { channel: any }) {
 
                     // 🔥 NORMAL MESSAGE
                     return (
-                        <div key={msg._id} className="text-sm">
+                        <div key={msg._id} className="text-sm group relative">
+
+                            <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition">
+                                <button
+                                    onClick={() => openTaskModal(msg)}
+                                    className="text-xs px-2 py-1 bg-gray-100 rounded"
+                                >
+                                    Convert to Task
+                                </button>
+                            </div>
+
                             <span className="font-medium">
                                 {msg.sender?.username ?? "Unknown"}
                             </span>{" "}
@@ -369,6 +424,62 @@ export default function ChatArea({ channel }: { channel: any }) {
                     </button>
                 </div>
             </div>
+
+            {
+                showTaskModal && selectedMessage && (
+                    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                        <div className="bg-white p-6 rounded-lg w-[400px] space-y-4">
+
+                            <h2 className="text-lg font-semibold">Convert to Task</h2>
+
+                            {/* Title */}
+                            <input
+                                value={selectedMessage.content || ""} // DEFAULT TO MESSAGE CONTENT
+                                onChange={(e) =>
+                                    setSelectedMessage({
+                                        ...selectedMessage,
+                                        content: e.target.value,
+                                    })
+                                }
+                                className="w-full border p-2 rounded"
+                            />
+
+                            {/* Priority */}
+                            <select
+                                className="w-full border p-2 rounded"
+                                onChange={(e) =>
+                                    setSelectedMessage({
+                                        ...selectedMessage,
+                                        priority: e.target.value,
+                                    })
+                                }
+                            >
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                                <option value="high">High</option>
+                            </select>
+
+                            {/* Buttons */}
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => setShowTaskModal(false)}
+                                    className="px-3 py-1 bg-gray-200 rounded"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    onClick={handleCreateTask}
+                                    className="px-3 py-1 bg-black text-white rounded"
+                                >
+                                    Create
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
         </div>
     );
 }
