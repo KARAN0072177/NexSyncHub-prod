@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useDraggable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export default function TaskCard({
     task,
@@ -11,27 +12,35 @@ export default function TaskCard({
 }: any) {
     const router = useRouter();
 
-    const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    // ✅ SORTABLE (NOT DRAGGABLE)
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({
         id: task._id,
     });
 
     const style = {
-        transform: transform
-            ? `translate(${transform.x}px, ${transform.y}px)`
-            : undefined,
+        transform: CSS.Transform.toString(transform),
+        transition,
     };
 
     return (
-        <div ref={setNodeRef}
-            {...listeners}
+        <div
+            ref={setNodeRef}
             {...attributes}
+            {...listeners}
             style={style}
-            className="bg-white p-3 rounded shadow mb-2 space-y-2">
+            className="bg-white p-3 rounded shadow mb-2 space-y-2 cursor-grab active:cursor-grabbing"
+        >
 
             {/* TITLE */}
             <p className="font-medium">{task.title}</p>
 
-            {/* 👤 ASSIGNEE DROPDOWN */}
+            {/* 👤 ASSIGNEE */}
             <select
                 className="border p-1 rounded text-xs w-full"
                 value={task.assignee?._id || ""}
@@ -64,7 +73,7 @@ export default function TaskCard({
                 </button>
             )}
 
-            {/* 📊 STATUS BUTTONS */}
+            {/* 📊 STATUS BUTTONS (fallback if drag not used) */}
             <div className="flex gap-1 flex-wrap">
                 <button
                     onClick={() => updateTask(task._id, { status: "todo" })}

@@ -10,6 +10,12 @@ import {
     useDroppable,
 } from "@dnd-kit/core";
 
+import {
+    SortableContext,
+    verticalListSortingStrategy,
+    arrayMove,
+} from "@dnd-kit/sortable";
+
 type Member = {
     user: {
         _id: string;
@@ -45,12 +51,16 @@ function Column({
     return (
         <div
             ref={setNodeRef}
-            className={`p-3 rounded min-h-[300px] transition-all ${
-                isOver ? "scale-[1.02] bg-opacity-70" : ""
-            } ${color}`}
+            className={`p-3 rounded min-h-[300px] transition-all ${isOver ? "scale-[1.02] bg-opacity-70" : ""
+                } ${color}`}
         >
             <h2 className="font-semibold mb-2">{title}</h2>
-            {children}
+            <SortableContext
+                items={children.map((child: any) => child.key)}
+                strategy={verticalListSortingStrategy}
+            >
+                {children}
+            </SortableContext>
         </div>
     );
 }
@@ -147,10 +157,53 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
 
         if (!over) return;
 
-        const taskId = active.id as string;
-        const newStatus = over.id as "todo" | "in-progress" | "done";
+        const activeId = active.id as string;
+        const overId = over.id as string;
 
-        updateTask(taskId, { status: newStatus });
+        // 🔥 Find tasks
+        const activeTask = tasks.find((t) => t._id === activeId);
+        const overTask = tasks.find((t) => t._id === overId);
+
+        // 🧠 CASE 1: DROP ON COLUMN
+        if (!overTask) {
+            const newStatus = overId as "todo" | "in-progress" | "done";
+            updateTask(activeId, { status: newStatus });
+            return;
+        }
+
+        // 🧠 CASE 2: REORDER INSIDE SAME COLUMN
+        if (activeTask?.status === overTask?.status) {
+            const columnTasks = tasks.filter(
+                (t) => t.status === activeTask.status
+            );
+
+            const oldIndex = columnTasks.findIndex(
+                (t) => t._id === activeId
+            );
+
+            const newIndex = columnTasks.findIndex(
+                (t) => t._id === overId
+            );
+
+            const newColumnTasks = arrayMove(
+                columnTasks,
+                oldIndex,
+                newIndex
+            );
+
+            // 🔥 Merge back into global list
+            const updatedTasks = tasks.map((t) => {
+                const found = newColumnTasks.find((nt) => nt._id === t._id);
+                return found || t;
+            });
+
+            setTasks(updatedTasks);
+        }
+
+        // 🧠 CASE 3: MOVE BETWEEN COLUMNS
+        else if (activeTask && overTask) {
+            updateTask(activeId, { status: overTask.status });
+        }
     };
 
     const groupedTasks = {
