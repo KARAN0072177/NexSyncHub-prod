@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import TaskCard from "./TaskCard";
 
 type Member = {
     user: {
@@ -106,6 +107,12 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
         );
     };
 
+    const groupedTasks = {
+        todo: tasks.filter((t) => t.status === "todo"),
+        "in-progress": tasks.filter((t) => t.status === "in-progress"),
+        done: tasks.filter((t) => t.status === "done"),
+    };
+
     if (loading) return <div className="p-6">Loading tasks...</div>;
 
     return (
@@ -116,111 +123,35 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                 <div className="text-gray-500">No tasks yet</div>
             )}
 
-            <div className="space-y-3">
-                {tasks.map((task) => (
-                    <div
-                        key={task._id}
-                        className="border rounded-lg p-4 flex justify-between items-center"
-                    >
-                        {/* LEFT */}
-                        <div>
-                            <p className="font-medium">{task.title}</p>
+            <div className="grid grid-cols-3 gap-4">
 
-                            <button
-                                onClick={() => {
-                                    if (!task.linkedMessage || !task.channel) return;
+                {/* TODO */}
+                <div className="bg-gray-50 p-3 rounded">
+                    <h2 className="font-semibold mb-2">Todo</h2>
 
-                                    router.push(
-                                        `/dashboard/${workspaceId}?channel=${task.channel}&message=${task.linkedMessage}`
-                                    );
-                                }}
-                                className="text-xs text-blue-500 underline mt-1"
-                            >
-                                View Message
-                            </button>
+                    {groupedTasks.todo.map((task) => (
+                        <TaskCard key={task._id} task={task} updateTask={updateTask} />
+                    ))}
+                </div>
 
-                            <p className="text-xs text-gray-500">
-                                Created by {task.createdBy?.username || "Unknown"}
-                            </p>
+                {/* IN PROGRESS */}
+                <div className="bg-blue-50 p-3 rounded">
+                    <h2 className="font-semibold mb-2">In Progress</h2>
 
-                            {/* 🔥 ASSIGNEE DROPDOWN */}
-                            <select
-                                className="border p-1 rounded text-xs mt-2"
-                                value={task.assignee?._id || ""}
-                                onChange={(e) =>
-                                    updateTask(task._id, {
-                                        assignee: e.target.value,
-                                    })
-                                }
-                            >
-                                <option value="">Unassigned</option>
+                    {groupedTasks["in-progress"].map((task) => (
+                        <TaskCard key={task._id} task={task} updateTask={updateTask} />
+                    ))}
+                </div>
 
-                                {members.map((m) => (
-                                    <option key={m.user._id} value={m.user._id}>
-                                        {m.user.username}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                {/* DONE */}
+                <div className="bg-green-50 p-3 rounded">
+                    <h2 className="font-semibold mb-2">Done</h2>
 
-                        {/* RIGHT */}
-                        <div className="flex items-center gap-2">
-                            {/* STATUS */}
-                            <span
-                                className={`text-xs px-2 py-1 rounded ${task.status === "todo"
-                                        ? "bg-gray-100 text-gray-700"
-                                        : task.status === "in-progress"
-                                            ? "bg-blue-100 text-blue-700"
-                                            : "bg-green-100 text-green-700"
-                                    }`}
-                            >
-                                {task.status}
-                            </span>
+                    {groupedTasks.done.map((task) => (
+                        <TaskCard key={task._id} task={task} updateTask={updateTask} />
+                    ))}
+                </div>
 
-                            {/* 🔥 STATUS BUTTONS */}
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() =>
-                                        updateTask(task._id, { status: "todo" })
-                                    }
-                                    className="text-xs px-2 py-1 bg-gray-100 rounded"
-                                >
-                                    Todo
-                                </button>
-
-                                <button
-                                    onClick={() =>
-                                        updateTask(task._id, { status: "in-progress" })
-                                    }
-                                    className="text-xs px-2 py-1 bg-blue-100 rounded"
-                                >
-                                    In Progress
-                                </button>
-
-                                <button
-                                    onClick={() =>
-                                        updateTask(task._id, { status: "done" })
-                                    }
-                                    className="text-xs px-2 py-1 bg-green-100 rounded"
-                                >
-                                    Done
-                                </button>
-                            </div>
-
-                            {/* PRIORITY */}
-                            <span
-                                className={`text-xs px-2 py-1 rounded ${task.priority === "high"
-                                        ? "bg-red-100 text-red-700"
-                                        : task.priority === "medium"
-                                            ? "bg-yellow-100 text-yellow-700"
-                                            : "bg-gray-100 text-gray-700"
-                                    }`}
-                            >
-                                {task.priority}
-                            </span>
-                        </div>
-                    </div>
-                ))}
             </div>
         </div>
     );
