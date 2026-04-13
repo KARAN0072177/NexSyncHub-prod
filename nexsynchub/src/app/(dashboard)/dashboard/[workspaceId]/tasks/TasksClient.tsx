@@ -130,7 +130,13 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     <h2 className="font-semibold mb-2">Todo</h2>
 
                     {groupedTasks.todo.map((task) => (
-                        <TaskCard key={task._id} task={task} updateTask={updateTask} />
+                        <TaskCard
+                            key={task._id}
+                            task={task}
+                            updateTask={updateTask}
+                            members={members}
+                            workspaceId={workspaceId}
+                        />
                     ))}
                 </div>
 
@@ -139,7 +145,13 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     <h2 className="font-semibold mb-2">In Progress</h2>
 
                     {groupedTasks["in-progress"].map((task) => (
-                        <TaskCard key={task._id} task={task} updateTask={updateTask} />
+                        <TaskCard
+                            key={task._id}
+                            task={task}
+                            updateTask={updateTask}
+                            members={members}
+                            workspaceId={workspaceId}
+                        />
                     ))}
                 </div>
 
@@ -148,7 +160,13 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     <h2 className="font-semibold mb-2">Done</h2>
 
                     {groupedTasks.done.map((task) => (
-                        <TaskCard key={task._id} task={task} updateTask={updateTask} />
+                        <TaskCard
+                            key={task._id}
+                            task={task}
+                            updateTask={updateTask}
+                            members={members}
+                            workspaceId={workspaceId}
+                        />
                     ))}
                 </div>
 
