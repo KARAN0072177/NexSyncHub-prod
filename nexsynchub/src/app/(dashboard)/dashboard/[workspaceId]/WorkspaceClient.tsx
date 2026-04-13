@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ChatArea from "./ChatArea";
 import { useRouter, usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function WorkspaceClient({
   workspaceId,
@@ -13,6 +14,9 @@ export default function WorkspaceClient({
 }) {
   const [channels, setChannels] = useState<any[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<any>(null);
+
+  const searchParams = useSearchParams();
+  const queryChannelId = searchParams.get("channel");
 
   const router = useRouter();
   const pathname = usePathname();
@@ -27,7 +31,11 @@ export default function WorkspaceClient({
       if (res.ok) {
         setChannels(data.channels);
         if (data.channels.length > 0) {
-          setSelectedChannel(data.channels[0]);
+          const found = data.channels.find(
+            (ch: any) => ch._id === queryChannelId
+          );
+
+          setSelectedChannel(found || data.channels[0]);
         }
       }
     };

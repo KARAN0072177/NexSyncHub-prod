@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 export default function ChatArea({ channel }: { channel: any }) {
     const [messages, setMessages] = useState<any[]>([]);
@@ -27,6 +28,9 @@ export default function ChatArea({ channel }: { channel: any }) {
 
     const [attachments, setAttachments] = useState<Attachment[]>([]);
 
+    const searchParams = useSearchParams();
+    const highlightMessageId = searchParams.get("message");
+
     type Attachment = {
         key: string;
         type: "image" | "video" | "file";
@@ -42,6 +46,16 @@ export default function ChatArea({ channel }: { channel: any }) {
             socketRef.current?.disconnect();
         };
     }, []);
+
+    useEffect(() => {
+        if (!highlightMessageId) return;
+
+        const el = document.getElementById(`msg-${highlightMessageId}`);
+
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, [messages, highlightMessageId]);
 
     // 📩 Fetch messages
     useEffect(() => {
@@ -334,7 +348,12 @@ export default function ChatArea({ channel }: { channel: any }) {
 
                     // 🔥 NORMAL MESSAGE
                     return (
-                        <div key={msg._id} className="text-sm group relative">
+                        <div
+                            key={msg._id}
+                            id={`msg-${msg._id}`} // 🔥 IMPORTANT
+                            className={`text-sm group relative ${highlightMessageId === msg._id ? "bg-yellow-100 p-2 rounded" : ""
+                                }`}
+                        >
 
                             <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition">
                                 <button
