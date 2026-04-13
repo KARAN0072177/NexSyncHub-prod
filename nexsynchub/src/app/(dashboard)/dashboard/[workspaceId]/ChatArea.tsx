@@ -16,6 +16,8 @@ export default function ChatArea({ channel }: { channel: any }) {
     const [uploading, setUploading] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState<any>(null);
     const [showTaskModal, setShowTaskModal] = useState(false);
+    const [members, setMembers] = useState<any[]>([]);
+    const [assignee, setAssignee] = useState("");
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const { data: session } = useSession();
@@ -45,7 +47,7 @@ export default function ChatArea({ channel }: { channel: any }) {
     useEffect(() => {
 
         if (!channel?._id) return;
-        
+
         const fetchMessages = async () => {
             const res = await fetch(
                 `/api/message/list?channelId=${channel._id}`
@@ -83,6 +85,25 @@ export default function ChatArea({ channel }: { channel: any }) {
             window.removeEventListener("focus", markRead);
         };
     }, [channel._id]);
+
+    // 👥 Fetch members
+
+    useEffect(() => {
+        const fetchMembers = async () => {
+            const res = await fetch(
+                `/api/workspace/members?workspaceId=${channel.workspace}`
+            );
+            const data = await res.json();
+
+            if (res.ok) {
+                setMembers(data.members);
+            }
+        };
+
+        if (channel?.workspace) {
+            fetchMembers();
+        }
+    }, [channel?.workspace]);
 
     // 🔥 FILE UPLOAD
     const handleFileUpload = async (e: any) => {
@@ -226,6 +247,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                 channelId: channel._id,
                 priority: selectedMessage.priority,
                 linkedMessage: selectedMessage?._id, // LINK TO ORIGINAL MESSAGE
+                assignee: assignee || undefined, // OPTIONAL ASSIGNEE
             }),
         });
 
@@ -457,6 +479,22 @@ export default function ChatArea({ channel }: { channel: any }) {
                                 <option value="medium">Medium</option>
                                 <option value="low">Low</option>
                                 <option value="high">High</option>
+                            </select>
+
+                            {/* Assignee */}
+
+                            <select
+                                className="border p-2 rounded w-full"
+                                value={assignee}
+                                onChange={(e) => setAssignee(e.target.value)}
+                            >
+                                <option value="">Unassigned</option>
+
+                                {members.map((m) => (
+                                    <option key={m.user._id} value={m.user._id}>
+                                        {m.user.username}
+                                    </option>
+                                ))}
                             </select>
 
                             {/* Buttons */}

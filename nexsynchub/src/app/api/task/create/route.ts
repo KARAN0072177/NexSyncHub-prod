@@ -71,24 +71,33 @@ export async function POST(req: Request) {
       workspace: workspaceId,
       channel: channelId || undefined,
       createdBy: session.user.id,
-      assignee,
+      assignee: assignee || null,
       priority,
       dueDate,
       linkedMessage,
     });
 
-    // 🔥 SYSTEM MESSAGE
-    const actionText = `${session.user.username} created a task: ${title}`;
 
-    const systemMessage = await Message.create({
-      content: actionText,
-      channel: channel?._id || channelId, // fallback
-      sender: session.user.id,
-      type: "system",
-    });
+    let systemMessage = null;
+
+    if (assignee) {
+      const target = await Membership.findOne({
+        user: assignee,
+        workspace: workspaceId,
+      }).populate("user");
+
+      const actionText = `${session.user.username} created and assigned "${title}" to ${target?.user?.username}`;
+
+      systemMessage = await Message.create({
+        content: actionText,
+        channel: channelId,
+        sender: session.user.id,
+        type: "system",
+      });
+    }
 
     // 🔥 Convert to plain object (IMPORTANT)
-    const plainMessage = JSON.parse(JSON.stringify(systemMessage));
+    const plainMessage = systemMessage ? JSON.parse(JSON.stringify(systemMessage)) : null;
 
     // 🔥 Emit socket
     try {
