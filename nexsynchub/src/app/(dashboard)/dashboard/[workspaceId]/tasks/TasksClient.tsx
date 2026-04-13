@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TaskCard from "./TaskCard";
+import {
+    DndContext,
+    closestCenter,
+    DragEndEvent,
+    useDroppable,
+} from "@dnd-kit/core";
 
 type Member = {
     user: {
@@ -21,6 +27,35 @@ type Task = {
     linkedMessage?: string;
     channel?: string;
 };
+
+//////////////////////////////////////////////////////
+// 🔥 DROPPABLE COLUMN COMPONENT
+//////////////////////////////////////////////////////
+
+function Column({
+    id,
+    title,
+    children,
+    color,
+}: any) {
+    const { setNodeRef, isOver } = useDroppable({
+        id,
+    });
+
+    return (
+        <div
+            ref={setNodeRef}
+            className={`p-3 rounded min-h-[300px] transition-all ${
+                isOver ? "scale-[1.02] bg-opacity-70" : ""
+            } ${color}`}
+        >
+            <h2 className="font-semibold mb-2">{title}</h2>
+            {children}
+        </div>
+    );
+}
+
+//////////////////////////////////////////////////////
 
 export default function TasksClient({ workspaceId }: { workspaceId: string }) {
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -89,7 +124,6 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
             return;
         }
 
-        // 🔥 Smart UI update
         setTasks((prev) =>
             prev.map((t) => {
                 if (t._id !== taskId) return t;
@@ -105,6 +139,18 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                 };
             })
         );
+    };
+
+    // 🔥 DRAG END HANDLER
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over) return;
+
+        const taskId = active.id as string;
+        const newStatus = over.id as "todo" | "in-progress" | "done";
+
+        updateTask(taskId, { status: newStatus });
     };
 
     const groupedTasks = {
@@ -123,54 +169,57 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                 <div className="text-gray-500">No tasks yet</div>
             )}
 
-            <div className="grid grid-cols-3 gap-4">
+            <DndContext
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+            >
+                <div className="grid grid-cols-3 gap-4">
 
-                {/* TODO */}
-                <div className="bg-gray-50 p-3 rounded">
-                    <h2 className="font-semibold mb-2">Todo</h2>
+                    {/* TODO */}
+                    <Column id="todo" title="Todo" color="bg-gray-50">
+                        {groupedTasks.todo.map((task) => (
+                            <TaskCard
+                                key={task._id}
+                                task={task}
+                                updateTask={updateTask}
+                                members={members}
+                                workspaceId={workspaceId}
+                            />
+                        ))}
+                    </Column>
 
-                    {groupedTasks.todo.map((task) => (
-                        <TaskCard
-                            key={task._id}
-                            task={task}
-                            updateTask={updateTask}
-                            members={members}
-                            workspaceId={workspaceId}
-                        />
-                    ))}
+                    {/* IN PROGRESS */}
+                    <Column
+                        id="in-progress"
+                        title="In Progress"
+                        color="bg-blue-50"
+                    >
+                        {groupedTasks["in-progress"].map((task) => (
+                            <TaskCard
+                                key={task._id}
+                                task={task}
+                                updateTask={updateTask}
+                                members={members}
+                                workspaceId={workspaceId}
+                            />
+                        ))}
+                    </Column>
+
+                    {/* DONE */}
+                    <Column id="done" title="Done" color="bg-green-50">
+                        {groupedTasks.done.map((task) => (
+                            <TaskCard
+                                key={task._id}
+                                task={task}
+                                updateTask={updateTask}
+                                members={members}
+                                workspaceId={workspaceId}
+                            />
+                        ))}
+                    </Column>
+
                 </div>
-
-                {/* IN PROGRESS */}
-                <div className="bg-blue-50 p-3 rounded">
-                    <h2 className="font-semibold mb-2">In Progress</h2>
-
-                    {groupedTasks["in-progress"].map((task) => (
-                        <TaskCard
-                            key={task._id}
-                            task={task}
-                            updateTask={updateTask}
-                            members={members}
-                            workspaceId={workspaceId}
-                        />
-                    ))}
-                </div>
-
-                {/* DONE */}
-                <div className="bg-green-50 p-3 rounded">
-                    <h2 className="font-semibold mb-2">Done</h2>
-
-                    {groupedTasks.done.map((task) => (
-                        <TaskCard
-                            key={task._id}
-                            task={task}
-                            updateTask={updateTask}
-                            members={members}
-                            workspaceId={workspaceId}
-                        />
-                    ))}
-                </div>
-
-            </div>
+            </DndContext>
         </div>
     );
 }
