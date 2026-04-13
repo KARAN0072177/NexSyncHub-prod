@@ -19,6 +19,7 @@ export default function ChatArea({ channel }: { channel: any }) {
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [members, setMembers] = useState<any[]>([]);
     const [assignee, setAssignee] = useState("");
+    const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const { data: session } = useSession();
@@ -47,6 +48,8 @@ export default function ChatArea({ channel }: { channel: any }) {
         };
     }, []);
 
+    // 🔥 HANDLE HIGHLIGHT
+
     useEffect(() => {
         if (!highlightMessageId) return;
 
@@ -54,6 +57,14 @@ export default function ChatArea({ channel }: { channel: any }) {
 
         if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            // 🔥 Set highlight
+            setActiveHighlight(highlightMessageId);
+
+            // 🔥 Remove after 3s
+            setTimeout(() => {
+                setActiveHighlight(null);
+            }, 3000);
         }
     }, [messages, highlightMessageId]);
 
@@ -351,7 +362,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                         <div
                             key={msg._id}
                             id={`msg-${msg._id}`} // 🔥 IMPORTANT
-                            className={`text-sm group relative ${highlightMessageId === msg._id ? "bg-yellow-100 p-2 rounded" : ""
+                            className={`text-sm group relative ${activeHighlight === msg._id ? "bg-yellow-100 p-2 rounded" : ""
                                 }`}
                         >
 
