@@ -64,6 +64,23 @@ export async function PATCH(req: Request) {
 
         await task.save();
 
+        // 🔥 EMIT TASK UPDATE
+        try {
+            await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    channelId: task.workspace, // ✅ IMPORTANT
+                    event: "task_updated",
+                    data: task,
+                }),
+            });
+        } catch (err) {
+            console.error("Socket emit failed:", err);
+        }
+
         // 🔥 Get default channel
         const channel = await Channel.findOne({
             workspace: task.workspace,

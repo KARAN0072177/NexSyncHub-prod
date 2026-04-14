@@ -1,278 +1,373 @@
+// TaskClient.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TaskCard from "./TaskCard";
+import { io } from "socket.io-client";
 import {
-    DndContext,
-    closestCenter,
-    DragEndEvent,
-    useDroppable,
+  DndContext,
+  closestCenter,
+  DragEndEvent,
+  useDroppable,
+  DragOverlay,
 } from "@dnd-kit/core";
-
 import {
-    SortableContext,
-    verticalListSortingStrategy,
-    arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
 } from "@dnd-kit/sortable";
+import { Plus, Loader2, LayoutGrid } from "lucide-react";
 
 type Member = {
-    user: {
-        _id: string;
-        username: string;
-    };
+  user: {
+    _id: string;
+    username: string;
+  };
 };
 
 type Task = {
-    _id: string;
-    title: string;
-    status: "todo" | "in-progress" | "done";
-    priority: "low" | "medium" | "high";
-    createdBy?: { username: string };
-    assignee?: { _id: string; username: string };
-    linkedMessage?: string;
-    channel?: string;
+  _id: string;
+  title: string;
+  status: "todo" | "in-progress" | "done";
+  priority: "low" | "medium" | "high";
+  createdBy?: { username: string };
+  assignee?: { _id: string; username: string };
+  linkedMessage?: string;
+  channel?: string;
 };
 
 //////////////////////////////////////////////////////
-// 🔥 DROPPABLE COLUMN COMPONENT
+// 🔥 DROPPABLE COLUMN COMPONENT (Dark Theme)
 //////////////////////////////////////////////////////
 
 function Column({
-    id,
-    title,
-    children,
-    color,
-}: any) {
-    const { setNodeRef, isOver } = useDroppable({
-        id,
-    });
+  id,
+  title,
+  children,
+  count = 0,
+  accentColor,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+  count?: number;
+  accentColor: string;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
 
-    return (
-        <div
-            ref={setNodeRef}
-            className={`p-3 rounded min-h-[300px] transition-all ${isOver ? "scale-[1.02] bg-opacity-70" : ""
-                } ${color}`}
-        >
-            <h2 className="font-semibold mb-2">{title}</h2>
-            <SortableContext
-                items={children.map((child: any) => child.key)}
-                strategy={verticalListSortingStrategy}
-            >
-                {children}
-            </SortableContext>
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex flex-col rounded-2xl border backdrop-blur-sm transition-all duration-200
+        bg-gray-900/80 border-gray-800 shadow-xl
+        ${isOver ? `ring-2 ring-${accentColor}-500/50 scale-[1.01]` : ""}`}
+    >
+      {/* Column Header */}
+      <div className="p-4 pb-2 flex items-center justify-between border-b border-gray-800/50">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full bg-${accentColor}-500`} />
+          <h2 className="font-semibold text-gray-200 tracking-tight">
+            {title}
+          </h2>
+          <span className="ml-1 text-xs font-medium text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
+            {count}
+          </span>
         </div>
-    );
+        <button className="text-gray-500 hover:text-gray-300 transition-colors">
+          <Plus size={16} />
+        </button>
+      </div>
+
+      {/* Task List Container */}
+      <div className="p-3 flex-1 overflow-y-auto max-h-[calc(100vh-240px)] min-h-[300px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+        <SortableContext
+          items={Array.isArray(children) ? children.map((child: any) => child.key) : []}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2.5">{children}</div>
+        </SortableContext>
+
+        {/* Empty state hint */}
+        {(!children || (Array.isArray(children) && children.length === 0)) && (
+          <div className="h-24 flex items-center justify-center">
+            <p className="text-xs text-gray-600 italic">Drop tasks here</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 //////////////////////////////////////////////////////
+// MAIN CLIENT COMPONENT
+//////////////////////////////////////////////////////
+
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
 export default function TasksClient({ workspaceId }: { workspaceId: string }) {
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [members, setMembers] = useState<Member[]>([]);
-    const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-    const router = useRouter();
+  const router = useRouter();
 
-    // 📩 Fetch tasks
-    useEffect(() => {
-        const fetchTasks = async () => {
-            const res = await fetch(
-                `/api/task/list?workspaceId=${workspaceId}`
-            );
-            const data = await res.json();
+  // 📩 Fetch tasks
+  useEffect(() => {
+    const fetchTasks = async () => {
+      const res = await fetch(`/api/task/list?workspaceId=${workspaceId}`);
+      const data = await res.json();
+      if (res.ok) setTasks(data.tasks);
+      setLoading(false);
+    };
+    fetchTasks();
+  }, [workspaceId]);
 
-            if (res.ok) {
-                setTasks(data.tasks);
-            }
+  // 👥 Fetch members
+  useEffect(() => {
+    const fetchMembers = async () => {
+      const res = await fetch(`/api/workspace/members?workspaceId=${workspaceId}`);
+      const data = await res.json();
+      if (res.ok) setMembers(data.members);
+    };
+    fetchMembers();
+  }, [workspaceId]);
 
-            setLoading(false);
+  // 🔥 UNIVERSAL UPDATE FUNCTION
+  const updateTask = async (
+    taskId: string,
+    updates: {
+      status?: "todo" | "in-progress" | "done";
+      assignee?: string;
+    }
+  ) => {
+    const res = await fetch("/api/task/status", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId, ...updates }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error);
+      return;
+    }
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t._id !== taskId) return t;
+        return {
+          ...t,
+          ...(updates.status && { status: updates.status }),
+          ...(updates.assignee && {
+            assignee: members
+              .map((m) => m.user)
+              .find((u) => u._id === updates.assignee),
+          }),
         };
-
-        fetchTasks();
-    }, [workspaceId]);
-
-    // 👥 Fetch members
-    useEffect(() => {
-        const fetchMembers = async () => {
-            const res = await fetch(
-                `/api/workspace/members?workspaceId=${workspaceId}`
-            );
-            const data = await res.json();
-
-            if (res.ok) {
-                setMembers(data.members);
-            }
-        };
-
-        fetchMembers();
-    }, [workspaceId]);
-
-    // 🔥 UNIVERSAL UPDATE FUNCTION
-    const updateTask = async (
-        taskId: string,
-        updates: {
-            status?: "todo" | "in-progress" | "done";
-            assignee?: string;
-        }
-    ) => {
-        const res = await fetch("/api/task/status", {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                taskId,
-                ...updates,
-            }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            alert(data.error);
-            return;
-        }
-
-        setTasks((prev) =>
-            prev.map((t) => {
-                if (t._id !== taskId) return t;
-
-                return {
-                    ...t,
-                    ...(updates.status && { status: updates.status }),
-                    ...(updates.assignee && {
-                        assignee: members
-                            .map((m) => m.user)
-                            .find((u) => u._id === updates.assignee),
-                    }),
-                };
-            })
-        );
-    };
-
-    // 🔥 DRAG END HANDLER
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-
-        if (!over) return;
-
-        const activeId = active.id as string;
-        const overId = over.id as string;
-
-        // 🔥 Find tasks
-        const activeTask = tasks.find((t) => t._id === activeId);
-        const overTask = tasks.find((t) => t._id === overId);
-
-        // 🧠 CASE 1: DROP ON COLUMN
-        if (!overTask) {
-            const newStatus = overId as "todo" | "in-progress" | "done";
-            updateTask(activeId, { status: newStatus });
-            return;
-        }
-
-        // 🧠 CASE 2: REORDER INSIDE SAME COLUMN
-        if (activeTask?.status === overTask?.status) {
-            const columnTasks = tasks.filter(
-                (t) => t.status === activeTask.status
-            );
-
-            const oldIndex = columnTasks.findIndex(
-                (t) => t._id === activeId
-            );
-
-            const newIndex = columnTasks.findIndex(
-                (t) => t._id === overId
-            );
-
-            const newColumnTasks = arrayMove(
-                columnTasks,
-                oldIndex,
-                newIndex
-            );
-
-            // 🔥 Merge back into global list
-            const updatedTasks = tasks.map((t) => {
-                const found = newColumnTasks.find((nt) => nt._id === t._id);
-                return found || t;
-            });
-
-            setTasks(updatedTasks);
-        }
-
-        // 🧠 CASE 3: MOVE BETWEEN COLUMNS
-        else if (activeTask && overTask) {
-            updateTask(activeId, { status: overTask.status });
-        }
-    };
-
-    const groupedTasks = {
-        todo: tasks.filter((t) => t.status === "todo"),
-        "in-progress": tasks.filter((t) => t.status === "in-progress"),
-        done: tasks.filter((t) => t.status === "done"),
-    };
-
-    if (loading) return <div className="p-6">Loading tasks...</div>;
-
-    return (
-        <div className="p-6 max-w-4xl mx-auto space-y-6">
-            <h1 className="text-2xl font-semibold">Tasks</h1>
-
-            {tasks.length === 0 && (
-                <div className="text-gray-500">No tasks yet</div>
-            )}
-
-            <DndContext
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <div className="grid grid-cols-3 gap-4">
-
-                    {/* TODO */}
-                    <Column id="todo" title="Todo" color="bg-gray-50">
-                        {groupedTasks.todo.map((task) => (
-                            <TaskCard
-                                key={task._id}
-                                task={task}
-                                updateTask={updateTask}
-                                members={members}
-                                workspaceId={workspaceId}
-                            />
-                        ))}
-                    </Column>
-
-                    {/* IN PROGRESS */}
-                    <Column
-                        id="in-progress"
-                        title="In Progress"
-                        color="bg-blue-50"
-                    >
-                        {groupedTasks["in-progress"].map((task) => (
-                            <TaskCard
-                                key={task._id}
-                                task={task}
-                                updateTask={updateTask}
-                                members={members}
-                                workspaceId={workspaceId}
-                            />
-                        ))}
-                    </Column>
-
-                    {/* DONE */}
-                    <Column id="done" title="Done" color="bg-green-50">
-                        {groupedTasks.done.map((task) => (
-                            <TaskCard
-                                key={task._id}
-                                task={task}
-                                updateTask={updateTask}
-                                members={members}
-                                workspaceId={workspaceId}
-                            />
-                        ))}
-                    </Column>
-
-                </div>
-            </DndContext>
-        </div>
+      })
     );
+  };
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    socket.emit("join_channel", workspaceId);
+
+  }, [workspaceId]);
+
+  useEffect(() => {
+    socket.on("task_updated", (updatedTask) => {
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t._id === updatedTask._id
+            ? { ...t, ...updatedTask }
+            : t
+        )
+      );
+
+    });
+
+    return () => {
+      socket.off("task_updated");
+    };
+  }, []);
+
+  // 🔥 DRAG END HANDLER
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeTask = tasks.find((t) => t._id === activeId);
+    const overTask = tasks.find((t) => t._id === overId);
+
+    // Drop on column
+    if (!overTask) {
+      const newStatus = overId as "todo" | "in-progress" | "done";
+      updateTask(activeId, { status: newStatus });
+      return;
+    }
+
+    // Reorder inside same column
+    if (activeTask?.status === overTask?.status) {
+      const columnTasks = tasks.filter((t) => t.status === activeTask.status);
+      const oldIndex = columnTasks.findIndex((t) => t._id === activeId);
+      const newIndex = columnTasks.findIndex((t) => t._id === overId);
+      const newColumnTasks = arrayMove(columnTasks, oldIndex, newIndex);
+      const updatedTasks = tasks.map((t) => {
+        const found = newColumnTasks.find((nt) => nt._id === t._id);
+        return found || t;
+      });
+      setTasks(updatedTasks);
+    }
+    // Move between columns
+    else if (activeTask && overTask) {
+      updateTask(activeId, { status: overTask.status });
+    }
+  };
+
+  const groupedTasks = {
+    todo: tasks.filter((t) => t.status === "todo"),
+    "in-progress": tasks.filter((t) => t.status === "in-progress"),
+    done: tasks.filter((t) => t.status === "done"),
+  };
+
+  const activeTask = activeId ? tasks.find((t) => t._id === activeId) : null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="h-8 w-8 rounded-lg bg-gray-800 animate-pulse" />
+            <div className="h-8 w-48 bg-gray-800 rounded animate-pulse" />
+          </div>
+          <div className="grid grid-cols-3 gap-5">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-gray-900/50 rounded-2xl p-4 h-64 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      <div className="p-6 max-w-[1600px] mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gray-800/50 rounded-xl border border-gray-700">
+              <LayoutGrid className="w-5 h-5 text-indigo-400" />
+            </div>
+            <h1 className="text-2xl font-semibold text-white tracking-tight">
+              Tasks
+              <span className="ml-3 text-sm font-normal text-gray-500">
+                {tasks.length} total
+              </span>
+            </h1>
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl border border-indigo-500/30 transition-all text-sm font-medium">
+            <Plus size={16} />
+            New Task
+          </button>
+        </div>
+
+        {/* Empty state for whole board */}
+        {tasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-24 h-24 rounded-full bg-gray-800/50 flex items-center justify-center mb-4 border border-gray-700">
+              <LayoutGrid className="w-10 h-10 text-gray-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-300 mb-1">No tasks yet</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Create your first task to get started
+            </p>
+            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20">
+              Create Task
+            </button>
+          </div>
+        ) : (
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            onDragStart={(event) => setActiveId(event.active.id as string)}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <Column
+                id="todo"
+                title="To Do"
+                accentColor="gray"
+                count={groupedTasks.todo.length}
+              >
+                {groupedTasks.todo.map((task) => (
+                  <TaskCard
+                    key={task._id}
+                    task={task}
+                    updateTask={updateTask}
+                    members={members}
+                    workspaceId={workspaceId}
+                  />
+                ))}
+              </Column>
+
+              <Column
+                id="in-progress"
+                title="In Progress"
+                accentColor="blue"
+                count={groupedTasks["in-progress"].length}
+              >
+                {groupedTasks["in-progress"].map((task) => (
+                  <TaskCard
+                    key={task._id}
+                    task={task}
+                    updateTask={updateTask}
+                    members={members}
+                    workspaceId={workspaceId}
+                  />
+                ))}
+              </Column>
+
+              <Column
+                id="done"
+                title="Done"
+                accentColor="green"
+                count={groupedTasks.done.length}
+              >
+                {groupedTasks.done.map((task) => (
+                  <TaskCard
+                    key={task._id}
+                    task={task}
+                    updateTask={updateTask}
+                    members={members}
+                    workspaceId={workspaceId}
+                  />
+                ))}
+              </Column>
+            </div>
+
+            {/* Drag overlay for smoother experience */}
+            <DragOverlay>
+              {activeTask ? (
+                <div className="opacity-90 scale-105 shadow-2xl">
+                  <TaskCard
+                    task={activeTask}
+                    updateTask={updateTask}
+                    members={members}
+                    workspaceId={workspaceId}
+                    isOverlay
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
+      </div>
+    </div>
+  );
 }
