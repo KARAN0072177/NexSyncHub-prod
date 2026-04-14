@@ -66,12 +66,12 @@ export async function GET(req: Request) {
     const query: any = { channel: channelId };
 
     if (cursor) {
-      query._id = { $lt: cursor };
+      query.createdAt = { $lt: new Date(cursor) };
     }
 
     // 🔥 Fetch messages
     const rawMessages = await Message.find(query)
-      .sort({ _id: -1 })
+      .sort({ createdAt: -1 })
       .limit(PAGE_SIZE)
       .populate("sender", "username email")
       .lean();
@@ -143,7 +143,7 @@ export async function GET(req: Request) {
       messages: messagesWithUrls.reverse(), // oldest → newest
       nextCursor:
         messagesWithUrls.length === PAGE_SIZE
-          ? messagesWithUrls[messagesWithUrls.length - 1]._id
+          ? messagesWithUrls[messagesWithUrls.length - 1].createdAt
           : null,
     });
   } catch (error) {

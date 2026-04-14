@@ -43,6 +43,8 @@ export default function ChatArea({ channel }: { channel: any }) {
     const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const [cursor, setCursor] = useState<string | null>(null);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -80,10 +82,72 @@ export default function ChatArea({ channel }: { channel: any }) {
         const fetchMessages = async () => {
             const res = await fetch(`/api/message/list?channelId=${channel._id}`);
             const data = await res.json();
-            if (res.ok) setMessages(data.messages);
+
+            if (res.ok) {
+                setMessages(data.messages);
+                setCursor(data.nextCursor); // ✅ IMPORTANT
+            }
         };
         fetchMessages();
     }, [channel._id]);
+
+    // 🔥 Load more messages (pagination)
+
+    const loadMoreMessages = async () => {
+        if (!cursor || loadingMore) return;
+
+        setLoadingMore(true);
+
+        const container = messagesContainerRef.current;
+        const prevHeight = container?.scrollHeight || 0;
+
+        const res = await fetch(
+            `/api/message/list?channelId=${channel._id}&cursor=${cursor}`
+        );
+
+        const data = await res.json();
+
+        if (res.ok) {
+            setMessages((prev) => {
+                const existingIds = new Set(prev.map((m) => m._id));
+
+                const newMessages = data.messages.filter(
+                    (m: any) => !existingIds.has(m._id)
+                );
+
+                return [...newMessages, ...prev];
+            });
+            setCursor(data.nextCursor);
+        }
+
+        // 🔥 Maintain scroll position
+        setTimeout(() => {
+            if (container) {
+                const newHeight = container.scrollHeight;
+                container.scrollTop = newHeight - prevHeight;
+            }
+        }, 0);
+
+        setLoadingMore(false);
+    };
+
+
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            if (container.scrollTop === 0) {
+                loadMoreMessages();
+            }
+        };
+
+        container.addEventListener("scroll", handleScroll);
+
+        return () => {
+            container.removeEventListener("scroll", handleScroll);
+        };
+    }, [cursor, loadingMore]);
 
     // 🔥 Mark read
     useEffect(() => {
@@ -312,6 +376,15 @@ export default function ChatArea({ channel }: { channel: any }) {
                 ref={messagesContainerRef}
                 className="flex-1 overflow-y-auto px-5 py-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
             >
+
+                {/* Loading more indicator */}
+
+                {loadingMore && (
+                    <div className="flex justify-center mb-2">
+                        <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+                    </div>
+                )}
+
                 {messages.map((msg, index) => {
                     const isOwnMessage = msg.sender?._id === userId || msg.sender === userId;
                     const showSeen = index === messages.length - 1 && seenUsers.size > 0 && isOwnMessage;
