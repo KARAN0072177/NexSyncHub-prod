@@ -11,6 +11,8 @@ export default function TaskCard({
   updateTask,
   members,
   workspaceId,
+  currentUserId,
+  currentUserRole,
   isOverlay = false,
 }: any) {
   const router = useRouter();
@@ -44,6 +46,13 @@ export default function TaskCard({
     done: "bg-green-500/20 text-green-300 border-green-500/30",
   };
 
+  const isCreator = task.createdBy?._id === currentUserId;
+  const isAssignee = task.assignee?._id === currentUserId;
+  const isAdmin =
+    currentUserRole === "ADMIN" || currentUserRole === "OWNER";
+
+  const canUpdate = isCreator || isAssignee || isAdmin;
+
   return (
     <div
       ref={setNodeRef}
@@ -61,8 +70,8 @@ export default function TaskCard({
           ${task.priority === "high"
             ? "from-red-500 to-red-600"
             : task.priority === "medium"
-            ? "from-yellow-500 to-yellow-600"
-            : "from-gray-500 to-gray-600"
+              ? "from-yellow-500 to-yellow-600"
+              : "from-gray-500 to-gray-600"
           }`}
       />
 
@@ -83,6 +92,7 @@ export default function TaskCard({
             <User size={12} />
           </div>
           <select
+            disabled={!isCreator && !isAdmin}
             className="w-full pl-7 pr-2 py-1.5 text-xs bg-gray-900/50 border border-gray-700 rounded-lg
               text-gray-300 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50
               hover:bg-gray-800 transition-colors cursor-pointer"
@@ -121,6 +131,7 @@ export default function TaskCard({
         {/* Status quick actions */}
         <div className="flex gap-1.5 pt-1">
           <button
+            disabled={!canUpdate}
             onClick={() => updateTask(task._id, { status: "todo" })}
             className={`text-xs px-2.5 py-1 rounded-lg border transition-all
               ${task.status === "todo"
@@ -131,6 +142,7 @@ export default function TaskCard({
             Todo
           </button>
           <button
+            disabled={!canUpdate}
             onClick={() => updateTask(task._id, { status: "in-progress" })}
             className={`text-xs px-2.5 py-1 rounded-lg border transition-all
               ${task.status === "in-progress"
@@ -141,6 +153,7 @@ export default function TaskCard({
             Progress
           </button>
           <button
+            disabled={!canUpdate}
             onClick={() => updateTask(task._id, { status: "done" })}
             className={`text-xs px-2.5 py-1 rounded-lg border transition-all
               ${task.status === "done"
@@ -161,14 +174,13 @@ export default function TaskCard({
                 task.priority === "high"
                   ? "text-red-400"
                   : task.priority === "medium"
-                  ? "text-yellow-400"
-                  : "text-gray-400"
+                    ? "text-yellow-400"
+                    : "text-gray-400"
               }
             />
             <span
-              className={`text-xs font-medium capitalize ${
-                priorityConfig[task.priority as keyof typeof priorityConfig].color
-              }`}
+              className={`text-xs font-medium capitalize ${priorityConfig[task.priority as keyof typeof priorityConfig].color
+                }`}
             >
               {task.priority}
             </span>

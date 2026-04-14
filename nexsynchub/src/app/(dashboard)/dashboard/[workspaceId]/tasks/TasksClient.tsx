@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TaskCard from "./TaskCard";
 import { io } from "socket.io-client";
+import { useSession } from "next-auth/react";
 import {
   DndContext,
   closestCenter,
@@ -24,6 +25,7 @@ type Member = {
     _id: string;
     username: string;
   };
+  role?: string;
 };
 
 type Task = {
@@ -110,6 +112,14 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  const { data: session } = useSession();
+
+  const currentUser = members.find(
+    (m) => m.user._id === session?.user?.id
+  );
+
+  const currentUserRole = currentUser?.role;
 
   const router = useRouter();
 
@@ -312,6 +322,8 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     updateTask={updateTask}
                     members={members}
                     workspaceId={workspaceId}
+                    currentUserId={session?.user?.id}
+                    currentUserRole={currentUserRole}
                   />
                 ))}
               </Column>
@@ -329,6 +341,8 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     updateTask={updateTask}
                     members={members}
                     workspaceId={workspaceId}
+                    currentUserId={session?.user?.id}
+                    currentUserRole={currentUserRole}
                   />
                 ))}
               </Column>
@@ -346,6 +360,8 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     updateTask={updateTask}
                     members={members}
                     workspaceId={workspaceId}
+                    currentUserId={session?.user?.id}
+                    currentUserRole={currentUserRole}
                   />
                 ))}
               </Column>
@@ -360,6 +376,8 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     updateTask={updateTask}
                     members={members}
                     workspaceId={workspaceId}
+                    currentUserId={session?.user?.id}
+                    currentUserRole={currentUserRole}
                     isOverlay
                   />
                 </div>

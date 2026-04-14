@@ -45,6 +45,27 @@ export async function PATCH(req: Request) {
             workspace: task.workspace,
         });
 
+        // 🔐 PERMISSION CHECK
+
+        const userId = session.user.id;
+
+        const isCreator =
+            task.createdBy?.toString() === userId;
+
+        const isAssignee =
+            task.assignee?.toString() === userId;
+
+        const isAdmin =
+            membership.role === "ADMIN" || membership.role === "OWNER";
+
+        // ❌ NOT ALLOWED
+        if (!isCreator && !isAssignee && !isAdmin) {
+            return NextResponse.json(
+                { error: "You are not allowed to update this task" },
+                { status: 403 }
+            );
+        }
+
         if (!membership) {
             return NextResponse.json(
                 { error: "Access denied" },
