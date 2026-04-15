@@ -30,11 +30,11 @@ const TaskSchema = new Schema<ITask>(
       maxlength: 200,
     },
 
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 2000,
-    },
+    // description: {
+    //   type: String,
+    //   trim: true,
+    //   maxlength: 2000,
+    // },
 
     workspace: {
       type: Schema.Types.ObjectId,
@@ -67,6 +67,11 @@ const TaskSchema = new Schema<ITask>(
       enum: ["todo", "in-progress", "done"],
       default: "todo",
       index: true,
+    },
+
+    description: {
+      type: String,
+      default: "",
     },
 
     priority: {
