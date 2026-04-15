@@ -142,13 +142,19 @@ export async function PATCH(req: Request) {
             task: task._id,
         });
 
+        // 🔥 POPULATE MESSAGE (IMPORTANT FIX)
+        const populatedMessage = await Message.findById(systemMessage._id)
+            .populate("sender", "username")
+            .populate("task", "title")
+            .lean();
+
         // 🔥 EMIT SOCKET
         await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 channelId: channel._id,
-                message: systemMessage,
+                message: populatedMessage,
             }),
         });
 
@@ -159,7 +165,18 @@ export async function PATCH(req: Request) {
             body: JSON.stringify({
                 channelId: task._id,   // ✅ IMPORTANT (task room)
                 event: "task_activity",
-                data: systemMessage,
+                data: populatedMessage,
+            }),
+        });
+
+        // 🔥 GLOBAL WORKSPACE ACTIVITY
+        await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                channelId: task.workspace.toString(), // ✅ workspace room
+                event: "workspace_activity",
+                data: populatedMessage,
             }),
         });
 
