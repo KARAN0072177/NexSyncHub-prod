@@ -138,7 +138,8 @@ export async function PATCH(req: Request) {
             content: actionText,
             channel: channel._id,
             sender: session.user.id,
-            type: "system",
+            type: "task_activity", // ✅
+            task: task._id,
         });
 
         // 🔥 EMIT SOCKET
@@ -148,6 +149,17 @@ export async function PATCH(req: Request) {
             body: JSON.stringify({
                 channelId: channel._id,
                 message: systemMessage,
+            }),
+        });
+
+        // 🔥 EMIT TASK ACTIVITY (REAL-TIME)
+        await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                channelId: task._id,   // ✅ IMPORTANT (task room)
+                event: "task_activity",
+                data: systemMessage,
             }),
         });
 

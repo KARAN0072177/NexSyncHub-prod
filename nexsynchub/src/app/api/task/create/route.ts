@@ -92,7 +92,8 @@ export async function POST(req: Request) {
         content: actionText,
         channel: channelId,
         sender: session.user.id,
-        type: "system",
+        type: "task_activity", // ✅ new type for task-related system messages
+        task: task._id,
       });
     }
 
@@ -111,6 +112,17 @@ export async function POST(req: Request) {
           message: plainMessage,
         }),
       });
+
+      await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channelId: task._id,
+          event: "task_activity",
+          data: systemMessage,
+        }),
+      });
+
     } catch (err) {
       console.error("Socket emit failed:", err);
     }

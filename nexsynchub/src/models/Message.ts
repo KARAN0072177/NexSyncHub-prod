@@ -14,7 +14,8 @@ export interface IMessage {
   channel: mongoose.Types.ObjectId;
   sender: mongoose.Types.ObjectId;
 
-  type: "user" | "system"; // ✅ NEW
+  type: "user" | "system" | "task_activity"; // ✅ NEW
+  task?: mongoose.Types.ObjectId | null;
 
   createdAt: Date;
   updatedAt: Date;
@@ -65,8 +66,13 @@ const MessageSchema = new Schema<IMessage>(
     // 🔥 NEW FIELD
     type: {
       type: String,
-      enum: ["user", "system"],
+      enum: ["user", "system", "task_activity"], // ✅ added "task_activity"
       default: "user",
+    },
+    task: {
+      type: Schema.Types.ObjectId,
+      ref: "Task",
+      default: null,
     },
   },
   {
