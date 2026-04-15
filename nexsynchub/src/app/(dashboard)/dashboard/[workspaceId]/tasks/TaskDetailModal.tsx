@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
 export default function TaskDetailModal({
     taskId,
@@ -25,6 +28,18 @@ export default function TaskDetailModal({
         fetchData();
     }, [taskId]);
 
+    // 🔔 listen for new comments
+
+    useEffect(() => {
+        if (!taskId) return;
+
+        socket.emit("join_channel", taskId);
+
+        return () => {
+            socket.off("task_comment");
+        };
+    }, [taskId]);
+
     // 💬 add comment
     const addComment = async () => {
         if (!content.trim()) return;
@@ -40,10 +55,28 @@ export default function TaskDetailModal({
         const data = await res.json();
 
         if (res.ok) {
-            setComments((prev) => [...prev, data.comment]);
+            setComments((prev) => {
+                if (prev.some((c) => c._id === data.comment._id)) return prev;
+                return [...prev, data.comment];
+            });
             setContent("");
         }
     };
+
+    // Listen for new comments in real-time and update the comments state
+
+    useEffect(() => {
+        socket.on("task_comment", (newComment) => {
+            setComments((prev) => {
+                if (prev.some((c) => c._id === newComment._id)) return prev;
+                return [...prev, newComment];
+            });
+        });
+
+        return () => {
+            socket.off("task_comment");
+        };
+    }, []);
 
     const saveDescription = async () => {
         const res = await fetch("/api/task/update", {
