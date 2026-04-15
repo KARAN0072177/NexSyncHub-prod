@@ -145,10 +145,9 @@ export default function WorkspaceClient({
                         router.push(`/dashboard/${workspaceId}`);
                       }}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
-                        ${
-                          isActive
-                            ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                            : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                        ${isActive
+                          ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                          : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
                         }`}
                     >
                       <Hash size={14} className="flex-shrink-0" />
@@ -170,10 +169,9 @@ export default function WorkspaceClient({
               <button
                 onClick={() => router.push(`/dashboard/${workspaceId}/tasks`)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
-                  ${
-                    isTasksPage
-                      ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                      : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                  ${isTasksPage
+                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                    : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
                   }`}
               >
                 <CheckSquare size={14} className="flex-shrink-0" />
@@ -184,14 +182,29 @@ export default function WorkspaceClient({
               <button
                 onClick={() => router.push(`/dashboard/${workspaceId}/members`)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
-                  ${
-                    isMembersPage
-                      ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                      : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                  ${isMembersPage
+                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                    : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
                   }`}
               >
                 <Users size={14} className="flex-shrink-0" />
                 <span>Members</span>
+              </button>
+
+              {/* Activity */}
+
+              <button
+                onClick={() =>
+                  router.push(`/dashboard/${workspaceId}/activity`)
+                }
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all"
+                ${isMembersPage
+                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                    : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                  }`}
+              >
+                <Settings size={14} className="flex-shrink-0" />
+                <span>Activity</span>
               </button>
             </div>
           </div>
