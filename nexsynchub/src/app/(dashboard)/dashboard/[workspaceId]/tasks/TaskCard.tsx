@@ -4,7 +4,7 @@
 import { useRouter } from "next/navigation";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { User, Flag, ExternalLink, MoreHorizontal } from "lucide-react";
+import { User, Flag, ExternalLink, MoreHorizontal, GripVertical } from "lucide-react";
 
 export default function TaskCard({
   task,
@@ -40,12 +40,6 @@ export default function TaskCard({
     high: { color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
   };
 
-  const statusColors = {
-    todo: "bg-gray-500/20 text-gray-300 border-gray-500/30",
-    "in-progress": "bg-blue-500/20 text-blue-300 border-blue-500/30",
-    done: "bg-green-500/20 text-green-300 border-green-500/30",
-  };
-
   const isCreator = task.createdBy?._id === currentUserId;
   const isAssignee = task.assignee?._id === currentUserId;
   const isAdmin =
@@ -53,17 +47,29 @@ export default function TaskCard({
 
   const canUpdate = isCreator || isAssignee || isAdmin;
 
+  // Stop propagation on interactive elements to prevent drag initiation
+  const handleInteractivePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <div
       ref={setNodeRef}
       {...attributes}
-      {...listeners}
       style={style}
       className={`group relative bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 p-4 
         shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-200
-        cursor-grab active:cursor-grabbing
         ${isOverlay ? "shadow-2xl ring-2 ring-indigo-500/50" : ""}`}
     >
+      {/* Drag Handle (visible on hover/focus) */}
+      <div
+        {...listeners}
+        className="absolute left-1 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={18} />
+      </div>
+
       {/* Priority indicator bar */}
       <div
         className={`absolute top-0 left-0 w-1 h-full rounded-l-xl bg-gradient-to-b 
@@ -75,7 +81,7 @@ export default function TaskCard({
           }`}
       />
 
-      <div className="pl-2 space-y-3">
+      <div className="pl-6 space-y-3">
         {/* Header: Title and menu */}
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-medium text-gray-200 text-sm leading-tight">
@@ -93,6 +99,7 @@ export default function TaskCard({
           </div>
           <select
             disabled={!isCreator && !isAdmin}
+            onPointerDown={handleInteractivePointerDown}
             className="w-full pl-7 pr-2 py-1.5 text-xs bg-gray-900/50 border border-gray-700 rounded-lg
               text-gray-300 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50
               hover:bg-gray-800 transition-colors cursor-pointer"
@@ -120,6 +127,7 @@ export default function TaskCard({
                 `/dashboard/${workspaceId}?channel=${task.channel}&message=${task.linkedMessage}`
               )
             }
+            onPointerDown={handleInteractivePointerDown}
             className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 
               transition-colors group/link"
           >
@@ -133,6 +141,7 @@ export default function TaskCard({
           <button
             disabled={!canUpdate}
             onClick={() => updateTask(task._id, { status: "todo" })}
+            onPointerDown={handleInteractivePointerDown}
             className={`text-xs px-2.5 py-1 rounded-lg border transition-all
               ${task.status === "todo"
                 ? "bg-gray-700/50 text-gray-200 border-gray-600"
@@ -144,6 +153,7 @@ export default function TaskCard({
           <button
             disabled={!canUpdate}
             onClick={() => updateTask(task._id, { status: "in-progress" })}
+            onPointerDown={handleInteractivePointerDown}
             className={`text-xs px-2.5 py-1 rounded-lg border transition-all
               ${task.status === "in-progress"
                 ? "bg-blue-900/30 text-blue-300 border-blue-700/50"
@@ -155,6 +165,7 @@ export default function TaskCard({
           <button
             disabled={!canUpdate}
             onClick={() => updateTask(task._id, { status: "done" })}
+            onPointerDown={handleInteractivePointerDown}
             className={`text-xs px-2.5 py-1 rounded-lg border transition-all
               ${task.status === "done"
                 ? "bg-green-900/30 text-green-300 border-green-700/50"

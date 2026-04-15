@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { Plus, Loader2, LayoutGrid } from "lucide-react";
+import { Plus, Loader2, LayoutGrid, X } from "lucide-react";
 
 type Member = {
   user: {
@@ -33,7 +33,7 @@ type Task = {
   title: string;
   status: "todo" | "in-progress" | "done";
   priority: "low" | "medium" | "high";
-  createdBy?: { username: string };
+  createdBy?: { _id: string; username: string };
   assignee?: { _id: string; username: string };
   linkedMessage?: string;
   channel?: string;
@@ -46,12 +46,14 @@ type Task = {
 function Column({
   id,
   title,
+  taskIds,
   children,
   count = 0,
   accentColor,
 }: {
   id: string;
   title: string;
+  taskIds: string[];
   children: React.ReactNode;
   count?: number;
   accentColor: string;
@@ -83,15 +85,12 @@ function Column({
 
       {/* Task List Container */}
       <div className="p-3 flex-1 overflow-y-auto max-h-[calc(100vh-240px)] min-h-[300px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-        <SortableContext
-          items={Array.isArray(children) ? children.map((child: any) => child.key) : []}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-2.5">{children}</div>
         </SortableContext>
 
         {/* Empty state hint */}
-        {(!children || (Array.isArray(children) && children.length === 0)) && (
+        {taskIds.length === 0 && (
           <div className="h-24 flex items-center justify-center">
             <p className="text-xs text-gray-600 italic">Drop tasks here</p>
           </div>
@@ -112,6 +111,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { data: session } = useSession();
 
@@ -159,7 +159,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
     });
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error);
+      setErrorMessage(data.error); // Use themed popup instead of alert
       return;
     }
     setTasks((prev) =>
@@ -182,12 +182,10 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId) return;
 
     socket.emit("join_channel", workspaceId);
-
   }, [workspaceId]);
 
   useEffect(() => {
     socket.on("task_updated", (updatedTask) => {
-
       setTasks((prev) =>
         prev.map((t) =>
           t._id === updatedTask._id
@@ -195,7 +193,6 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
             : t
         )
       );
-
     });
 
     return () => {
@@ -314,6 +311,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                 title="To Do"
                 accentColor="gray"
                 count={groupedTasks.todo.length}
+                taskIds={groupedTasks.todo.map(t => t._id)}
               >
                 {groupedTasks.todo.map((task) => (
                   <TaskCard
@@ -333,6 +331,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                 title="In Progress"
                 accentColor="blue"
                 count={groupedTasks["in-progress"].length}
+                taskIds={groupedTasks["in-progress"].map(t => t._id)}
               >
                 {groupedTasks["in-progress"].map((task) => (
                   <TaskCard
@@ -352,6 +351,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                 title="Done"
                 accentColor="green"
                 count={groupedTasks.done.length}
+                taskIds={groupedTasks.done.map(t => t._id)}
               >
                 {groupedTasks.done.map((task) => (
                   <TaskCard
@@ -384,6 +384,32 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
               ) : null}
             </DragOverlay>
           </DndContext>
+        )}
+
+        {/* Themed Error Popup */}
+        {errorMessage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-gray-900 border border-red-500/30 rounded-2xl shadow-2xl max-w-md w-full p-6">
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-lg font-semibold text-red-400">Permission Error</h3>
+                <button
+                  onClick={() => setErrorMessage(null)}
+                  className="text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-gray-300 mb-6">{errorMessage}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setErrorMessage(null)}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm font-medium transition-colors border border-gray-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
