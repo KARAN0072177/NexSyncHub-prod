@@ -79,11 +79,19 @@ export async function PATCH(req: Request) {
             task.status = status;
         }
 
-        if (assignee) {
-            task.assignee = assignee;
+        // 🔥 Update assignee
+
+        if (assignee !== undefined) {
+            task.assignee = assignee || null;
         }
 
         await task.save();
+
+        // 🔥 POPULATE TASK BEFORE EMIT (CRITICAL FIX)
+        const populatedTask = await Task.findById(task._id)
+            .populate("assignee", "username")
+            .populate("createdBy", "username")
+            .lean();
 
         // 🔥 EMIT TASK UPDATE
         try {
@@ -95,7 +103,7 @@ export async function PATCH(req: Request) {
                 body: JSON.stringify({
                     channelId: task.workspace, // ✅ IMPORTANT
                     event: "task_updated",
-                    data: task,
+                    data: populatedTask, // ✅ Send populated task for real-time updates
                 }),
             });
         } catch (err) {

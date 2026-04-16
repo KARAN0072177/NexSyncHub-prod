@@ -162,20 +162,6 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
       setErrorMessage(data.error); // Use themed popup instead of alert
       return;
     }
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t._id !== taskId) return t;
-        return {
-          ...t,
-          ...(updates.status && { status: updates.status }),
-          ...(updates.assignee && {
-            assignee: members
-              .map((m) => m.user)
-              .find((u) => u._id === updates.assignee),
-          }),
-        };
-      })
-    );
   };
 
   useEffect(() => {
