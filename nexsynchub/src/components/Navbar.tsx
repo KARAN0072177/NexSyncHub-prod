@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { useRouter } from "next/navigation";
 
 const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
@@ -11,6 +12,8 @@ export default function NotificationBell() {
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unread, setUnread] = useState(0);
     const [open, setOpen] = useState(false);
+
+    const router = useRouter();
 
     const fetchNotifications = async () => {
         const res = await fetch("/api/notification/list");
@@ -48,6 +51,35 @@ export default function NotificationBell() {
         };
     }, []);
 
+    const handleClick = async (n: any) => {
+        try {
+            // 🔥 mark as read
+            await fetch("/api/notification/read", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ notificationId: n._id }),
+            });
+
+            // 🔥 update UI instantly
+            setNotifications((prev: any) =>
+                prev.map((p: any) =>
+                    p._id === n._id ? { ...p, isRead: true } : p
+                )
+            );
+
+            setUnread((prev) => Math.max(prev - 1, 0));
+
+            // 🔥 redirect
+            router.push(n.link);
+
+            // 🔥 close dropdown
+            setOpen(false);
+
+        } catch (err) {
+            console.error("Notification click error:", err);
+        }
+    };
+
     return (
         <div className="relative">
             {/* 🔔 ICON */}
@@ -71,6 +103,7 @@ export default function NotificationBell() {
                     {notifications.map((n: any) => (
                         <div
                             key={n._id}
+                            onClick={() => handleClick(n)}
                             className={`text-sm p-2 rounded ${n.isRead ? "bg-gray-100" : "bg-blue-50"
                                 }`}
                         >
