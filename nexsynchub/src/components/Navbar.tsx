@@ -80,6 +80,23 @@ export default function NotificationBell() {
         }
     };
 
+    const markAllAsRead = async () => {
+        try {
+            await fetch("/api/notification/read-all", {
+                method: "PATCH",
+            });
+
+            // 🔥 update UI instantly
+            setNotifications((prev: any) =>
+                prev.map((n: any) => ({ ...n, isRead: true }))
+            );
+
+            setUnread(0);
+        } catch (err) {
+            console.error("Mark all error:", err);
+        }
+    };
+
     return (
         <div className="relative">
             {/* 🔔 ICON */}
@@ -100,6 +117,19 @@ export default function NotificationBell() {
                         <p className="text-sm text-gray-500">No notifications</p>
                     )}
 
+                    <div className="flex justify-between items-center mb-2">
+                        <p className="text-sm font-medium">Notifications</p>
+
+                        {unread > 0 && (
+                            <button
+                                onClick={markAllAsRead}
+                                className="text-xs text-indigo-600 hover:underline"
+                            >
+                                Mark all as read
+                            </button>
+                        )}
+                    </div>
+
                     {notifications.map((n: any) => (
                         <div
                             key={n._id}
@@ -110,6 +140,13 @@ export default function NotificationBell() {
                             {n.content}
                         </div>
                     ))}
+
+                    <button
+                        onClick={() => router.push("/dashboard/notifications")}
+                        className="w-full text-sm text-center text-indigo-600 hover:underline mt-2"
+                    >
+                        View all notifications
+                    </button>
                 </div>
             )}
         </div>
