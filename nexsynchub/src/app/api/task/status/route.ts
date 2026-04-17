@@ -8,6 +8,7 @@ import { sendTaskAssignedEmail } from "@/lib/email";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { createNotification } from "@/lib/notification";
 
 export async function PATCH(req: Request) {
     try {
@@ -141,6 +142,15 @@ export async function PATCH(req: Request) {
         if (assignee && assigneeUser) {
             actionText = `${session.user.username} assigned "${task.title}" to ${assigneeUser.username}`;
         }
+
+        await createNotification({
+            user: assigneeUser._id,
+            type: "task_assigned",
+            content: `${session.user.username} assigned you "${task.title}"`,
+            link: `/dashboard/${task.workspace}/tasks`,
+            task: task._id,
+            workspace: task.workspace,
+        });
 
         await sendTaskAssignedEmail({
             to: assigneeUser.email,
