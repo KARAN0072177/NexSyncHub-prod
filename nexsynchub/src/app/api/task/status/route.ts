@@ -152,6 +152,24 @@ export async function PATCH(req: Request) {
             workspace: task.workspace,
         });
 
+        await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                channelId: assigneeUser._id.toString(), // 🔥 IMPORTANT
+                event: "new_notification",
+                data: {
+                    _id: new Date().toISOString(), // 🔥 temporary unique id
+                    content: `${session.user.username} assigned you "${task.title}"`,
+                    link: `/dashboard/${task.workspace}/tasks`,
+                    isRead: false,
+                    createdAt: new Date(),
+                },
+            }),
+        });
+
         await sendTaskAssignedEmail({
             to: assigneeUser.email,
             username: assigneeUser.username,
