@@ -4,6 +4,7 @@ import Task from "@/models/Task";
 import Membership from "@/models/Membership";
 import Message from "@/models/Message";
 import Channel from "@/models/Channel";
+import { sendTaskAssignedEmail } from "@/lib/email";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
@@ -140,6 +141,14 @@ export async function PATCH(req: Request) {
         if (assignee && assigneeUser) {
             actionText = `${session.user.username} assigned "${task.title}" to ${assigneeUser.username}`;
         }
+
+        await sendTaskAssignedEmail({
+            to: assigneeUser.email,
+            username: assigneeUser.username,
+            taskTitle: task.title,
+            assignedBy: session.user.username,
+            link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${task.workspace}/tasks`,
+        });
 
         // 🔥 CREATE SYSTEM MESSAGE
         const systemMessage = await Message.create({

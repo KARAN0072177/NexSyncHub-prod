@@ -32,6 +32,9 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
   useEffect(() => {
     const fetchData = async () => {
       try {
+
+        console.log("📦 FRONTEND SENDING TASK ID:", taskId);
+
         const res = await fetch(`/api/task/${taskId}`);
         const data = await res.json();
         if (res.ok && data.task) {
