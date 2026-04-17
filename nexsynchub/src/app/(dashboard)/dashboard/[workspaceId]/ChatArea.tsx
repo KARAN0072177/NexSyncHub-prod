@@ -67,13 +67,25 @@ export default function ChatArea({ channel }: { channel: any }) {
     // 🔥 HANDLE HIGHLIGHT
     useEffect(() => {
         if (!highlightMessageId) return;
-        const el = document.getElementById(`msg-${highlightMessageId}`);
-        if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            setActiveHighlight(highlightMessageId);
-            const timer = setTimeout(() => setActiveHighlight(null), 3000);
-            return () => clearTimeout(timer);
-        }
+
+        const targetExists = messages.some(
+            (m) => m._id === highlightMessageId
+        );
+
+        if (!targetExists) return; // ⛔ wait until message is loaded
+
+        setTimeout(() => {
+            const el = document.getElementById(`msg-${highlightMessageId}`);
+
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                setActiveHighlight(highlightMessageId);
+
+                const timer = setTimeout(() => setActiveHighlight(null), 3000);
+                return () => clearTimeout(timer);
+            }
+        }, 100);
+
     }, [messages, highlightMessageId]);
 
     // 📩 Fetch messages
@@ -329,6 +341,41 @@ export default function ChatArea({ channel }: { channel: any }) {
             });
         }, 1500);
     };
+
+
+    // 🔥 Load messages until target message is found (for deep linking)
+
+    const loadMessageContext = async (messageId: string) => {
+        try {
+            const res = await fetch(
+                `/api/message/context?messageId=${messageId}`
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) return;
+
+            // 🔥 Replace messages completely
+            setMessages(data.messages);
+
+            // 🔥 Stop pagination (optional but recommended)
+            setCursor(null);
+
+        } catch (err) {
+            console.error("Context load failed:", err);
+        }
+    };
+
+    // useEffect for loading message context when highlightMessageId changes
+
+    useEffect(() => {
+        if (!highlightMessageId || !channel?._id) return;
+
+        console.log("🔥 Loading message context...");
+
+        loadMessageContext(highlightMessageId);
+
+    }, [highlightMessageId]);
 
     const formatFileSize = (bytes?: number) => {
         if (!bytes) return "";
