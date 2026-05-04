@@ -15,6 +15,7 @@ export default function TaskCard({
   workspaceId,
   currentUserId,
   currentUserRole,
+  onOpenTask,
   isOverlay = false,
 }: any) {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function TaskCard({
     currentUserRole === "ADMIN" || currentUserRole === "OWNER";
 
   const canUpdate = isCreator || isAssignee || isAdmin;
-  const [showDetail, setShowDetail] = useState(false);
+
 
   // Stop propagation on interactive elements to prevent drag initiation
   const handleInteractivePointerDown = (e: React.PointerEvent) => {
@@ -65,7 +66,7 @@ export default function TaskCard({
         style={style}
         onClick={(e) => {
           e.stopPropagation();
-          setShowDetail(true);
+          onOpenTask?.(task._id); // 🔥 IMPORTANT
         }}
         className={`group relative bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 p-4 
         shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-200
@@ -212,13 +213,7 @@ export default function TaskCard({
           </div>
         </div>
       </div>
-
-      {showDetail && (
-        <TaskDetailModal
-          taskId={task._id}
-          onClose={() => setShowDetail(false)}
-        />
-      )}
+      
     </>
   );
 }

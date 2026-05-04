@@ -163,7 +163,7 @@ export async function PATCH(req: Request) {
                 data: {
                     _id: new Date().toISOString(), // 🔥 temporary unique id
                     content: `${session.user.username} assigned you "${task.title}"`,
-                    link: `/dashboard/${task.workspace}/tasks`,
+                    link: `/dashboard/${task.workspace}/tasks?taskId=${task._id}`,
                     isRead: false,
                     createdAt: new Date(),
                 },

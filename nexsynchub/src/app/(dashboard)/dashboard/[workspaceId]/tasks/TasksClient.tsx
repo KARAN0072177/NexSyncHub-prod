@@ -19,6 +19,8 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { Plus, Loader2, LayoutGrid, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import TaskDetailModal from "./TaskDetailModal";
 
 type Member = {
   user: {
@@ -112,6 +114,10 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const initialTaskId = searchParams.get("taskId");
+
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const { data: session } = useSession();
 
@@ -231,6 +237,13 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
 
   const activeTask = activeId ? tasks.find((t) => t._id === activeId) : null;
 
+  useEffect(() => {
+    if (initialTaskId) {
+      setSelectedTaskId(initialTaskId);
+    }
+  }, [initialTaskId]);
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-6">
@@ -308,6 +321,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     workspaceId={workspaceId}
                     currentUserId={session?.user?.id}
                     currentUserRole={currentUserRole}
+                    onOpenTask={(taskId: string) => setSelectedTaskId(taskId)}
                   />
                 ))}
               </Column>
@@ -328,6 +342,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     workspaceId={workspaceId}
                     currentUserId={session?.user?.id}
                     currentUserRole={currentUserRole}
+                    onOpenTask={(taskId: string) => setSelectedTaskId(taskId)}
                   />
                 ))}
               </Column>
@@ -348,6 +363,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     workspaceId={workspaceId}
                     currentUserId={session?.user?.id}
                     currentUserRole={currentUserRole}
+                    onOpenTask={(taskId: string) => setSelectedTaskId(taskId)}
                   />
                 ))}
               </Column>
@@ -364,6 +380,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
                     workspaceId={workspaceId}
                     currentUserId={session?.user?.id}
                     currentUserRole={currentUserRole}
+                    onOpenTask={(taskId: string) => setSelectedTaskId(taskId)}
                     isOverlay
                   />
                 </div>
@@ -398,6 +415,14 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
           </div>
         )}
       </div>
+
+      {selectedTaskId && (
+        <TaskDetailModal
+          taskId={selectedTaskId}
+          onClose={() => setSelectedTaskId(null)}
+        />
+      )}
+
     </div>
   );
 }
