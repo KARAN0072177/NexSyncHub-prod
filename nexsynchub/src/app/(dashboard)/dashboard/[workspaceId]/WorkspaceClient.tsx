@@ -16,6 +16,7 @@ import {
   Loader2,
   Globe,
 } from "lucide-react";
+import UserMenu from "@/components/layout/UserMenu";
 
 export default function WorkspaceClient({
   workspaceId,
@@ -212,13 +213,7 @@ export default function WorkspaceClient({
 
         {/* User Footer */}
         <div className="p-3 border-t border-gray-800/50">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-gray-800/30">
-            <div className="w-7 h-7 rounded-full bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center">
-              <span className="text-xs font-medium text-indigo-300">U</span>
-            </div>
-            <span className="text-sm text-gray-300 flex-1 truncate">User</span>
-            <ChevronDown size={14} className="text-gray-500" />
-          </div>
+          <UserMenu />
         </div>
       </div>
 
