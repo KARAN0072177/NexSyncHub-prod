@@ -1,0 +1,9 @@
+{
+    "terminal.integrated.suggest.quickSuggestions": {
+        "commands": "on",
+        "arguments": "on",
+        "unknown": "off"
+    },
+    "terminal.integrated.suggest.runOnEnter": "always",
+    "terminal.integrated.suggest.selectionMode": "always"
+}
