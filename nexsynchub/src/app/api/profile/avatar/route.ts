@@ -66,15 +66,15 @@ export async function POST(
       );
     }
 
-    // 🔥 Validate size (2MB)
+    // 🔥 Validate size (5MB)
     const MAX_SIZE =
-      2 * 1024 * 1024;
+      5 * 1024 * 1024;
 
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
         {
           error:
-            "Image must be under 2MB",
+            "Image must be under 5MB",
         },
         { status: 400 }
       );
@@ -99,7 +99,7 @@ export async function POST(
       new PutObjectCommand({
 
         Bucket:
-          process.env.AWS_S3_BUCKET!,
+          process.env.AWS_BUCKET_NAME!,
 
         Key: key,
 
@@ -112,7 +112,7 @@ export async function POST(
 
     // 🔥 Generate public URL
     const avatarUrl =
-      `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+      `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
     // 🔥 Save to DB
     const user =

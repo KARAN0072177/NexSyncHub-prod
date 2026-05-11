@@ -3,203 +3,316 @@
 import { useState } from "react";
 
 import {
-  User,
-  Mail,
-  Calendar,
-  Loader2,
-  Save,
+    User,
+    Mail,
+    Calendar,
+    Loader2,
+    Save,
 } from "lucide-react";
 
 type ProfileBasicInfoProps = {
-  initialProfile: any;
+    initialProfile: any;
 };
 
 export default function ProfileBasicInfo({
-  initialProfile,
+    initialProfile,
 }: ProfileBasicInfoProps) {
 
-  const [displayName, setDisplayName] =
-    useState(
-      initialProfile.displayName || ""
-    );
+    const [displayName, setDisplayName] =
+        useState(
+            initialProfile.displayName || ""
+        );
 
-  const [bio, setBio] =
-    useState(
-      initialProfile.bio || ""
-    );
+    const [bio, setBio] =
+        useState(
+            initialProfile.bio || ""
+        );
 
-  const [saving, setSaving] =
-    useState(false);
+    const [saving, setSaving] =
+        useState(false);
 
-  const handleSave = async () => {
+    const [avatar, setAvatar] =
+        useState(
+            initialProfile.avatar || ""
+        );
 
-    try {
+    const [uploadingAvatar, setUploadingAvatar] =
+        useState(false);
 
-      setSaving(true);
+    const handleAvatarUpload = async (
+        file: File
+    ) => {
 
-      const res = await fetch(
-        "/api/profile/update",
-        {
-          method: "PATCH",
+        try {
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            setUploadingAvatar(true);
 
-          body: JSON.stringify({
-            displayName,
-            bio,
-          }),
+            const formData = new FormData();
+
+            formData.append(
+                "avatar",
+                file
+            );
+
+            const res = await fetch(
+                "/api/profile/avatar",
+                {
+                    method: "POST",
+                    body: formData,
+                }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error);
+                return;
+            }
+
+            setAvatar(data.avatar);
+
+            alert("Avatar updated");
+
+        } catch (error) {
+
+            console.error(error);
+
+            alert("Upload failed");
+
+        } finally {
+
+            setUploadingAvatar(false);
+
         }
-      );
 
-      const data = await res.json();
+    };
 
-      if (!res.ok) {
-        alert(data.error);
-        return;
-      }
+    const handleSave = async () => {
 
-      alert("Profile updated");
+        try {
 
-    } catch (error) {
+            setSaving(true);
 
-      console.error(error);
+            const res = await fetch(
+                "/api/profile/update",
+                {
+                    method: "PATCH",
 
-      alert("Something went wrong");
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
 
-    } finally {
+                    body: JSON.stringify({
+                        displayName,
+                        bio,
+                    }),
+                }
+            );
 
-      setSaving(false);
+            const data = await res.json();
 
-    }
+            if (!res.ok) {
+                alert(data.error);
+                return;
+            }
 
-  };
+            alert("Profile updated");
 
-  // 🔥 Avatar initials
-  const initials =
-    (
-      initialProfile.displayName ||
-      initialProfile.username ||
-      "U"
-    )
-      .slice(0, 2)
-      .toUpperCase();
+        } catch (error) {
 
-  return (
-    <div
-      className="bg-gray-900/40 border border-gray-800
-      rounded-3xl p-6 backdrop-blur-sm"
-    >
+            console.error(error);
 
-      {/* Section title */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-white">
-          Basic Information
-        </h2>
+            alert("Something went wrong");
 
-        <p className="text-sm text-gray-400 mt-1">
-          Manage your personal profile
-          and identity across workspaces.
-        </p>
-      </div>
+        } finally {
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
+            setSaving(false);
 
-        {/* Left side */}
+        }
+
+    };
+
+    // 🔥 Avatar initials
+    const initials =
+        (
+            initialProfile.displayName ||
+            initialProfile.username ||
+            "U"
+        )
+            .slice(0, 2)
+            .toUpperCase();
+
+    return (
         <div
-          className="bg-gray-950/40 border border-gray-800
-          rounded-2xl p-5"
+            className="bg-gray-900/40 border border-gray-800
+      rounded-3xl p-6 backdrop-blur-sm"
         >
 
-          {/* Avatar */}
-          <div className="flex flex-col items-center text-center">
+            {/* Section title */}
+            <div className="mb-6">
+                <h2 className="text-xl font-semibold text-white">
+                    Basic Information
+                </h2>
 
-            <div
-              className="w-24 h-24 rounded-full
-              bg-indigo-600/20 border border-indigo-500/30
-              flex items-center justify-center
-              text-2xl font-bold text-indigo-300"
-            >
-              {initials}
+                <p className="text-sm text-gray-400 mt-1">
+                    Manage your personal profile
+                    and identity across workspaces.
+                </p>
             </div>
 
-            <h3 className="mt-4 text-lg font-semibold text-white">
-              {initialProfile.displayName ||
-                initialProfile.username}
-            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
 
-            <p className="text-sm text-gray-500">
-              @{initialProfile.username}
-            </p>
+                {/* Left side */}
+                <div
+                    className="bg-gray-950/40 border border-gray-800
+          rounded-2xl p-5"
+                >
 
-          </div>
+                    {/* Avatar */}
+                    <div className="flex flex-col items-center text-center">
 
-          {/* Meta */}
-          <div className="mt-6 space-y-4">
+                        <div className="relative">
 
-            <div className="flex items-start gap-3">
-              <Mail
-                size={16}
-                className="text-gray-500 mt-0.5"
-              />
+                            {/* Avatar */}
+                            <div
+                                className="w-24 h-24 rounded-full
+    overflow-hidden border
+    border-indigo-500/30
+    bg-indigo-600/20"
+                            >
 
-              <div>
-                <p className="text-xs text-gray-500">
-                  Email
-                </p>
+                                {avatar ? (
 
-                <p className="text-sm text-gray-300 break-all">
-                  {initialProfile.email}
-                </p>
-              </div>
-            </div>
+                                    <img
+                                        src={avatar}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover"
+                                    />
 
-            <div className="flex items-start gap-3">
-              <Calendar
-                size={16}
-                className="text-gray-500 mt-0.5"
-              />
+                                ) : (
 
-              <div>
-                <p className="text-xs text-gray-500">
-                  Joined
-                </p>
+                                    <div
+                                        className="w-full h-full
+        flex items-center justify-center
+        text-2xl font-bold text-indigo-300"
+                                    >
+                                        {initials}
+                                    </div>
 
-                <p className="text-sm text-gray-300">
-                  {new Date(
-                    initialProfile.createdAt
-                  ).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
+                                )}
 
-          </div>
+                            </div>
 
-        </div>
+                            {/* Upload overlay */}
+                            <label
+                                className="absolute inset-0 rounded-full
+    bg-black/50 opacity-0 hover:opacity-100
+    transition-opacity cursor-pointer
+    flex items-center justify-center
+    text-xs text-white font-medium"
+                            >
 
-        {/* Right side */}
-        <div className="space-y-5">
+                                {uploadingAvatar
+                                    ? "Uploading..."
+                                    : "Change"}
 
-          {/* Display name */}
-          <div>
-            <label
-              className="block text-sm font-medium
+                                <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    className="hidden"
+
+                                    onChange={(e) => {
+
+                                        const file =
+                                            e.target.files?.[0];
+
+                                        if (file) {
+                                            handleAvatarUpload(file);
+                                        }
+
+                                    }}
+                                />
+
+                            </label>
+
+                        </div>
+
+                        <h3 className="mt-4 text-lg font-semibold text-white">
+                            {initialProfile.displayName ||
+                                initialProfile.username}
+                        </h3>
+
+                        <p className="text-sm text-gray-500">
+                            @{initialProfile.username}
+                        </p>
+
+                    </div>
+
+                    {/* Meta */}
+                    <div className="mt-6 space-y-4">
+
+                        <div className="flex items-start gap-3">
+                            <Mail
+                                size={16}
+                                className="text-gray-500 mt-0.5"
+                            />
+
+                            <div>
+                                <p className="text-xs text-gray-500">
+                                    Email
+                                </p>
+
+                                <p className="text-sm text-gray-300 break-all">
+                                    {initialProfile.email}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                            <Calendar
+                                size={16}
+                                className="text-gray-500 mt-0.5"
+                            />
+
+                            <div>
+                                <p className="text-xs text-gray-500">
+                                    Joined
+                                </p>
+
+                                <p className="text-sm text-gray-300">
+                                    {new Date(
+                                        initialProfile.createdAt
+                                    ).toLocaleDateString()}
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {/* Right side */}
+                <div className="space-y-5">
+
+                    {/* Display name */}
+                    <div>
+                        <label
+                            className="block text-sm font-medium
               text-gray-300 mb-2"
-            >
-              Display Name
-            </label>
+                        >
+                            Display Name
+                        </label>
 
-            <input
-              value={displayName}
-              onChange={(e) =>
-                setDisplayName(
-                  e.target.value
-                )
-              }
-              placeholder="Your display name"
-              className="w-full bg-gray-800/50
+                        <input
+                            value={displayName}
+                            onChange={(e) =>
+                                setDisplayName(
+                                    e.target.value
+                                )
+                            }
+                            placeholder="Your display name"
+                            className="w-full bg-gray-800/50
               border border-gray-700
               rounded-xl px-4 py-3
               text-gray-200
@@ -209,28 +322,28 @@ export default function ProfileBasicInfo({
               focus:ring-indigo-500/50
               focus:border-indigo-500/50
               transition-all"
-            />
-          </div>
+                        />
+                    </div>
 
-          {/* Bio */}
-          <div>
-            <label
-              className="block text-sm font-medium
+                    {/* Bio */}
+                    <div>
+                        <label
+                            className="block text-sm font-medium
               text-gray-300 mb-2"
-            >
-              Bio
-            </label>
+                        >
+                            Bio
+                        </label>
 
-            <textarea
-              value={bio}
-              onChange={(e) =>
-                setBio(
-                  e.target.value
-                )
-              }
-              rows={5}
-              placeholder="Tell your team a little about yourself..."
-              className="w-full bg-gray-800/50
+                        <textarea
+                            value={bio}
+                            onChange={(e) =>
+                                setBio(
+                                    e.target.value
+                                )
+                            }
+                            rows={5}
+                            placeholder="Tell your team a little about yourself..."
+                            className="w-full bg-gray-800/50
               border border-gray-700
               rounded-xl px-4 py-3
               text-gray-200
@@ -240,16 +353,16 @@ export default function ProfileBasicInfo({
               focus:ring-indigo-500/50
               focus:border-indigo-500/50
               transition-all resize-none"
-            />
-          </div>
+                        />
+                    </div>
 
-          {/* Save */}
-          <div className="flex justify-end">
+                    {/* Save */}
+                    <div className="flex justify-end">
 
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="inline-flex items-center gap-2
               px-5 py-3 rounded-xl
               bg-indigo-600 hover:bg-indigo-700
               disabled:opacity-50
@@ -257,31 +370,31 @@ export default function ProfileBasicInfo({
               text-white font-medium
               transition-all shadow-lg
               shadow-indigo-600/20"
-            >
+                        >
 
-              {saving ? (
-                <>
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save size={16} />
-                  Save Changes
-                </>
-              )}
+                            {saving ? (
+                                <>
+                                    <Loader2
+                                        size={16}
+                                        className="animate-spin"
+                                    />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={16} />
+                                    Save Changes
+                                </>
+                            )}
 
-            </button>
+                        </button>
 
-          </div>
+                    </div>
+
+                </div>
+
+            </div>
 
         </div>
-
-      </div>
-
-    </div>
-  );
+    );
 }
