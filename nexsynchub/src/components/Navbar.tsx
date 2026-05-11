@@ -38,8 +38,10 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
+    if (!session?.user?.id) return;
+
     fetchNotifications();
-  }, []);
+  }, [session]);
 
   // Join socket room
   useEffect(() => {
@@ -254,8 +256,8 @@ export default function NotificationBell() {
                   <div className="flex justify-between items-start gap-2">
                     <p
                       className={`text-sm flex-1 ${n.isRead
-                          ? "text-gray-300"
-                          : "text-white font-medium"
+                        ? "text-gray-300"
+                        : "text-white font-medium"
                         }`}
                     >
                       {n.content}
