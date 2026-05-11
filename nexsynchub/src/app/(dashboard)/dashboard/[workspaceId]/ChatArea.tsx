@@ -19,6 +19,8 @@ import {
     User,
 } from "lucide-react";
 
+import WorkspacePresence from "@/components/chat/WorkspacePresence";
+
 type Attachment = {
     key: string;
     type: "image" | "video" | "file";
@@ -412,9 +414,9 @@ export default function ChatArea({ channel }: { channel: any }) {
                         <span className="text-indigo-400 font-bold text-lg">#</span>
                     </div>
                     <h2 className="font-semibold text-gray-200 tracking-tight">{channel.name}</h2>
-                    <span className="ml-auto text-xs text-gray-500 bg-gray-800/50 px-2.5 py-1 rounded-full border border-gray-700/50">
-                        {members.length} members
-                    </span>
+                    <div className="ml-auto">
+                        <WorkspacePresence members={members} />
+                    </div>
                 </div>
             </div>
 
