@@ -8,36 +8,70 @@ import {
 } from "lucide-react";
 
 import ProfileBasicInfo from "@/components/profile/ProfileBasicInfo";
+import ProfileWorkspaceStats from "@/components/profile/ProfileWorkspaceStats";
 
 export default function ProfilePage() {
 
   const [profile, setProfile] =
     useState<any>(null);
 
+  const [workspaces, setWorkspaces] =
+    useState<any[]>([]);
+
+  const [stats, setStats] =
+    useState<any>(null);
+
   const [loading, setLoading] =
     useState(true);
 
-  // 🔥 Fetch profile
+  // 🔥 Fetch all profile data
   useEffect(() => {
 
-    const fetchProfile = async () => {
+    const fetchProfileData = async () => {
 
       try {
 
-        const res = await fetch(
-          "/api/profile/me"
-        );
+        const [
+          profileRes,
+          workspaceRes,
+          statsRes,
+        ] = await Promise.all([
 
-        const data = await res.json();
+          fetch("/api/profile/me"),
 
-        if (res.ok) {
-          setProfile(data.profile);
+          fetch("/api/workspace/my"),
+
+          fetch("/api/profile/stats"),
+
+        ]);
+
+        const profileData =
+          await profileRes.json();
+
+        const workspaceData =
+          await workspaceRes.json();
+
+        const statsData =
+          await statsRes.json();
+
+        if (profileRes.ok) {
+          setProfile(profileData.profile);
+        }
+
+        if (workspaceRes.ok) {
+          setWorkspaces(
+            workspaceData.workspaces || []
+          );
+        }
+
+        if (statsRes.ok) {
+          setStats(statsData.stats);
         }
 
       } catch (error) {
 
         console.error(
-          "Profile fetch failed:",
+          "Profile page fetch error:",
           error
         );
 
@@ -49,7 +83,7 @@ export default function ProfilePage() {
 
     };
 
-    fetchProfile();
+    fetchProfileData();
 
   }, []);
 
@@ -70,7 +104,7 @@ export default function ProfilePage() {
   }
 
   // 🔥 Error state
-  if (!profile) {
+  if (!profile || !stats) {
     return (
       <div
         className="min-h-screen flex items-center
@@ -110,10 +144,10 @@ export default function ProfilePage() {
       p-6"
     >
 
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto space-y-6">
 
-        {/* Page header */}
-        <div className="mb-8">
+        {/* Header */}
+        <div>
 
           <h1
             className="text-3xl font-bold
@@ -124,7 +158,7 @@ export default function ProfilePage() {
 
           <p className="text-gray-400 mt-2">
             Manage your identity,
-            personalization, and workspace presence.
+            collaboration, and workspace activity.
           </p>
 
         </div>
@@ -132,6 +166,12 @@ export default function ProfilePage() {
         {/* Section 1 */}
         <ProfileBasicInfo
           initialProfile={profile}
+        />
+
+        {/* Section 2 */}
+        <ProfileWorkspaceStats
+          workspaces={workspaces}
+          stats={stats}
         />
 
       </div>
