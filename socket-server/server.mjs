@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
@@ -18,18 +19,56 @@ const io = new Server(server, {
     },
 });
 
+// 🔥 Workspace presence store
+const workspacePresence = new Map();
 
 // ✅ SOCKET CONNECTION
 io.on("connection", (socket) => {
+
     console.log("Connected:", socket.id);
 
+    // 🔥 Join chat channel
     socket.on("join_channel", (channelId) => {
         socket.join(channelId);
     });
 
-    socket.on("disconnect", () => {
-        console.log("Disconnected:", socket.id);
-    });
+    // 🔥 Workspace presence
+    socket.on(
+        "join_workspace_presence",
+        ({ workspaceId, userId }) => {
+
+            // Join workspace room
+            socket.join(workspaceId);
+
+            // Create workspace map if missing
+            if (!workspacePresence.has(workspaceId)) {
+                workspacePresence.set(
+                    workspaceId,
+                    new Map()
+                );
+            }
+
+            const workspaceUsers =
+                workspacePresence.get(workspaceId);
+
+            // Store user socket
+            workspaceUsers.set(userId, socket.id);
+
+            // Save metadata for disconnect cleanup
+            socket.data.workspaceId = workspaceId;
+            socket.data.userId = userId;
+
+            // Emit updated online users
+            io.to(workspaceId).emit(
+                "workspace_online_users",
+                Array.from(workspaceUsers.keys())
+            );
+
+            console.log(
+                `User ${userId} joined workspace ${workspaceId}`
+            );
+        }
+    );
 
     // 🔥 Typing start
     socket.on("typing_start", ({ channelId, user }) => {
@@ -41,40 +80,69 @@ io.on("connection", (socket) => {
         socket.to(channelId).emit("user_stop_typing", user);
     });
 
+    // 🔥 Disconnect
+    socket.on("disconnect", () => {
+
+        console.log("Disconnected:", socket.id);
+
+        const workspaceId = socket.data.workspaceId;
+        const userId = socket.data.userId;
+
+        if (!workspaceId || !userId) return;
+
+        const workspaceUsers =
+            workspacePresence.get(workspaceId);
+
+        if (!workspaceUsers) return;
+
+        // Remove disconnected user
+        workspaceUsers.delete(userId);
+
+        // Remove workspace if empty
+        if (workspaceUsers.size === 0) {
+            workspacePresence.delete(workspaceId);
+        }
+
+        // Emit updated online users
+        io.to(workspaceId).emit(
+            "workspace_online_users",
+            Array.from(workspaceUsers.keys())
+        );
+
+        console.log(
+            `User ${userId} left workspace ${workspaceId}`
+        );
+    });
+
 });
 
 
-// ✅ INTERNAL EMIT API (VERY IMPORTANT)        old backup logic for reference, in case we want to revert back to a simpler emit structure without custom events and data payloads
-// app.post("/emit", (req, res) => {
-//     const { channelId, message } = req.body;
-
-//     if (!channelId || !message) {
-//         return res.status(400).json({ error: "Invalid data" });
-//     }
-
-//     io.to(channelId).emit("receive_message", message);
-
-//     res.json({ success: true });
-// });
-
+// ✅ INTERNAL EMIT API
 app.post("/emit", (req, res) => {
-  const { channelId, event, data, message } = req.body;
 
-  if (!channelId) {
-    return res.status(400).json({ error: "channelId required" });
-  }
+    const { channelId, event, data, message } = req.body;
 
-  // ✅ Handle NEW flexible events
-  if (event) {
-    io.to(channelId).emit(event, data);
-  }
+    if (!channelId) {
+        return res.status(400).json({
+            error: "channelId required"
+        });
+    }
 
-  // ✅ Handle OLD message format (BACKWARD COMPATIBLE)
-  if (message) {
-    io.to(channelId).emit("receive_message", message);
-  }
+    // ✅ Flexible events
+    if (event) {
+        io.to(channelId).emit(event, data);
+    }
 
-  res.json({ success: true });
+    // ✅ Backward compatible message event
+    if (message) {
+        io.to(channelId).emit(
+            "receive_message",
+            message
+        );
+    }
+
+    res.json({ success: true });
+
 });
 
 

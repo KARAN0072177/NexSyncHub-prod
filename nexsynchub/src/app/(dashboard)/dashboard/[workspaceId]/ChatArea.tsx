@@ -415,7 +415,12 @@ export default function ChatArea({ channel }: { channel: any }) {
                     </div>
                     <h2 className="font-semibold text-gray-200 tracking-tight">{channel.name}</h2>
                     <div className="ml-auto">
-                        <WorkspacePresence members={members} />
+                        <WorkspacePresence
+                            socket={socketRef.current}
+                            workspaceId={channel.workspace}
+                            members={members}
+                            currentUserId={userId}
+                        />
                     </div>
                 </div>
             </div>
