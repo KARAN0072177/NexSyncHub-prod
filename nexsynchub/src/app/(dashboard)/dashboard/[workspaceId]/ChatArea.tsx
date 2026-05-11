@@ -408,7 +408,7 @@ export default function ChatArea({ channel }: { channel: any }) {
     return (
         <div className="flex flex-col h-full bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
             {/* Header */}
-            <div className="flex-shrink-0 px-5 py-4 border-b border-gray-800/50 backdrop-blur-sm bg-gray-900/30">
+            <div className="relative z-50 flex-shrink-0 px-5 py-4 border-b border-gray-800/50 backdrop-blur-sm bg-gray-900/30">
                 <div className="flex items-center gap-3">
                     <div className="p-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
                         <span className="text-indigo-400 font-bold text-lg">#</span>
@@ -460,7 +460,8 @@ export default function ChatArea({ channel }: { channel: any }) {
                         <div
                             key={msg._id}
                             id={`msg-${msg._id}`}
-                            className={`group relative flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                            className={`group flex relative ${isOwnMessage ? "justify-end" : "justify-start"
+                                }`}
                         >
                             <div
                                 className={`max-w-[75%] transition-all duration-300 ${activeHighlight === msg._id
