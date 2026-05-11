@@ -7,6 +7,11 @@ export interface IUser {
 
   username?: string | null;
 
+  // 🔥 Profile fields
+  displayName?: string | null;
+  bio?: string | null;
+  avatar?: string | null;
+
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
 
@@ -41,6 +46,25 @@ const UserSchema = new Schema<IUser>(
       sparse: true, // allows null values but enforces uniqueness when set
       lowercase: true,
       trim: true,
+    },
+
+    // 🔥 Display name
+    displayName: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+    },
+
+    // 🔥 Short profile bio
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 160,
+    },
+
+    // 🔥 Avatar image URL
+    avatar: {
+      type: String,
     },
 
     emailVerificationToken: {
