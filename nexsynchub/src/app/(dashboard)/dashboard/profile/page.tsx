@@ -3,179 +3,200 @@
 import { useEffect, useState } from "react";
 
 import {
-  Loader2,
-  User,
+    Loader2,
+    User,
 } from "lucide-react";
 
 import ProfileBasicInfo from "@/components/profile/ProfileBasicInfo";
 import ProfileWorkspaceStats from "@/components/profile/ProfileWorkspaceStats";
+import ProfileRecentActivity from "@/components/profile/ProfileRecentActivity";
 
 export default function ProfilePage() {
 
-  const [profile, setProfile] =
-    useState<any>(null);
+    const [profile, setProfile] =
+        useState<any>(null);
 
-  const [workspaces, setWorkspaces] =
-    useState<any[]>([]);
+    const [workspaces, setWorkspaces] =
+        useState<any[]>([]);
 
-  const [stats, setStats] =
-    useState<any>(null);
+    const [stats, setStats] =
+        useState<any>(null);
 
-  const [loading, setLoading] =
-    useState(true);
+    const [activity, setActivity] =
+        useState<any[]>([]);
 
-  // 🔥 Fetch all profile data
-  useEffect(() => {
+    const [loading, setLoading] =
+        useState(true);
 
-    const fetchProfileData = async () => {
+    // 🔥 Fetch all profile data
+    useEffect(() => {
 
-      try {
+        const fetchProfileData = async () => {
 
-        const [
-          profileRes,
-          workspaceRes,
-          statsRes,
-        ] = await Promise.all([
+            try {
 
-          fetch("/api/profile/me"),
+                const [
+                    profileRes,
+                    workspaceRes,
+                    statsRes,
+                    activityRes,
+                ] = await Promise.all([
 
-          fetch("/api/workspace/my"),
+                    fetch("/api/profile/me"),
 
-          fetch("/api/profile/stats"),
+                    fetch("/api/workspace/my"),
 
-        ]);
+                    fetch("/api/profile/stats"),
 
-        const profileData =
-          await profileRes.json();
+                    fetch("/api/profile/activity"),
 
-        const workspaceData =
-          await workspaceRes.json();
+                ]);
 
-        const statsData =
-          await statsRes.json();
+                const profileData =
+                    await profileRes.json();
 
-        if (profileRes.ok) {
-          setProfile(profileData.profile);
-        }
+                const workspaceData =
+                    await workspaceRes.json();
 
-        if (workspaceRes.ok) {
-          setWorkspaces(
-            workspaceData.workspaces || []
-          );
-        }
+                const statsData =
+                    await statsRes.json();
 
-        if (statsRes.ok) {
-          setStats(statsData.stats);
-        }
+                const activityData =
+                    await activityRes.json();
 
-      } catch (error) {
+                if (profileRes.ok) {
+                    setProfile(profileData.profile);
+                }
 
-        console.error(
-          "Profile page fetch error:",
-          error
-        );
+                if (workspaceRes.ok) {
+                    setWorkspaces(
+                        workspaceData.workspaces || []
+                    );
+                }
 
-      } finally {
+                if (statsRes.ok) {
+                    setStats(statsData.stats);
+                }
 
-        setLoading(false);
+                if (activityRes.ok) {
+                    setActivity(
+                        activityData.activity || []
+                    );
+                }
 
-      }
+            } catch (error) {
 
-    };
+                console.error(
+                    "Profile page fetch error:",
+                    error
+                );
 
-    fetchProfileData();
+            } finally {
 
-  }, []);
+                setLoading(false);
 
-  // 🔥 Loading state
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen flex items-center
+            }
+
+        };
+
+        fetchProfileData();
+
+    }, []);
+
+    // 🔥 Loading state
+    if (loading) {
+        return (
+            <div
+                className="min-h-screen flex items-center
         justify-center bg-gradient-to-br
         from-gray-950 via-gray-900 to-gray-950"
-      >
-        <Loader2
-          className="w-8 h-8 text-indigo-500
+            >
+                <Loader2
+                    className="w-8 h-8 text-indigo-500
           animate-spin"
-        />
-      </div>
-    );
-  }
+                />
+            </div>
+        );
+    }
 
-  // 🔥 Error state
-  if (!profile || !stats) {
-    return (
-      <div
-        className="min-h-screen flex items-center
+    // 🔥 Error state
+    if (!profile || !stats) {
+        return (
+            <div
+                className="min-h-screen flex items-center
         justify-center bg-gradient-to-br
         from-gray-950 via-gray-900 to-gray-950"
-      >
+            >
 
-        <div
-          className="text-center bg-gray-900/40
+                <div
+                    className="text-center bg-gray-900/40
           border border-gray-800 rounded-2xl
           p-8"
-        >
+                >
 
-          <User
-            className="w-10 h-10 text-gray-600
+                    <User
+                        className="w-10 h-10 text-gray-600
             mx-auto mb-4"
-          />
+                    />
 
-          <h2 className="text-lg font-semibold text-white">
-            Failed to load profile
-          </h2>
+                    <h2 className="text-lg font-semibold text-white">
+                        Failed to load profile
+                    </h2>
 
-          <p className="text-sm text-gray-500 mt-1">
-            Please try refreshing the page.
-          </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Please try refreshing the page.
+                    </p>
 
-        </div>
+                </div>
 
-      </div>
-    );
-  }
+            </div>
+        );
+    }
 
-  return (
-    <div
-      className="min-h-screen bg-gradient-to-br
+    return (
+        <div
+            className="min-h-screen bg-gradient-to-br
       from-gray-950 via-gray-900 to-gray-950
       p-6"
-    >
+        >
 
-      <div className="max-w-6xl mx-auto space-y-6">
+            <div className="max-w-6xl mx-auto space-y-6">
 
-        {/* Header */}
-        <div>
+                {/* Header */}
+                <div>
 
-          <h1
-            className="text-3xl font-bold
+                    <h1
+                        className="text-3xl font-bold
             text-white tracking-tight"
-          >
-            Your Profile
-          </h1>
+                    >
+                        Your Profile
+                    </h1>
 
-          <p className="text-gray-400 mt-2">
-            Manage your identity,
-            collaboration, and workspace activity.
-          </p>
+                    <p className="text-gray-400 mt-2">
+                        Manage your identity,
+                        collaboration, and workspace activity.
+                    </p>
+
+                </div>
+
+                {/* Section 1 */}
+                <ProfileBasicInfo
+                    initialProfile={profile}
+                />
+
+                {/* Section 2 */}
+                <ProfileWorkspaceStats
+                    workspaces={workspaces}
+                    stats={stats}
+                />
+
+                {/* Section 3 */}
+                <ProfileRecentActivity
+                    activity={activity}
+                />
+
+            </div>
 
         </div>
-
-        {/* Section 1 */}
-        <ProfileBasicInfo
-          initialProfile={profile}
-        />
-
-        {/* Section 2 */}
-        <ProfileWorkspaceStats
-          workspaces={workspaces}
-          stats={stats}
-        />
-
-      </div>
-
-    </div>
-  );
+    );
 }
