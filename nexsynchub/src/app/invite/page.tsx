@@ -1,7 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import {
+  Suspense,
+  useState,
+} from "react";
+
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 
 import {
   Building2,
@@ -11,16 +18,12 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-export default function InvitePage({
-  searchParams,
-}: {
-  searchParams: {
-    token?: string;
-  };
-}) {
+function InviteContent() {
   const router = useRouter();
 
-  const token = searchParams?.token;
+  const params = useSearchParams();
+
+  const token = params.get("token");
 
   const [loading, setLoading] = useState(false);
 
@@ -177,5 +180,13 @@ export default function InvitePage({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense fallback={null}>
+      <InviteContent />
+    </Suspense>
   );
 }

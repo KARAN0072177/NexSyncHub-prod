@@ -147,7 +147,7 @@ export async function PATCH(req: Request) {
             user: assigneeUser._id,
             type: "task_assigned",
             content: `${session.user.username} assigned you "${task.title}"`,
-            link: `/dashboard/${task.workspace}/tasks`,
+            link: `/workspace/${task.workspace}/tasks`,
             task: task._id,
             workspace: task.workspace,
         });
@@ -163,7 +163,7 @@ export async function PATCH(req: Request) {
                 data: {
                     _id: new Date().toISOString(), // 🔥 temporary unique id
                     content: `${session.user.username} assigned you "${task.title}"`,
-                    link: `/dashboard/${task.workspace}/tasks?taskId=${task._id}`,
+                    link: `/workspace/${task.workspace}/tasks?taskId=${task._id}`,
                     isRead: false,
                     createdAt: new Date(),
                 },
@@ -175,7 +175,7 @@ export async function PATCH(req: Request) {
             username: assigneeUser.username,
             taskTitle: task.title,
             assignedBy: session.user.username,
-            link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${task.workspace}/tasks`,
+            link: `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${task.workspace}/tasks`,
         });
 
         // 🔥 CREATE SYSTEM MESSAGE

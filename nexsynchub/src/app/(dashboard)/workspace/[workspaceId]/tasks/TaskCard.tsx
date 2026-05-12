@@ -135,7 +135,7 @@ export default function TaskCard({
             <button
               onClick={() =>
                 router.push(
-                  `/dashboard/${workspaceId}?channel=${task.channel}&message=${task.linkedMessage}`
+                  `/workspace/${workspaceId}?channel=${task.channel}&message=${task.linkedMessage}`
                 )
               }
               onPointerDown={handleInteractivePointerDown}

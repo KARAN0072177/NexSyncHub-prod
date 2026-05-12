@@ -183,7 +183,7 @@ export default function DashboardPage() {
               return (
                 <div
                   key={ws._id}
-                  onClick={() => router.push(`/dashboard/${ws._id}`)}
+                  onClick={() => router.push(`/workspace/${ws._id}`)}
                   className="group relative bg-gray-900/30 backdrop-blur-sm border border-gray-800/50 
                     rounded-xl p-5 cursor-pointer hover:bg-gray-800/30 hover:border-gray-700/50 
                     transition-all duration-200 shadow-lg hover:shadow-xl"

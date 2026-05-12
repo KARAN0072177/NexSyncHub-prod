@@ -143,7 +143,7 @@ export default function WorkspaceClient({
                       key={ch._id}
                       onClick={() => {
                         setSelectedChannel(ch);
-                        router.push(`/dashboard/${workspaceId}`);
+                        router.push(`/workspace/${workspaceId}`);
                       }}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
                         ${isActive
@@ -168,7 +168,7 @@ export default function WorkspaceClient({
             <div className="space-y-0.5">
               {/* Tasks */}
               <button
-                onClick={() => router.push(`/dashboard/${workspaceId}/tasks`)}
+                onClick={() => router.push(`/workspace/${workspaceId}/tasks`)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
                   ${isTasksPage
                     ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
@@ -181,7 +181,7 @@ export default function WorkspaceClient({
 
               {/* Members */}
               <button
-                onClick={() => router.push(`/dashboard/${workspaceId}/members`)}
+                onClick={() => router.push(`/workspace/${workspaceId}/members`)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
                   ${isMembersPage
                     ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
@@ -196,7 +196,7 @@ export default function WorkspaceClient({
 
               <button
                 onClick={() =>
-                  router.push(`/dashboard/${workspaceId}/activity`)
+                  router.push(`/workspace/${workspaceId}/activity`)
                 }
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all"
                 ${isMembersPage
