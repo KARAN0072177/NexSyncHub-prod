@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { useRouter } from "next/navigation";
@@ -10,10 +10,10 @@ import {
   ExternalLink,
   Inbox,
   BellOff,
-  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import NavbarUserMenu from "../dashboard/NavbarUserMenu";
 
 const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
@@ -23,7 +23,6 @@ export default function DashboardNavbar() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -85,25 +84,6 @@ export default function DashboardNavbar() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  // Logout handler
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-
-      // Disconnect socket
-      socket.disconnect();
-
-      // Destroy session
-      await signOut({
-        callbackUrl: "/login",
-      });
-
-    } catch (err) {
-      console.error("Logout error:", err);
-      setLoggingOut(false);
-    }
-  };
 
   const handleClick = async (n: any) => {
     try {
@@ -251,27 +231,7 @@ export default function DashboardNavbar() {
             )}
           </button>
 
-          {/* Logout Button */}
-          {
-            session ? (
-              <button
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50"
-              >
-                <LogOut size={14} />
 
-                {loggingOut ? "Logging out..." : "Logout"}
-              </button>
-            ) : (
-              <button
-                onClick={() => router.push("/login")}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all"
-              >
-                Login
-              </button>
-            )
-          }
 
           {/* Dropdown */}
           {open && (
@@ -362,6 +322,18 @@ export default function DashboardNavbar() {
               </div>
 
             </div>
+          )}
+
+          {session?.user && (
+            <NavbarUserMenu
+              user={{
+                name: session.user.name,
+                email: session.user.email,
+                image: session.user.image,
+                username: (session.user as any).username,
+                avatar: (session.user as any).avatar,
+              }}
+            />
           )}
         </div>
 
