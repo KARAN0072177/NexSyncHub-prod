@@ -48,7 +48,6 @@ export default async function WorkspacePage({
 
     <WorkspaceClient
       workspaceId={workspaceId}
-      role={membership.role}
     />
 
   );

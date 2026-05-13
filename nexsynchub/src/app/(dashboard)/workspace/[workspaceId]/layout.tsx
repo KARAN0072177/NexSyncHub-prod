@@ -1,9 +1,11 @@
 import { getAuthSession } from "@/lib/auth";
+
 import { redirect } from "next/navigation";
 
 import { connectDB } from "@/lib/db";
 
 import Membership from "@/models/Membership";
+
 import "@/models/Workspace";
 
 import {
@@ -11,6 +13,9 @@ import {
   Shield,
   User,
 } from "lucide-react";
+
+import WorkspaceSidebar
+  from "./WorkspaceSidebar";
 
 export default async function WorkspaceLayout({
   children,
@@ -66,7 +71,8 @@ export default async function WorkspaceLayout({
 
     <div
       className="
-      min-h-screen
+      h-screen
+      overflow-hidden
       bg-gradient-to-br
       from-gray-950
       via-gray-900
@@ -74,97 +80,111 @@ export default async function WorkspaceLayout({
       "
     >
 
-      <div className="h-full flex flex-col">
+      <div className="flex h-full">
 
-        {/* Workspace Header */}
-        <div
-          className="
-          flex-shrink-0
-          px-6 py-4
-          border-b border-gray-800/50
-          bg-gray-900/30
-          backdrop-blur-sm
-          "
-        >
+        {/* Sidebar */}
+        <WorkspaceSidebar
+          workspaceId={workspaceId}
+          role={membership.role}
+        />
 
-          <div className="flex items-center gap-4">
+        {/* Main Area */}
+        <div className="flex-1 flex flex-col min-w-0">
 
-            <div
-              className="
-              p-2
-              bg-indigo-500/10
-              rounded-xl
-              border border-indigo-500/20
-              "
-            >
+          {/* Workspace Header */}
+          <div
+            className="
+            flex-shrink-0
+            px-6 py-4
+            border-b border-gray-800/50
+            bg-gray-900/30
+            backdrop-blur-sm
+            "
+          >
 
-              <Building2
-                className="
-                w-6 h-6
-                text-indigo-400
-                "
-              />
-
-            </div>
-
-            <div>
-
-              <h1
-                className="
-                text-2xl font-semibold
-                text-white
-                tracking-tight
-                "
-              >
-                {workspace.name}
-              </h1>
+            <div className="flex items-center gap-4">
 
               <div
                 className="
-                flex items-center gap-2
-                mt-0.5
+                p-2
+                bg-indigo-500/10
+                rounded-xl
+                border border-indigo-500/20
                 "
               >
 
-                <span
-                  className={`
-                  inline-flex items-center gap-1
-                  px-2.5 py-0.5
-                  rounded-full
-                  text-xs font-medium
-                  border
+                <Building2
+                  className="
+                  w-6 h-6
+                  text-indigo-400
+                  "
+                />
 
-                  ${
-                    isAdmin
-                      ? "bg-purple-500/10 text-purple-300 border-purple-500/30"
-                      : "bg-gray-500/10 text-gray-300 border-gray-500/30"
-                  }
-                  `}
+              </div>
+
+              <div>
+
+                <h1
+                  className="
+                  text-2xl
+                  font-semibold
+                  text-white
+                  tracking-tight
+                  "
+                >
+                  {workspace.name}
+                </h1>
+
+                <div
+                  className="
+                  flex items-center
+                  gap-2
+                  mt-0.5
+                  "
                 >
 
-                  {isAdmin ? (
+                  <span
+                    className={`
+                    inline-flex
+                    items-center gap-1
+                    px-2.5 py-0.5
+                    rounded-full
+                    text-xs font-medium
+                    border
 
-                    <Shield className="w-3 h-3" />
+                    ${
+                      isAdmin
+                        ? "bg-purple-500/10 text-purple-300 border-purple-500/30"
+                        : "bg-gray-500/10 text-gray-300 border-gray-500/30"
+                    }
+                    `}
+                  >
 
-                  ) : (
+                    {isAdmin ? (
 
-                    <User className="w-3 h-3" />
+                      <Shield className="w-3 h-3" />
 
-                  )}
+                    ) : (
 
-                  {roleDisplay}
+                      <User className="w-3 h-3" />
 
-                </span>
+                    )}
 
-                <span className="text-xs text-gray-500">
-                  •
-                </span>
+                    {roleDisplay}
 
-                <span className="text-xs text-gray-500">
-                  Workspace ID:
-                  {" "}
-                  {workspaceId.slice(-6)}
-                </span>
+                  </span>
+
+                  <span className="text-xs text-gray-500">
+                    •
+                  </span>
+
+                  <span className="text-xs text-gray-500">
+                    Workspace ID:
+                    {" "}
+                    {workspaceId.slice(-6)}
+                  </span>
+
+                </div>
 
               </div>
 
@@ -172,11 +192,11 @@ export default async function WorkspaceLayout({
 
           </div>
 
-        </div>
+          {/* Dynamic Content */}
+          <div className="flex-1 min-h-0">
+            {children}
+          </div>
 
-        {/* Workspace Content */}
-        <div className="flex-1">
-          {children}
         </div>
 
       </div>
