@@ -1,40 +1,64 @@
-import mongoose, { Schema, models, model } from "mongoose";
+import mongoose, {
+  Schema,
+  models,
+  model,
+} from "mongoose";
 
 export interface IWorkspace {
+
   name: string;
+
+  description?: string;
+
   owner: mongoose.Types.ObjectId;
+
   isPrivate: boolean;
 
   createdAt: Date;
+
   updatedAt: Date;
+
 }
 
-const WorkspaceSchema = new Schema<IWorkspace>(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+const WorkspaceSchema =
+  new Schema<IWorkspace>(
+    {
 
-    owner: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+      },
 
-    isPrivate: {
-      type: Boolean,
-      default: true,
+      description: {
+        type: String,
+        default: "",
+      },
+
+      owner: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+        index: true,
+      },
+
+      isPrivate: {
+        type: Boolean,
+        default: true,
+      },
+
     },
-  },
-  {
-    timestamps: true,
-  }
-);
+    {
+      timestamps: true,
+    }
+  );
 
 const Workspace =
-  models.Workspace || model<IWorkspace>("Workspace", WorkspaceSchema);
+  models.Workspace ||
+
+  model<IWorkspace>(
+    "Workspace",
+    WorkspaceSchema
+  );
 
 export default Workspace;
