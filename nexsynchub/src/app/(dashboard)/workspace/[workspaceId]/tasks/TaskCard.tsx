@@ -110,16 +110,19 @@ export default function TaskCard({
             </div>
             <select
               disabled={!isCreator && !isAdmin}
-              onPointerDown={handleInteractivePointerDown}
               className="w-full pl-7 pr-2 py-1.5 text-xs bg-gray-900/50 border border-gray-700 rounded-lg
               text-gray-300 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50
               hover:bg-gray-800 transition-colors cursor-pointer"
               value={task.assignee?._id || ""}
-              onChange={(e) =>
+              onChange={(e) => {
+
+                console.log("ASSIGN SELECT VALUE:", e.target.value);
+
                 updateTask(task._id, {
                   assignee: e.target.value,
-                })
-              }
+                });
+
+              }}
             >
               <option value="">Unassigned</option>
               {members.map((m: any) => (
@@ -213,7 +216,7 @@ export default function TaskCard({
           </div>
         </div>
       </div>
-      
+
     </>
   );
 }

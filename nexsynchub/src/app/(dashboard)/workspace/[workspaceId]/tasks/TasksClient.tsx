@@ -158,6 +158,9 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
       assignee?: string;
     }
   ) => {
+
+    console.log("UPDATES SENT:", updates);
+
     const res = await fetch("/api/task/status", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

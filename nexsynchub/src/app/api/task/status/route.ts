@@ -143,40 +143,104 @@ export async function PATCH(req: Request) {
             actionText = `${session.user.username} assigned "${task.title}" to ${assigneeUser.username}`;
         }
 
-        await createNotification({
-            user: assigneeUser._id,
-            type: "task_assigned",
-            content: `${session.user.username} assigned you "${task.title}"`,
-            link: `/workspace/${task.workspace}/tasks`,
-            task: task._id,
-            workspace: task.workspace,
-        });
+        // 🔥 ASSIGNMENT MESSAGE
+        if (assignee && assigneeUser) {
+            actionText = `${session.user.username} assigned "${task.title}" to ${assigneeUser.username}`;
+        }
 
-        await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                channelId: assigneeUser._id.toString(), // 🔥 IMPORTANT
-                event: "new_notification",
-                data: {
-                    _id: new Date().toISOString(), // 🔥 temporary unique id
+        // 🔥 DEBUG LOGS
+        console.log("========== TASK ASSIGN DEBUG ==========");
+        console.log("ASSIGNEE:", assignee);
+        console.log("ASSIGNEE USER:", assigneeUser);
+        console.log("TASK TITLE:", task.title);
+        console.log("SOCKET URL:", process.env.SOCKET_SERVER_URL);
+        console.log("APP URL:", process.env.NEXT_PUBLIC_APP_URL);
+        console.log("======================================");
+
+        // 🔥 NOTIFICATION + SOCKET + EMAIL
+        if (assignee && assigneeUser) {
+
+            // ===============================
+            // NOTIFICATION
+            // ===============================
+            try {
+
+                console.log("STEP 1: BEFORE CREATE NOTIFICATION");
+
+                await createNotification({
+                    user: assigneeUser._id,
+                    type: "task_assigned",
                     content: `${session.user.username} assigned you "${task.title}"`,
-                    link: `/workspace/${task.workspace}/tasks?taskId=${task._id}`,
-                    isRead: false,
-                    createdAt: new Date(),
-                },
-            }),
-        });
+                    link: `/workspace/${task.workspace}/tasks`,
+                    task: task._id,
+                    workspace: task.workspace,
+                });
 
-        await sendTaskAssignedEmail({
-            to: assigneeUser.email,
-            username: assigneeUser.username,
-            taskTitle: task.title,
-            assignedBy: session.user.username,
-            link: `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${task.workspace}/tasks`,
-        });
+                console.log("STEP 2: NOTIFICATION CREATED");
+
+            } catch (err) {
+
+                console.error("NOTIFICATION ERROR:", err);
+
+            }
+
+            // ===============================
+            // SOCKET EMIT
+            // ===============================
+            try {
+
+                console.log("STEP 3: BEFORE SOCKET EMIT");
+
+                const socketRes = await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        channelId: assigneeUser._id.toString(),
+                        event: "new_notification",
+                        data: {
+                            _id: new Date().toISOString(),
+                            content: `${session.user.username} assigned you "${task.title}"`,
+                            link: `/workspace/${task.workspace}/tasks?taskId=${task._id}`,
+                            isRead: false,
+                            createdAt: new Date(),
+                        },
+                    }),
+                });
+
+                console.log("STEP 4: SOCKET STATUS:", socketRes.status);
+
+            } catch (err) {
+
+                console.error("SOCKET ERROR:", err);
+
+            }
+
+            // ===============================
+            // EMAIL
+            // ===============================
+            try {
+
+                console.log("STEP 5: BEFORE EMAIL");
+
+                await sendTaskAssignedEmail({
+                    to: assigneeUser.email,
+                    username: assigneeUser.username,
+                    taskTitle: task.title,
+                    assignedBy: session.user.username,
+                    link: `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${task.workspace}/tasks`,
+                });
+
+                console.log("STEP 6: EMAIL SENT");
+
+            } catch (err) {
+
+                console.error("EMAIL ERROR:", err);
+
+            }
+
+        }
 
         // 🔥 CREATE SYSTEM MESSAGE
         const systemMessage = await Message.create({
