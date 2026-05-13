@@ -81,6 +81,7 @@ export async function GET(
 
     return NextResponse.json({
       workspace,
+      role: membership.role,
     });
 
   } catch (error) {
