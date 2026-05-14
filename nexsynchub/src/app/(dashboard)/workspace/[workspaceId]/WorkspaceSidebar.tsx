@@ -95,6 +95,40 @@ export default function WorkspaceSidebar({
 
     }, [workspaceId]);
 
+    // 🔥 Listen for read updates
+    useEffect(() => {
+
+        const handler =
+            (event: any) => {
+
+                const channelId =
+                    event.detail.channelId;
+
+                setUnreadCounts(
+                    (prev) => ({
+                        ...prev,
+                        [channelId]: 0,
+                    })
+                );
+
+            };
+
+        window.addEventListener(
+            "channel-read",
+            handler
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                "channel-read",
+                handler
+            );
+
+        };
+
+    }, []);
+
     // 🔥 Create channel
     const createChannel =
         async () => {

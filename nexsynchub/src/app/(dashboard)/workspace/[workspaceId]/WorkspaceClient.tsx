@@ -110,6 +110,18 @@ export default function WorkspaceClient({
             }
           );
 
+          window.dispatchEvent(
+            new CustomEvent(
+              "channel-read",
+              {
+                detail: {
+                  channelId:
+                    selectedChannel._id,
+                },
+              }
+            )
+          );
+
         } catch (err) {
 
           console.error(

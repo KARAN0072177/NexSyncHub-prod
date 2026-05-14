@@ -231,9 +231,25 @@ export default function ChatArea({ channel }: { channel: any }) {
         socket.emit("join_channel", channel._id);
 
         socket.on("receive_message", (msg: any) => {
+            if (
+                String(msg.channel) !==
+                String(channel._id)
+            ) {
+                return;
+            }
+
             setMessages((prev) => {
-                if (prev.some((m) => m._id === msg._id)) return prev;
+
+                if (
+                    prev.some(
+                        (m) => m._id === msg._id
+                    )
+                ) {
+                    return prev;
+                }
+
                 return [...prev, msg];
+
             });
             setSeenUsers(new Set());
             fetch("/api/channel/read", {
