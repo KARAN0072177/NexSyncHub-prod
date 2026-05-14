@@ -1,7 +1,7 @@
 // ChatArea.tsx
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, Fragment } from "react";
 import { io } from "socket.io-client";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -47,6 +47,7 @@ export default function ChatArea({ channel }: { channel: any }) {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [cursor, setCursor] = useState<string | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
+    const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -93,17 +94,30 @@ export default function ChatArea({ channel }: { channel: any }) {
     // 📩 Fetch messages
     useEffect(() => {
         if (!channel?._id) return;
+        setFirstUnreadId(null);
         const fetchMessages = async () => {
+            // Fetch unread count first
+            const unreadRes = await fetch(`/api/channel/unread-counts?workspaceId=${channel.workspace}`);
+            const unreadData = await unreadRes.json();
+            const unreadCount = unreadData.unreadCounts?.[channel._id] || 0;
+
             const res = await fetch(`/api/message/list?channelId=${channel._id}`);
             const data = await res.json();
 
             if (res.ok) {
                 setMessages(data.messages);
                 setCursor(data.nextCursor); // ✅ IMPORTANT
+
+                if (unreadCount > 0 && data.messages.length > 0) {
+                    const firstUnreadIndex = Math.max(0, data.messages.length - unreadCount);
+                    if (data.messages[firstUnreadIndex]) {
+                        setFirstUnreadId(data.messages[firstUnreadIndex]._id);
+                    }
+                }
             }
         };
         fetchMessages();
-    }, [channel._id]);
+    }, [channel._id, channel.workspace]);
 
     // 🔥 Load more messages (pagination)
 
@@ -162,21 +176,6 @@ export default function ChatArea({ channel }: { channel: any }) {
             container.removeEventListener("scroll", handleScroll);
         };
     }, [cursor, loadingMore]);
-
-    // 🔥 Mark read
-    useEffect(() => {
-        if (!channel?._id) return;
-        const markRead = () => {
-            fetch("/api/channel/read", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ channelId: channel._id }),
-            });
-        };
-        markRead();
-        window.addEventListener("focus", markRead);
-        return () => window.removeEventListener("focus", markRead);
-    }, [channel._id]);
 
     // 👥 Fetch members
     useEffect(() => {
@@ -548,6 +547,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                 {messages.map((msg, index) => {
                     const isOwnMessage = msg.sender?._id === userId || msg.sender === userId;
                     const showSeen = index === messages.length - 1 && seenUsers.size > 0 && isOwnMessage;
+                    const showUnreadBanner = firstUnreadId === msg._id;
 
                     // System message
                     if (msg.type === "system") {
@@ -563,90 +563,100 @@ export default function ChatArea({ channel }: { channel: any }) {
                     }
 
                     return (
-                        <div
-                            key={msg._id}
-                            id={`msg-${msg._id}`}
-                            className={`group flex relative ${isOwnMessage ? "justify-end" : "justify-start"
-                                }`}
-                        >
+                        <Fragment key={msg._id}>
+                            {showUnreadBanner && (
+                                <div className="flex items-center gap-3 my-2">
+                                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent" />
+                                    <div className="text-xs font-medium text-red-400 uppercase tracking-wider bg-red-900/50 px-3 py-1 rounded-full border border-red-800">
+                                        New Messages
+                                    </div>
+                                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent" />
+                                </div>
+                            )}
                             <div
-                                className={`max-w-[75%] transition-all duration-300 ${activeHighlight === msg._id
-                                    ? "ring-2 ring-yellow-500/50 shadow-lg shadow-yellow-500/10 scale-[1.02]"
-                                    : ""
+                                id={`msg-${msg._id}`}
+                                className={`group flex relative ${isOwnMessage ? "justify-end" : "justify-start"
                                     }`}
                             >
-                                {/* Message bubble */}
                                 <div
-                                    className={`rounded-2xl px-4 py-2.5 ${isOwnMessage
-                                        ? "bg-indigo-600/20 border border-indigo-500/30 text-gray-200"
-                                        : "bg-gray-800/80 border border-gray-700 text-gray-200"
+                                    className={`max-w-[75%] transition-all duration-300 ${activeHighlight === msg._id
+                                        ? "ring-2 ring-yellow-500/50 shadow-lg shadow-yellow-500/10 scale-[1.02]"
+                                        : ""
                                         }`}
                                 >
-                                    {!isOwnMessage && (
-                                        <p className="text-xs font-medium text-indigo-400 mb-1">
-                                            {msg.sender?.username ?? "Unknown"}
-                                        </p>
-                                    )}
-                                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                    {/* Message bubble */}
+                                    <div
+                                        className={`rounded-2xl px-4 py-2.5 ${isOwnMessage
+                                            ? "bg-indigo-600/20 border border-indigo-500/30 text-gray-200"
+                                            : "bg-gray-800/80 border border-gray-700 text-gray-200"
+                                            }`}
+                                    >
+                                        {!isOwnMessage && (
+                                            <p className="text-xs font-medium text-indigo-400 mb-1">
+                                                {msg.sender?.username ?? "Unknown"}
+                                            </p>
+                                        )}
+                                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
 
-                                    {/* Attachments */}
-                                    {msg.attachments?.length > 0 && (
-                                        <div className="mt-3 space-y-2">
-                                            {msg.attachments.map((att: any, i: number) => {
-                                                if (att.type?.startsWith("image")) {
+                                        {/* Attachments */}
+                                        {msg.attachments?.length > 0 && (
+                                            <div className="mt-3 space-y-2">
+                                                {msg.attachments.map((att: any, i: number) => {
+                                                    if (att.type?.startsWith("image")) {
+                                                        return (
+                                                            <img
+                                                                key={i}
+                                                                src={att.url}
+                                                                alt="attachment"
+                                                                className="max-w-full rounded-lg border border-gray-700"
+                                                            />
+                                                        );
+                                                    }
+                                                    if (att.type?.startsWith("video")) {
+                                                        return (
+                                                            <video key={i} controls className="max-w-full rounded-lg border border-gray-700">
+                                                                <source src={att.url} />
+                                                            </video>
+                                                        );
+                                                    }
                                                     return (
-                                                        <img
+                                                        <a
                                                             key={i}
-                                                            src={att.url}
-                                                            alt="attachment"
-                                                            className="max-w-full rounded-lg border border-gray-700"
-                                                        />
+                                                            href={att.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 p-2 bg-gray-900/50 rounded-lg border border-gray-700 text-indigo-400 hover:text-indigo-300 transition-colors"
+                                                        >
+                                                            <File size={14} />
+                                                            <span className="text-sm truncate">{att.name}</span>
+                                                        </a>
                                                     );
-                                                }
-                                                if (att.type?.startsWith("video")) {
-                                                    return (
-                                                        <video key={i} controls className="max-w-full rounded-lg border border-gray-700">
-                                                            <source src={att.url} />
-                                                        </video>
-                                                    );
-                                                }
-                                                return (
-                                                    <a
-                                                        key={i}
-                                                        href={att.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center gap-2 p-2 bg-gray-900/50 rounded-lg border border-gray-700 text-indigo-400 hover:text-indigo-300 transition-colors"
-                                                    >
-                                                        <File size={14} />
-                                                        <span className="text-sm truncate">{att.name}</span>
-                                                    </a>
-                                                );
-                                            })}
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Seen indicator */}
+                                    {showSeen && (
+                                        <div className="flex items-center justify-end gap-1 mt-1 text-xs text-gray-500">
+                                            <CheckCheck size={12} className="text-green-500" />
+                                            <span>Seen by {seenUsers.size}</span>
                                         </div>
                                     )}
                                 </div>
-
-                                {/* Seen indicator */}
-                                {showSeen && (
-                                    <div className="flex items-center justify-end gap-1 mt-1 text-xs text-gray-500">
-                                        <CheckCheck size={12} className="text-green-500" />
-                                        <span>Seen by {seenUsers.size}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Convert to Task button (hover) */}
-                            <button
-                                onClick={() => openTaskModal(msg)}
-                                className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-all duration-200 
+    
+                                {/* Convert to Task button (hover) */}
+                                <button
+                                    onClick={() => openTaskModal(msg)}
+                                    className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-all duration-200 
                   bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:bg-indigo-600/30 
                   hover:border-indigo-500/50 rounded-lg px-2.5 py-1 text-xs flex items-center gap-1.5 shadow-lg"
-                            >
-                                <Flag size={12} />
-                                Convert to Task
-                            </button>
-                        </div>
+                                >
+                                    <Flag size={12} />
+                                    Convert to Task
+                                </button>
+                            </div>
+                        </Fragment>
                     );
                 })}
                 <div ref={bottomRef} />
