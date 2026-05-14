@@ -1,3 +1,7 @@
+// File: WorkspaceSidebar.tsx
+// Workspace Sidebar - shows channels and workspace navigation links
+
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -31,6 +35,9 @@ export default function WorkspaceSidebar({
 
     const [channels, setChannels] =
         useState<any[]>([]);
+
+    const [unreadCounts, setUnreadCounts] =
+        useState<Record<string, number>>({});
 
     const [showModal, setShowModal] =
         useState(false);
@@ -66,6 +73,20 @@ export default function WorkspaceSidebar({
 
                 if (res.ok) {
                     setChannels(data.channels);
+                }
+
+                // 🔥 Fetch unread counts
+                const unreadRes = await fetch(
+                    `/api/channel/unread-counts?workspaceId=${workspaceId}`
+                );
+
+                const unreadData =
+                    await unreadRes.json();
+
+                if (unreadRes.ok) {
+                    setUnreadCounts(
+                        unreadData.unreadCounts
+                    );
                 }
 
             };
@@ -237,8 +258,8 @@ export default function WorkspaceSidebar({
                                         }
 
                                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${isActive
-                                                ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                                                : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                                            ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                                            : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
                                             }`}
                                     >
 
@@ -247,9 +268,27 @@ export default function WorkspaceSidebar({
                                             className="flex-shrink-0"
                                         />
 
-                                        <span className="truncate">
-                                            {ch.name}
-                                        </span>
+                                        <div className="flex items-center justify-between flex-1 min-w-0">
+
+                                            <span className="truncate">
+                                                {ch.name}
+                                            </span>
+
+                                            {
+                                                unreadCounts[ch._id] > 0 && (
+
+                                                    <span
+                                                        className="ml-2 min-w-[20px] h-5 px-1.5 rounded-full bg-indigo-500 text-white text-[11px] font-medium flex items-center justify-center"
+                                                    >
+                                                        {
+                                                            unreadCounts[ch._id]
+                                                        }
+                                                    </span>
+
+                                                )
+                                            }
+
+                                        </div>
 
                                     </button>
 
@@ -281,8 +320,8 @@ export default function WorkspaceSidebar({
                                 }
 
                                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${pathname.includes("/tasks")
-                                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                                        : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                                    : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
                                     }`}
                             >
 
@@ -303,8 +342,8 @@ export default function WorkspaceSidebar({
                                 }
 
                                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${pathname.includes("/members")
-                                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                                        : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                                    : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
                                     }`}
                             >
 
@@ -323,8 +362,8 @@ export default function WorkspaceSidebar({
                                 }
 
                                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${pathname.includes("/activity")
-                                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                                        : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                                    : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
                                     }`}
                             >
 
@@ -346,8 +385,8 @@ export default function WorkspaceSidebar({
                                 }
 
                                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${pathname.includes("/settings")
-                                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
-                                        : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
+                                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30"
+                                    : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
                                     } `}
                             >
 
