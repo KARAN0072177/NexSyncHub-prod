@@ -1,3 +1,5 @@
+// WorkspaceClient.tsx
+
 "use client";
 
 import {
@@ -79,6 +81,57 @@ export default function WorkspaceClient({
     workspaceId,
     queryChannelId,
   ]);
+
+  // 🔥 Mark channel as read
+  useEffect(() => {
+
+    if (!selectedChannel?._id)
+      return;
+
+    const markAsRead =
+      async () => {
+
+        try {
+
+          await fetch(
+            "/api/channel/mark-read",
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                channelId:
+                  selectedChannel._id,
+              }),
+            }
+          );
+
+        } catch (err) {
+
+          console.error(
+            "MARK READ ERROR:",
+            err
+          );
+
+        }
+
+      };
+
+    // 🔥 Small delay
+    const timer =
+      setTimeout(
+        markAsRead,
+        500
+      );
+
+    return () =>
+      clearTimeout(timer);
+
+  }, [selectedChannel]);
 
   // 🔥 Loading
   if (!selectedChannel) {
