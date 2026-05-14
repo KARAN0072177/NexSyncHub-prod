@@ -129,6 +129,44 @@ export default function WorkspaceSidebar({
 
     }, []);
 
+    // 🔥 Listen for unread increments
+    useEffect(() => {
+
+        const handler =
+            (event: any) => {
+
+                const channelId =
+                    event.detail.channelId;
+
+                setUnreadCounts(
+                    (prev) => ({
+
+                        ...prev,
+
+                        [channelId]:
+                            (prev[channelId] || 0) + 1,
+
+                    })
+                );
+
+            };
+
+        window.addEventListener(
+            "channel-unread",
+            handler
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                "channel-unread",
+                handler
+            );
+
+        };
+
+    }, []);
+
     // 🔥 Create channel
     const createChannel =
         async () => {

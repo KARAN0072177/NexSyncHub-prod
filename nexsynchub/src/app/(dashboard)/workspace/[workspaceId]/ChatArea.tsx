@@ -230,34 +230,72 @@ export default function ChatArea({ channel }: { channel: any }) {
         const socket = socketRef.current;
         socket.emit("join_channel", channel._id);
 
-        socket.on("receive_message", (msg: any) => {
-            if (
-                String(msg.channel) !==
-                String(channel._id)
-            ) {
-                return;
-            }
+        socket.on(
+            "receive_message",
+            (msg: any) => {
 
-            setMessages((prev) => {
+                const isCurrentChannel =
+                    String(msg.channel) ===
+                    String(channel._id);
 
-                if (
-                    prev.some(
-                        (m) => m._id === msg._id
-                    )
-                ) {
-                    return prev;
+                // 🔥 Different channel
+                if (!isCurrentChannel) {
+
+                    window.dispatchEvent(
+                        new CustomEvent(
+                            "channel-unread",
+                            {
+                                detail: {
+                                    channelId:
+                                        msg.channel,
+                                },
+                            }
+                        )
+                    );
+
+                    return;
                 }
 
-                return [...prev, msg];
+                // 🔥 Current channel
+                setMessages((prev) => {
 
-            });
-            setSeenUsers(new Set());
-            fetch("/api/channel/read", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ channelId: channel._id }),
-            });
-        });
+                    if (
+                        prev.some(
+                            (m) =>
+                                m._id === msg._id
+                        )
+                    ) {
+                        return prev;
+                    }
+
+                    return [
+                        ...prev,
+                        msg,
+                    ];
+
+                });
+
+                setSeenUsers(new Set());
+
+                fetch(
+                    "/api/channel/read",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body: JSON.stringify({
+                            channelId:
+                                channel._id,
+                        }),
+                    }
+                );
+
+            }
+        );
 
         socket.on(
             "user_typing",
