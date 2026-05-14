@@ -259,18 +259,70 @@ export default function ChatArea({ channel }: { channel: any }) {
             });
         });
 
-        socket.on("user_typing", (user: any) => {
-            if (user.id === userId) return;
-            setTypingUsers((prev) => {
-                if (prev.find((u) => u.id === user.id)) return prev;
-                return [...prev, user];
-            });
-        });
+        socket.on(
+            "user_typing",
+            ({
+                user,
+                channelId,
+            }: any) => {
 
-        socket.on("user_stop_typing", (user: any) => {
-            if (user.id === userId) return;
-            setTypingUsers((prev) => prev.filter((u) => u.id !== user.id));
-        });
+                if (
+                    String(channelId) !==
+                    String(channel._id)
+                ) {
+                    return;
+                }
+
+                if (user.id === userId)
+                    return;
+
+                setTypingUsers((prev) => {
+
+                    if (
+                        prev.find(
+                            (u) =>
+                                u.id === user.id
+                        )
+                    ) {
+                        return prev;
+                    }
+
+                    return [
+                        ...prev,
+                        user,
+                    ];
+
+                });
+
+            }
+        );
+
+        socket.on(
+            "user_stop_typing",
+            ({
+                user,
+                channelId,
+            }: any) => {
+
+                if (
+                    String(channelId) !==
+                    String(channel._id)
+                ) {
+                    return;
+                }
+
+                if (user.id === userId)
+                    return;
+
+                setTypingUsers((prev) =>
+                    prev.filter(
+                        (u) =>
+                            u.id !== user.id
+                    )
+                );
+
+            }
+        );
 
         socket.on("message_seen", ({ userId }: any) => {
             setSeenUsers((prev) => new Set(prev).add(userId));

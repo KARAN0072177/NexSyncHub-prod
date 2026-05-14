@@ -71,14 +71,36 @@ io.on("connection", (socket) => {
     );
 
     // 🔥 Typing start
-    socket.on("typing_start", ({ channelId, user }) => {
-        socket.to(channelId).emit("user_typing", user);
-    });
+    socket.on(
+        "typing_start",
+        ({ channelId, user }) => {
+
+            socket.to(channelId).emit(
+                "user_typing",
+                {
+                    user,
+                    channelId,
+                }
+            );
+
+        }
+    );
 
     // 🔥 Typing stop
-    socket.on("typing_stop", ({ channelId, user }) => {
-        socket.to(channelId).emit("user_stop_typing", user);
-    });
+    socket.on(
+        "typing_stop",
+        ({ channelId, user }) => {
+
+            socket.to(channelId).emit(
+                "user_stop_typing",
+                {
+                    user,
+                    channelId,
+                }
+            );
+
+        }
+    );
 
     // 🔥 Disconnect
     socket.on("disconnect", () => {
