@@ -17,6 +17,7 @@ import {
     MoreVertical,
     Flag,
     User,
+    Smile,
 } from "lucide-react";
 
 import WorkspacePresence from "@/components/chat/WorkspacePresence";
@@ -365,11 +366,25 @@ export default function ChatArea({ channel }: { channel: any }) {
             setSeenUsers((prev) => new Set(prev).add(userId));
         });
 
+        socket.on("message_reaction_update", ({ messageId, reactions }: any) => {
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    String(msg._id) !== String(messageId)
+                        ? msg
+                        : { ...msg, reactions }
+                )
+            );
+        });
+
         return () => {
-            socket.off("receive_message");
-            socket.off("user_typing");
-            socket.off("user_stop_typing");
-            socket.off("message_seen");
+
+            // 🔥 Cleanup listeners on unmount or channel change
+
+            socket.off("receive_message"); // message cleanup
+            socket.off("user_typing"); // typing cleanup
+            socket.off("user_stop_typing");  // stop typing cleanup
+            socket.off("message_seen"); // seen cleanup
+            socket.off("message_reaction_update"); // reaction cleanup 
         };
     }, [channel._id, userId]);
 
@@ -411,6 +426,43 @@ export default function ChatArea({ channel }: { channel: any }) {
             return;
         }
         setShowTaskModal(false);
+    };
+
+    // 🔥 Handle reactions
+
+    const handleReaction = async (
+        messageId: string,
+        emoji: string
+    ) => {
+
+        try {
+
+            await fetch(
+                "/api/message/react",
+                {
+                    method: "PATCH",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+
+                    body: JSON.stringify({
+                        messageId,
+                        emoji,
+                    }),
+                }
+            );
+
+        } catch (err) {
+
+            console.error(
+                "REACTION ERROR:",
+                err
+            );
+
+        }
+
     };
 
     // ✉️ Send message
@@ -598,6 +650,51 @@ export default function ChatArea({ channel }: { channel: any }) {
                                         )}
                                         <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
 
+                                        {/* Reactions */}
+                                        {msg.reactions?.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-3">
+
+                                                {msg.reactions.map((reaction: any, index: number) => {
+
+                                                    const reacted =
+                                                        reaction.users?.some(
+                                                            (id: any) =>
+                                                                String(id) === String(userId)
+                                                        );
+
+                                                    return (
+                                                        <button
+                                                            key={index}
+                                                            onClick={() =>
+                                                                handleReaction(
+                                                                    msg._id,
+                                                                    reaction.emoji
+                                                                )
+                                                            }
+                                                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-all ${reacted
+                                                                    ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
+                                                                    : "bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500"
+                                                                }`}
+                                                        >
+
+                                                            <span>
+                                                                {reaction.emoji}
+                                                            </span>
+
+                                                            {reaction.users?.length > 1 && (
+                                                                <span>
+                                                                    {reaction.users.length}
+                                                                </span>
+                                                            )}
+
+                                                        </button>
+                                                    );
+
+                                                })}
+
+                                            </div>
+                                        )}
+
                                         {/* Attachments */}
                                         {msg.attachments?.length > 0 && (
                                             <div className="mt-3 space-y-2">
@@ -644,7 +741,22 @@ export default function ChatArea({ channel }: { channel: any }) {
                                         </div>
                                     )}
                                 </div>
-    
+
+                                {/* Quick reactions */}
+                                <div className="absolute -top-2 right-28 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center gap-1">
+
+                                    {["👍", "❤️", "🔥", "😂"].map((emoji) => (
+                                        <button
+                                            key={emoji}
+                                            onClick={() => handleReaction(msg._id, emoji)}
+                                            className="w-8 h-8 rounded-lg bg-gray-800 border border-gray-700 hover:border-indigo-500/50 hover:bg-indigo-500/10 flex items-center justify-center text-sm transition-all"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+
+                                </div>
+
                                 {/* Convert to Task button (hover) */}
                                 <button
                                     onClick={() => openTaskModal(msg)}
