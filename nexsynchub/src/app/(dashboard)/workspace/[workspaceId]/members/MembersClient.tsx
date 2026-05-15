@@ -70,6 +70,7 @@ interface ModalState {
   confirmText: string;
   type: "danger" | "primary" | "gold";
   onConfirm: () => void;
+  affectedItems?: string[];
 }
 
 function ConfirmModal({ modal, onClose }: { modal: ModalState; onClose: () => void }) {
@@ -115,9 +116,24 @@ function ConfirmModal({ modal, onClose }: { modal: ModalState; onClose: () => vo
                   <X size={15} />
                 </button>
               </div>
-              <p className="text-sm leading-relaxed mb-7" style={{ color: T.muted, fontFamily: "'DM Sans',sans-serif" }}>
+              <p className={`text-sm leading-relaxed ${modal.affectedItems?.length ? 'mb-4' : 'mb-7'}`} style={{ color: T.muted, fontFamily: "'DM Sans',sans-serif" }}>
                 {modal.message}
               </p>
+              {modal.affectedItems && modal.affectedItems.length > 0 && (
+                <div className="mb-7 rounded-xl p-4 overflow-y-auto max-h-32 scrollbar-thin scrollbar-thumb-gray-700" style={{ background: "rgba(0,0,0,0.2)", border: `1px solid ${T.borderHi}` }}>
+                  <ul className="space-y-2 text-sm" style={{ color: T.text, fontFamily: "'DM Sans',sans-serif" }}>
+                    {modal.affectedItems.slice(0, 4).map((item, i) => (
+                      <li key={i} className="flex items-center gap-2.5">
+                        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 8px ${color}80` }} />
+                        <span className="truncate">{item}</span>
+                      </li>
+                    ))}
+                    {modal.affectedItems.length > 4 && (
+                      <li className="text-xs italic mt-2 pl-4" style={{ color: T.muted }}>+ {modal.affectedItems.length - 4} more members selected</li>
+                    )}
+                  </ul>
+                </div>
+              )}
               <div className="flex justify-end gap-3">
                 <button onClick={onClose} className="px-5 py-2.5 rounded-2xl text-sm font-medium transition-all" style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.muted, fontFamily: "'DM Sans',sans-serif" }}>
                   Cancel
@@ -228,8 +244,9 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
   const [sortBy, setSortBy]               = useState<"NEWEST" | "OLDEST" | "ALPHABETICAL">("NEWEST");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
+  const [bulkRoleOpen, setBulkRoleOpen]   = useState(false);
   const [modal, setModal]                 = useState<ModalState>({
-    isOpen: false, title: "", message: "", confirmText: "Confirm", type: "danger", onConfirm: () => {},
+    isOpen: false, title: "", message: "", confirmText: "Confirm", type: "danger", onConfirm: () => {}, affectedItems: []
   });
 
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -354,11 +371,14 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
   };
 
   const handleBulkRemove = () => {
+    const affectedNames = Array.from(selectedUsers).map(id => members.find(m => m.user._id === id)?.user.username || "Unknown");
+
     openModal({
       title: "Remove Multiple Members",
-      message: `Are you sure you want to remove ${selectedUsers.size} members? This action cannot be undone.`,
+      message: `You are about to remove ${selectedUsers.size} members from the workspace. This action cannot be undone.`,
       confirmText: "Remove All",
       type: "danger",
+      affectedItems: affectedNames,
       onConfirm: async () => {
         setBulkActionInProgress(true);
         try {
@@ -381,11 +401,14 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
 
   const handleBulkRoleChange = (newRole: Role) => {
     if (!newRole) return;
+    const affectedNames = Array.from(selectedUsers).map(id => members.find(m => m.user._id === id)?.user.username || "Unknown");
+
     openModal({
       title: `Change Role to ${ROLE[newRole].label}`,
-      message: `Are you sure you want to change the role of ${selectedUsers.size} members to ${ROLE[newRole].label}?`,
+      message: `You are about to change the role of ${selectedUsers.size} members to ${ROLE[newRole].label}.`,
       confirmText: `Set as ${ROLE[newRole].label}`,
       type: "primary",
+      affectedItems: affectedNames,
       onConfirm: async () => {
         setBulkActionInProgress(true);
         try {
@@ -772,18 +795,50 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
             <div className="w-px h-5" style={{ background: T.borderHi }} />
             
             <div className="flex items-center gap-2">
-              <div className="relative flex items-center rounded-xl px-2 py-1.5 transition-colors hover:bg-white/5" style={{ border: `1px solid ${T.border}` }}>
-                <Shield size={14} className="mr-1.5" style={{ color: T.muted }} />
-                <select 
-                  onChange={e => { handleBulkRoleChange(e.target.value as Role); e.target.value = ""; }} 
-                  defaultValue="" 
-                  className="bg-transparent text-sm font-medium outline-none appearance-none cursor-pointer pr-4" 
-                  style={{ color: T.text }}
+              <div className="relative">
+                <button
+                  onClick={() => setBulkRoleOpen(!bulkRoleOpen)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-1.5 transition-colors hover:bg-white/5"
+                  style={{ border: `1px solid ${bulkRoleOpen ? T.accentMd : T.border}`, background: bulkRoleOpen ? T.accentLo : "transparent" }}
                 >
-                  <option value="" disabled className="bg-gray-900">Change Role...</option>
-                  <option value="ADMIN" className="bg-gray-900">Set as Admin</option>
-                  <option value="MEMBER" className="bg-gray-900">Set as Member</option>
-                </select>
+                  <Shield size={14} style={{ color: bulkRoleOpen ? T.accent : T.muted }} />
+                  <span className="text-sm font-medium" style={{ color: bulkRoleOpen ? T.text : T.muted }}>Change Role</span>
+                  <ChevronDown size={14} className={`transition-transform duration-200 ${bulkRoleOpen ? "rotate-180" : ""}`} style={{ color: T.muted }} />
+                </button>
+
+                <AnimatePresence>
+                  {bulkRoleOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setBulkRoleOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute bottom-full left-0 mb-3 w-44 rounded-xl shadow-xl z-50 overflow-hidden"
+                        style={{ background: T.surface, border: `1px solid ${T.borderHi}`, backdropFilter: "blur(20px)" }}
+                      >
+                        <div className="flex flex-col p-1.5">
+                          {(["ADMIN", "MEMBER"] as Role[]).map(r => {
+                            const cfg = ROLE[r];
+                            const Icon = cfg.icon;
+                            return (
+                              <button
+                                key={r}
+                                onClick={() => { handleBulkRoleChange(r); setBulkRoleOpen(false); }}
+                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors hover:bg-white/5 text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors" style={{ background: cfg.lo, border: `1px solid ${cfg.md}` }}>
+                                  <Icon size={13} style={{ color: cfg.color }} />
+                                </div>
+                                <span className="text-sm font-medium transition-colors" style={{ color: T.text }}>Set as {cfg.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
               
               <button
