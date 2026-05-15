@@ -17,6 +17,18 @@ import {
 import WorkspaceSidebar
   from "./WorkspaceSidebar";
 
+/* ─── design tokens ──────────────────────────────────────────────────────── */
+const T = {
+  accent:   "#3B82F6",
+  accentLo: "rgba(59,130,246,0.12)",
+  accentMd: "rgba(59,130,246,0.25)",
+  surface:  "rgba(15,23,42,0.60)",
+  border:   "rgba(255,255,255,0.06)",
+  borderHi: "rgba(255,255,255,0.12)",
+  text:     "#F8FAFC",
+  muted:    "#94A3B8",
+};
+
 export default async function WorkspaceLayout({
   children,
   params,
@@ -70,15 +82,12 @@ export default async function WorkspaceLayout({
   return (
 
     <div
-      className="
-      h-screen
-      overflow-hidden
-      bg-gradient-to-br
-      from-gray-950
-      via-gray-900
-      to-gray-950
-      "
+      className="h-screen overflow-hidden"
+      style={{ background: "#030712", color: T.text, fontFamily: "'DM Sans', sans-serif" }}
     >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+      `}</style>
 
       <div className="flex h-full">
 
@@ -93,31 +102,25 @@ export default async function WorkspaceLayout({
 
           {/* Workspace Header */}
           <div
-            className="
-            flex-shrink-0
-            px-6 py-4
-            border-b border-gray-800/50
-            bg-gray-900/30
-            backdrop-blur-sm
-            "
+            className="flex-shrink-0 px-6 py-5 relative z-10"
+            style={{
+              background: "rgba(3,7,18,0.65)",
+              borderBottom: `1px solid ${T.borderHi}`,
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)"
+            }}
           >
 
             <div className="flex items-center gap-4">
 
               <div
-                className="
-                p-2
-                bg-indigo-500/10
-                rounded-xl
-                border border-indigo-500/20
-                "
+                className="p-3 rounded-2xl flex items-center justify-center shrink-0 shadow-inner"
+                style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}
               >
 
                 <Building2
-                  className="
-                  w-6 h-6
-                  text-indigo-400
-                  "
+                  size={24}
+                  style={{ color: T.accent }}
                 />
 
               </div>
@@ -125,48 +128,32 @@ export default async function WorkspaceLayout({
               <div>
 
                 <h1
-                  className="
-                  text-2xl
-                  font-semibold
-                  text-white
-                  tracking-tight
-                  "
+                  className="text-2xl font-bold text-white tracking-tight"
+                  style={{ fontFamily: "'Sora', sans-serif" }}
                 >
                   {workspace.name}
                 </h1>
 
                 <div
-                  className="
-                  flex items-center
-                  gap-2
-                  mt-0.5
-                  "
+                  className="flex items-center gap-2.5 mt-1.5"
                 >
 
                   <span
-                    className={`
-                    inline-flex
-                    items-center gap-1
-                    px-2.5 py-0.5
-                    rounded-full
-                    text-xs font-medium
-                    border
-
-                    ${
-                      isAdmin
-                        ? "bg-purple-500/10 text-purple-300 border-purple-500/30"
-                        : "bg-gray-500/10 text-gray-300 border-gray-500/30"
-                    }
-                    `}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider"
+                    style={{
+                      background: isAdmin ? T.accentLo : "rgba(255,255,255,0.03)",
+                      color: isAdmin ? T.accent : T.muted,
+                      border: `1px solid ${isAdmin ? T.accentMd : T.border}`
+                    }}
                   >
 
                     {isAdmin ? (
 
-                      <Shield className="w-3 h-3" />
+                      <Shield size={11} />
 
                     ) : (
 
-                      <User className="w-3 h-3" />
+                      <User size={11} />
 
                     )}
 
@@ -174,14 +161,12 @@ export default async function WorkspaceLayout({
 
                   </span>
 
-                  <span className="text-xs text-gray-500">
+                  <span style={{ color: T.borderHi }}>
                     •
                   </span>
 
-                  <span className="text-xs text-gray-500">
-                    Workspace ID:
-                    {" "}
-                    {workspaceId.slice(-6)}
+                  <span className="text-[11px] font-medium" style={{ color: T.muted }}>
+                    ID: {workspaceId.slice(-6)}
                   </span>
 
                 </div>
