@@ -1,7 +1,7 @@
 // ChatArea.tsx
 "use client";
 
-import { useEffect, useState, useRef, useCallback, Fragment } from "react";
+import { useEffect, useState, useRef, useCallback, Fragment, useLayoutEffect } from "react";
 import { io } from "socket.io-client";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -18,6 +18,7 @@ import {
     Flag,
     User,
     Smile,
+    ChevronDown,
 } from "lucide-react";
 
 import WorkspacePresence from "@/components/chat/WorkspacePresence";
@@ -49,9 +50,11 @@ export default function ChatArea({ channel }: { channel: any }) {
     const [cursor, setCursor] = useState<string | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
     const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
+    const [showScrollBottom, setShowScrollBottom] = useState(false);
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const prevScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
     const { data: session } = useSession();
 
     const userId = session?.user?.id;
@@ -156,7 +159,6 @@ export default function ChatArea({ channel }: { channel: any }) {
         setLoadingMore(true);
 
         const container = messagesContainerRef.current;
-        const prevHeight = container?.scrollHeight || 0;
 
         const res = await fetch(
             `/api/message/list?channelId=${channel._id}&cursor=${cursor}`
@@ -165,6 +167,12 @@ export default function ChatArea({ channel }: { channel: any }) {
         const data = await res.json();
 
         if (res.ok) {
+            if (container) {
+                prevScrollRef.current = {
+                    scrollHeight: container.scrollHeight,
+                    scrollTop: container.scrollTop,
+                };
+            }
             setMessages((prev) => {
                 const existingIds = new Set(prev.map((m) => m._id));
 
@@ -177,17 +185,18 @@ export default function ChatArea({ channel }: { channel: any }) {
             setCursor(data.nextCursor);
         }
 
-        // 🔥 Maintain scroll position
-        setTimeout(() => {
-            if (container) {
-                const newHeight = container.scrollHeight;
-                container.scrollTop = newHeight - prevHeight;
-            }
-        }, 0);
-
         setLoadingMore(false);
     };
 
+    // 🔥 Maintain scroll position smoothly before browser repaints
+    useLayoutEffect(() => {
+        const container = messagesContainerRef.current;
+        if (container && prevScrollRef.current) {
+            const heightDiff = container.scrollHeight - prevScrollRef.current.scrollHeight;
+            container.scrollTop = prevScrollRef.current.scrollTop + heightDiff;
+            prevScrollRef.current = null;
+        }
+    }, [messages]);
 
     useEffect(() => {
         const container = messagesContainerRef.current;
@@ -197,6 +206,9 @@ export default function ChatArea({ channel }: { channel: any }) {
             if (container.scrollTop === 0) {
                 loadMoreMessages();
             }
+
+            const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 300;
+            setShowScrollBottom(!isNearBottom);
         };
 
         container.addEventListener("scroll", handleScroll);
@@ -678,10 +690,11 @@ export default function ChatArea({ channel }: { channel: any }) {
             </div>
 
             {/* Messages Area */}
-            <div
-                ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto px-5 py-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
-            >
+            <div className="flex-1 relative min-h-0">
+                <div
+                    ref={messagesContainerRef}
+                    className="h-full overflow-y-auto overflow-x-hidden px-5 py-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+                >
 
                 {/* Loading more indicator */}
 
@@ -722,11 +735,11 @@ export default function ChatArea({ channel }: { channel: any }) {
                             )}
                             <div
                                 id={`msg-${msg._id}`}
-                                className={`group flex relative ${isOwnMessage ? "justify-end" : "justify-start"
+                                className={`flex relative w-full ${isOwnMessage ? "justify-end" : "justify-start"
                                     }`}
                             >
                                 <div
-                                    className={`max-w-[75%] transition-all duration-300 ${activeHighlight === msg._id
+                                    className={`group relative w-fit max-w-[85%] md:max-w-[75%] transition-all duration-300 ${activeHighlight === msg._id
                                         ? "ring-2 ring-yellow-500/50 shadow-lg shadow-yellow-500/10 scale-[1.02]"
                                         : ""
                                         }`}
@@ -839,38 +852,53 @@ export default function ChatArea({ channel }: { channel: any }) {
                                             <span>Seen by {seenUsers.size}</span>
                                         </div>
                                     )}
+
+                                    {/* Hover Actions Toolbar */}
+                                    <div className={`absolute -top-4 ${isOwnMessage ? "right-2" : "left-2"} opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center z-10 translate-y-2 group-hover:translate-y-0`}>
+                                        <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden">
+                                            {/* Quick reactions */}
+                                            <div className="flex items-center px-1">
+                                                {["👍", "❤️", "🔥", "😂"].map((emoji) => (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => handleReaction(msg._id, emoji)}
+                                                        className="w-7 h-7 rounded hover:bg-gray-700 flex items-center justify-center text-sm transition-colors"
+                                                    >
+                                                        {emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            
+                                            <div className="w-px h-4 bg-gray-700 mx-1" />
+                                            
+                                            {/* Convert to Task button */}
+                                            <button
+                                                onClick={() => openTaskModal(msg)}
+                                                className="text-gray-300 hover:text-white hover:bg-gray-700 px-3 h-8 text-xs flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                                                title="Convert to Task"
+                                            >
+                                                <Flag size={12} />
+                                                Task
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-
-                                {/* Quick reactions */}
-                                <div className="absolute -top-2 right-28 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center gap-1">
-
-                                    {["👍", "❤️", "🔥", "😂"].map((emoji) => (
-                                        <button
-                                            key={emoji}
-                                            onClick={() => handleReaction(msg._id, emoji)}
-                                            className="w-8 h-8 rounded-lg bg-gray-800 border border-gray-700 hover:border-indigo-500/50 hover:bg-indigo-500/10 flex items-center justify-center text-sm transition-all"
-                                        >
-                                            {emoji}
-                                        </button>
-                                    ))}
-
-                                </div>
-
-                                {/* Convert to Task button (hover) */}
-                                <button
-                                    onClick={() => openTaskModal(msg)}
-                                    className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-all duration-200 
-                  bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:bg-indigo-600/30 
-                  hover:border-indigo-500/50 rounded-lg px-2.5 py-1 text-xs flex items-center gap-1.5 shadow-lg"
-                                >
-                                    <Flag size={12} />
-                                    Convert to Task
-                                </button>
                             </div>
                         </Fragment>
                     );
                 })}
                 <div ref={bottomRef} />
+                </div>
+
+                {/* Scroll to Bottom Button */}
+                {showScrollBottom && (
+                    <button
+                        onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+                        className="absolute bottom-4 right-6 p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg shadow-black/50 transition-all z-20 group"
+                    >
+                        <ChevronDown size={20} className="group-hover:translate-y-0.5 transition-transform" />
+                    </button>
+                )}
             </div>
 
             {/* Input Area */}
