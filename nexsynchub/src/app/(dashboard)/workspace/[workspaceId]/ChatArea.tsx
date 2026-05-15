@@ -466,6 +466,31 @@ export default function ChatArea({ channel }: { channel: any }) {
     ) => {
 
         try {
+            const msg = messages.find((m) => String(m._id) === String(messageId));
+            
+            if (msg?.reactions) {
+                // Find if the user has already reacted with a different emoji
+                const existingReaction = msg.reactions.find((r: any) =>
+                    r.users?.some(
+                        (id: any) =>
+                            String(typeof id === "object" ? id._id || id.id : id) === String(userId)
+                    )
+                );
+
+                // If they have an existing reaction and it's different from the new one, remove the old one first
+                if (existingReaction && existingReaction.emoji !== emoji) {
+                    await fetch("/api/message/react", {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            messageId,
+                            emoji: existingReaction.emoji,
+                        }),
+                    });
+                }
+            }
 
             await fetch(
                 "/api/message/react",
@@ -595,6 +620,17 @@ export default function ChatArea({ channel }: { channel: any }) {
 
     }, [highlightMessageId]);
 
+    const getReactionUsernames = useCallback((userIds: any[]) => {
+        if (!userIds || userIds.length === 0) return [];
+        const usernames = userIds.map((id: any) => {
+            const uId = typeof id === "object" ? id._id || id.id : id;
+            if (String(uId) === String(userId)) return "You";
+            const member = members.find((m) => String(m.user._id) === String(uId));
+            return member?.user?.username || "Someone";
+        });
+        return usernames;
+    }, [members, userId]);
+
     const formatFileSize = (bytes?: number) => {
         if (!bytes) return "";
         if (bytes < 1024) return `${bytes} B`;
@@ -718,35 +754,39 @@ export default function ChatArea({ channel }: { channel: any }) {
                                                     const reacted =
                                                         reaction.users?.some(
                                                             (id: any) =>
-                                                                String(id) === String(userId)
+                                                                String(typeof id === "object" ? id._id || id.id : id) === String(userId)
                                                         );
 
                                                     return (
-                                                        <button
-                                                            key={index}
-                                                            onClick={() =>
-                                                                handleReaction(
-                                                                    msg._id,
-                                                                    reaction.emoji
-                                                                )
-                                                            }
-                                                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-all ${reacted
-                                                                    ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
-                                                                    : "bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500"
-                                                                }`}
-                                                        >
-
-                                                            <span>
-                                                                {reaction.emoji}
-                                                            </span>
-
-                                                            {reaction.users?.length > 1 && (
-                                                                <span>
-                                                                    {reaction.users.length}
-                                                                </span>
-                                                            )}
-
-                                                        </button>
+                                                        <div key={index} className="relative group/reaction">
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleReaction(
+                                                                        msg._id,
+                                                                        reaction.emoji
+                                                                    )
+                                                                }
+                                                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-all ${reacted
+                                                                        ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
+                                                                        : "bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500"
+                                                                    }`}
+                                                            >
+                                                                <span>{reaction.emoji}</span>
+                                                                {reaction.users?.length > 1 && <span>{reaction.users.length}</span>}
+                                                            </button>
+                                                            
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-3 py-2 bg-gray-800/95 text-gray-200 text-[11px] rounded-md shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover/reaction:opacity-100 transition-all duration-200 z-[100] border border-gray-700/50 backdrop-blur-sm flex flex-col gap-1">
+                                                                {getReactionUsernames(reaction.users).map((uname: string, idx: number) => (
+                                                                    <div key={idx} className="flex items-center justify-between gap-3">
+                                                                        <span className="font-medium text-gray-300">{uname}</span>
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className="text-gray-500">:</span>
+                                                                            <span>{reaction.emoji}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
                                                     );
 
                                                 })}
