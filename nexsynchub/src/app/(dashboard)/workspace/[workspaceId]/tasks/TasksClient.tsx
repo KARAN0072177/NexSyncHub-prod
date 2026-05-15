@@ -18,9 +18,30 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { Plus, Loader2, LayoutGrid, X } from "lucide-react";
+import { Plus, Loader2, LayoutGrid, X, AlertTriangle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import TaskDetailModal from "./TaskDetailModal";
+import { motion, AnimatePresence } from "framer-motion";
+
+/* ─── design tokens (matches members/settings/tasks page) ──────────────── */
+const T = {
+  accent:   "#3B82F6", // electric blue
+  accentLo: "rgba(59,130,246,0.12)",
+  accentMd: "rgba(59,130,246,0.25)",
+  surface:  "rgba(15,23,42,0.50)", // deep darkblue glass
+  border:   "rgba(255,255,255,0.06)",
+  borderHi: "rgba(255,255,255,0.12)",
+  text:     "#F8FAFC",
+  muted:    "#94A3B8",
+  red:      "#EF4444",
+  redLo:    "rgba(239,68,68,0.10)",
+};
+
+const COL = {
+  todo: { color: T.muted, bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.22)" },
+  "in-progress": { color: T.accent, bg: T.accentLo, border: T.accentMd },
+  done: { color: "#10B981", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.22)" },
+};
 
 type Member = {
   user: {
@@ -51,50 +72,56 @@ function Column({
   taskIds,
   children,
   count = 0,
-  accentColor,
+  status,
 }: {
   id: string;
   title: string;
   taskIds: string[];
   children: React.ReactNode;
   count?: number;
-  accentColor: string;
+  status: "todo" | "in-progress" | "done";
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const cfg = COL[status];
 
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col rounded-2xl border backdrop-blur-sm transition-all duration-200
-        bg-gray-900/80 border-gray-800 shadow-xl
-        ${isOver ? `ring-2 ring-${accentColor}-500/50 scale-[1.01]` : ""}`}
+      className={`flex flex-col rounded-3xl transition-all duration-300 ${isOver ? "scale-[1.02]" : ""}`}
+      style={{
+        background: T.surface,
+        border: `1px solid ${isOver ? cfg.color : T.border}`,
+        boxShadow: isOver ? `0 0 0 1px ${cfg.color}40, 0 12px 40px rgba(0,0,0,0.4)` : "none",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)"
+      }}
     >
       {/* Column Header */}
-      <div className="p-4 pb-2 flex items-center justify-between border-b border-gray-800/50">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full bg-${accentColor}-500`} />
-          <h2 className="font-semibold text-gray-200 tracking-tight">
+      <div className="p-5 pb-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${T.borderHi}` }}>
+        <div className="flex items-center gap-3">
+          <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ background: cfg.color, boxShadow: `0 0 10px ${cfg.color}` }} />
+          <h2 className="font-bold text-white tracking-tight" style={{ fontFamily: "'Sora', sans-serif" }}>
             {title}
           </h2>
-          <span className="ml-1 text-xs font-medium text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg" style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
             {count}
           </span>
         </div>
-        <button className="text-gray-500 hover:text-gray-300 transition-colors">
-          <Plus size={16} />
+        <button className="w-7 h-7 flex items-center justify-center rounded-xl transition-colors hover:bg-white/5" style={{ color: T.muted }}>
+          <Plus size={15} />
         </button>
       </div>
 
       {/* Task List Container */}
-      <div className="p-3 flex-1 overflow-y-auto max-h-[calc(100vh-240px)] min-h-[300px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+      <div className="p-4 flex-1 overflow-y-auto max-h-[calc(100vh-240px)] min-h-[300px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2.5">{children}</div>
+          <div className="space-y-3">{children}</div>
         </SortableContext>
 
         {/* Empty state hint */}
         {taskIds.length === 0 && (
           <div className="h-24 flex items-center justify-center">
-            <p className="text-xs text-gray-600 italic">Drop tasks here</p>
+            <p className="text-xs italic" style={{ color: T.muted }}>Drop tasks here</p>
           </div>
         )}
       </div>
@@ -249,38 +276,39 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
 
   if (loading) {
     return (
-      <div className="h-full overflow-y-auto bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-6 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+      <div className="h-full overflow-y-auto p-6" style={{ background: "linear-gradient(135deg, #030712 0%, #080C17 100%)" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');`}</style>
         <div className="max-w-[1600px] mx-auto pb-12">
           <div className="flex items-center gap-3 mb-8">
-            <div className="h-8 w-8 rounded-lg bg-gray-800 animate-pulse" />
-            <div className="h-8 w-48 bg-gray-800 rounded animate-pulse" />
+            <div className="w-10 h-10 rounded-2xl animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+            <div className="h-6 w-32 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex flex-col rounded-2xl border border-gray-800/50 bg-gray-900/40 shadow-xl overflow-hidden">
+              <div key={i} className="flex flex-col rounded-3xl overflow-hidden" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
                 {/* Column Header Skeleton */}
-                <div className="p-4 pb-2 flex items-center justify-between border-b border-gray-800/50">
+                <div className="p-5 pb-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${T.borderHi}` }}>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-gray-700 animate-pulse" />
-                    <div className="h-5 w-24 bg-gray-800 rounded animate-pulse" />
-                    <div className="h-4 w-6 bg-gray-800 rounded-full animate-pulse ml-1" />
+                    <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: "rgba(255,255,255,0.1)" }} />
+                    <div className="h-5 w-24 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+                    <div className="h-4 w-6 rounded-md animate-pulse ml-1" style={{ background: "rgba(255,255,255,0.04)" }} />
                   </div>
-                  <div className="h-4 w-4 bg-gray-800 rounded animate-pulse" />
+                  <div className="h-4 w-4 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
                 </div>
                 {/* Column Body Skeleton */}
                 <div className="p-3 space-y-2.5 min-h-[300px]">
                   {[1, 2].map((j) => (
-                    <div key={j} className="bg-gray-800/40 rounded-xl border border-gray-700/50 p-4">
-                      <div className="h-4 w-3/4 bg-gray-700/50 rounded animate-pulse mb-3" />
-                      <div className="h-8 w-full bg-gray-700/30 rounded-lg animate-pulse mb-3" />
+                    <div key={j} className="rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid rgba(255,255,255,0.04)` }}>
+                      <div className="h-4 w-3/4 rounded animate-pulse mb-4" style={{ background: "rgba(255,255,255,0.08)" }} />
+                      <div className="h-8 w-full rounded-xl animate-pulse mb-4" style={{ background: "rgba(255,255,255,0.04)" }} />
                       <div className="flex gap-1.5 mb-3">
-                        <div className="h-5 w-12 bg-gray-700/40 rounded-md animate-pulse" />
-                        <div className="h-5 w-16 bg-gray-700/40 rounded-md animate-pulse" />
-                        <div className="h-5 w-12 bg-gray-700/40 rounded-md animate-pulse" />
+                        <div className="h-5 w-12 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
+                        <div className="h-5 w-16 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
+                        <div className="h-5 w-12 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.05)" }} />
                       </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-gray-700/50">
-                        <div className="h-3 w-16 bg-gray-700/50 rounded animate-pulse" />
-                        <div className="h-3 w-20 bg-gray-700/50 rounded animate-pulse" />
+                      <div className="flex justify-between items-center pt-3 border-t" style={{ borderColor: T.border }}>
+                        <div className="h-3 w-16 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.08)" }} />
+                        <div className="h-3 w-20 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
                       </div>
                     </div>
                   ))}
@@ -294,38 +322,47 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-      <div className="p-6 pb-12 max-w-[1600px] mx-auto">
+    <div className="h-full overflow-y-auto" style={{ background: "linear-gradient(135deg, #030712 0%, #080C17 100%)", color: T.text, fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:4px; }
+      `}</style>
+
+      {/* ambient orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
+        <div style={{ position:"absolute", top:-100, left:-80, width:420, height:420, borderRadius:"50%", background:"rgba(59,130,246,0.12)", filter:"blur(100px)" }} />
+        <div style={{ position:"absolute", bottom:-60, right:-40, width:320, height:320, borderRadius:"50%", background:"rgba(14,165,233,0.08)", filter:"blur(100px)" }} />
+      </div>
+
+      <div className="relative z-10 p-6 pb-12 max-w-[1600px] mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-800/50 rounded-xl border border-gray-700">
-              <LayoutGrid className="w-5 h-5 text-indigo-400" />
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
+              <LayoutGrid size={18} style={{ color: T.accent }} />
             </div>
-            <h1 className="text-2xl font-semibold text-white tracking-tight">
+            <h1 className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: "'Sora', sans-serif" }}>
               Tasks
-              <span className="ml-3 text-sm font-normal text-gray-500">
+              <span className="ml-3 text-xs font-bold px-3 py-1.5 rounded-xl align-middle" style={{ background: "rgba(255,255,255,0.05)", color: T.muted, border: `1px solid ${T.borderHi}`, fontFamily: "'DM Sans', sans-serif" }}>
                 {tasks.length} total
               </span>
             </h1>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl border border-indigo-500/30 transition-all text-sm font-medium">
-            <Plus size={16} />
-            New Task
-          </button>
         </div>
 
         {/* Empty state for whole board */}
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-24 h-24 rounded-full bg-gray-800/50 flex items-center justify-center mb-4 border border-gray-700">
-              <LayoutGrid className="w-10 h-10 text-gray-600" />
+          <div className="flex flex-col items-center justify-center py-24 rounded-3xl" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.borderHi}` }}>
+              <LayoutGrid size={32} style={{ color: T.muted }} />
             </div>
-            <h3 className="text-lg font-medium text-gray-300 mb-1">No tasks yet</h3>
-            <p className="text-sm text-gray-500 mb-6">
+            <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "'Sora', sans-serif" }}>No tasks yet</h3>
+            <p className="text-sm mb-7" style={{ color: T.muted }}>
               Create your first task to get started
             </p>
-            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20">
+            <button className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 text-white" style={{ background: `linear-gradient(135deg, ${T.accent}, #1D4ED8)`, boxShadow: `0 4px 20px ${T.accentMd}` }}>
               Create Task
             </button>
           </div>
@@ -339,7 +376,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
               <Column
                 id="todo"
                 title="To Do"
-                accentColor="gray"
+                status="todo"
                 count={groupedTasks.todo.length}
                 taskIds={groupedTasks.todo.map(t => t._id)}
               >
@@ -360,7 +397,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
               <Column
                 id="in-progress"
                 title="In Progress"
-                accentColor="blue"
+                status="in-progress"
                 count={groupedTasks["in-progress"].length}
                 taskIds={groupedTasks["in-progress"].map(t => t._id)}
               >
@@ -381,7 +418,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
               <Column
                 id="done"
                 title="Done"
-                accentColor="green"
+                status="done"
                 count={groupedTasks.done.length}
                 taskIds={groupedTasks.done.map(t => t._id)}
               >
@@ -421,30 +458,45 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
         )}
 
         {/* Themed Error Popup */}
-        {errorMessage && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-gray-900 border border-red-500/30 rounded-2xl shadow-2xl max-w-md w-full p-6">
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-semibold text-red-400">Permission Error</h3>
-                <button
-                  onClick={() => setErrorMessage(null)}
-                  className="text-gray-400 hover:text-gray-200 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <p className="text-gray-300 mb-6">{errorMessage}</p>
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setErrorMessage(null)}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-sm font-medium transition-colors border border-gray-700"
-                >
-                  Dismiss
-                </button>
-              </div>
+        <AnimatePresence>
+          {errorMessage && (
+            <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setErrorMessage(null)}
+                className="absolute inset-0"
+                style={{ background: "rgba(3,7,18,0.85)", backdropFilter: "blur(10px)" }}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 28, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.32, ease: [0.22,1,0.36,1] } }}
+                exit={{ opacity: 0, y: 16, scale: 0.97, transition: { duration: 0.18 } }}
+                className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
+                style={{ background: "rgba(15,23,42,0.95)", border: `1px solid ${T.red}30`, backdropFilter: "blur(40px)" }}
+              >
+                <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg,${T.red},transparent)` }} />
+                <div className="p-7">
+                  <div className="flex items-start justify-between mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: T.redLo, border: `1px solid ${T.red}30` }}>
+                        <AlertTriangle size={16} style={{ color: T.red }} />
+                      </div>
+                      <h3 className="text-lg font-bold text-white" style={{ fontFamily: "'Sora',sans-serif" }}>Permission Error</h3>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed mb-7" style={{ color: T.muted, fontFamily: "'DM Sans',sans-serif" }}>
+                    {errorMessage}
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <button onClick={() => setErrorMessage(null)} className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-white transition-all active:scale-95" style={{ background: `linear-gradient(135deg,${T.red},#FF6B35)`, boxShadow: `0 4px 20px ${T.red}40`, fontFamily: "'DM Sans',sans-serif" }}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-          </div>
-        )}
+          )}
+        </AnimatePresence>
       </div>
 
       {selectedTaskId && (

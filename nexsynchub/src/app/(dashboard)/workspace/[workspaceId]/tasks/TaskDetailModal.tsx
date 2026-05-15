@@ -21,14 +21,14 @@ const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
 /* ─── design tokens (matches members/settings page) ──────────────────────── */
 const T = {
-  accent:   "#6C63FF",
-  accentLo: "rgba(108,99,255,0.12)",
-  accentMd: "rgba(108,99,255,0.25)",
-  surface:  "rgba(16,15,22,0.98)",
-  border:   "rgba(255,255,255,0.07)",
-  borderHi: "rgba(255,255,255,0.13)",
-  text:     "#E8E6F0",
-  muted:    "#6B6880",
+  accent:   "#3B82F6",
+  accentLo: "rgba(59,130,246,0.12)",
+  accentMd: "rgba(59,130,246,0.25)",
+  surface:  "rgba(15,23,42,0.95)", // slightly more opaque for the modal pop
+  border:   "rgba(255,255,255,0.06)",
+  borderHi: "rgba(255,255,255,0.12)",
+  text:     "#F8FAFC",
+  muted:    "#94A3B8",
 };
 
 export default function TaskDetailModal({ taskId, onClose }: any) {
@@ -188,7 +188,7 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
   if (!task) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0" style={{ background: "rgba(5,5,8,0.78)", backdropFilter: "blur(10px)" }} onClick={onClose} />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0" style={{ background: "rgba(3,7,18,0.85)", backdropFilter: "blur(10px)" }} onClick={onClose} />
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative z-10 p-8 rounded-3xl" style={{ background: T.surface, border: `1px solid ${T.borderHi}` }}>
           <Loader2 className="w-8 h-8 animate-spin" style={{ color: T.accent }} />
         </motion.div>
@@ -206,7 +206,7 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="absolute inset-0"
-        style={{ background: "rgba(5,5,8,0.78)", backdropFilter: "blur(10px)" }}
+        style={{ background: "rgba(3,7,18,0.85)", backdropFilter: "blur(10px)" }}
         onClick={onClose}
       />
 
@@ -277,7 +277,7 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
                     onClick={saveDescription}
                     disabled={saving}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 active:scale-95 text-white"
-                    style={{ background: `linear-gradient(135deg, ${T.accent}, #8B5CF6)`, boxShadow: `0 4px 20px ${T.accentMd}` }}
+                    style={{ background: `linear-gradient(135deg, ${T.accent}, #1D4ED8)`, boxShadow: `0 4px 20px ${T.accentMd}` }}
                   >
                     {saving ? (
                       <>
@@ -409,7 +409,7 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
               onClick={addComment}
               disabled={sending || !content.trim()}
               className="flex items-center justify-center w-12 h-12 rounded-2xl disabled:opacity-50 transition-all active:scale-95 shrink-0 text-white"
-              style={{ background: `linear-gradient(135deg, ${T.accent}, #8B5CF6)`, boxShadow: `0 4px 20px ${T.accentMd}` }}
+              style={{ background: `linear-gradient(135deg, ${T.accent}, #1D4ED8)`, boxShadow: `0 4px 20px ${T.accentMd}` }}
             >
               {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             </button>

@@ -11,19 +11,19 @@ import { motion, AnimatePresence } from "framer-motion";
 
 /* ─── design tokens (matches settings page) ─────────────────────────────── */
 const T = {
-  accent:   "#6C63FF",
-  accentLo: "rgba(108,99,255,0.12)",
-  accentMd: "rgba(108,99,255,0.25)",
+  accent:   "#3B82F6",
+  accentLo: "rgba(59,130,246,0.12)",
+  accentMd: "rgba(59,130,246,0.25)",
   gold:     "#F59E0B",
   goldLo:   "rgba(245,158,11,0.12)",
   goldMd:   "rgba(245,158,11,0.25)",
-  red:      "#FF4D6D",
-  redLo:    "rgba(255,77,109,0.10)",
-  surface:  "rgba(14,14,20,0.80)",
-  border:   "rgba(255,255,255,0.07)",
-  borderHi: "rgba(255,255,255,0.13)",
-  text:     "#E8E6F0",
-  muted:    "#6B6880",
+  red:      "#EF4444",
+  redLo:    "rgba(239,68,68,0.10)",
+  surface:  "rgba(15,23,42,0.80)",
+  border:   "rgba(255,255,255,0.06)",
+  borderHi: "rgba(255,255,255,0.12)",
+  text:     "#F8FAFC",
+  muted:    "#94A3B8",
 };
 
 /* ─── role config ────────────────────────────────────────────────────────── */
@@ -47,8 +47,8 @@ const ROLE = {
   MEMBER: {
     icon: User,
     color: T.muted,
-    lo: "rgba(107,104,128,0.12)",
-    md: "rgba(107,104,128,0.22)",
+    lo: "rgba(148,163,184,0.12)",
+    md: "rgba(148,163,184,0.22)",
     label: "Member",
     rank: 1,
   },
@@ -81,8 +81,8 @@ function ConfirmModal({ modal, onClose }: { modal: ModalState; onClose: () => vo
   const gradient = isGold
     ? "linear-gradient(135deg,#F59E0B,#D97706)"
     : isPrimary
-    ? `linear-gradient(135deg,${T.accent},#8B5CF6)`
-    : "linear-gradient(135deg,#FF4D6D,#FF6B35)";
+    ? `linear-gradient(135deg,${T.accent},#1D4ED8)`
+    : `linear-gradient(135deg,${T.red},#B91C1C)`;
 
   return (
     <AnimatePresence>
@@ -92,14 +92,14 @@ function ConfirmModal({ modal, onClose }: { modal: ModalState; onClose: () => vo
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
             className="absolute inset-0"
-            style={{ background: "rgba(5,5,8,0.78)", backdropFilter: "blur(10px)" }}
+            style={{ background: "rgba(3,7,18,0.85)", backdropFilter: "blur(10px)" }}
           />
           <motion.div
             initial={{ opacity: 0, y: 28, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.32, ease: [0.22,1,0.36,1] } }}
             exit={{ opacity: 0, y: 16, scale: 0.97, transition: { duration: 0.18 } }}
             className="relative w-full max-w-md rounded-3xl overflow-hidden"
-            style={{ background: "rgba(16,15,22,0.98)", border: `1px solid ${color}30`, backdropFilter: "blur(40px)" }}
+            style={{ background: "rgba(15,23,42,0.95)", border: `1px solid ${color}30`, backdropFilter: "blur(40px)" }}
           >
             <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg,${color},transparent)` }} />
             <div className="p-7">
@@ -432,7 +432,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
   /* ── loading ── */
   if (loading) {
     return (
-      <div className="h-full overflow-y-auto" style={{ background: "#080810" }}>
+      <div className="h-full overflow-y-auto" style={{ background: "linear-gradient(135deg, #030712 0%, #080C17 100%)" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');`}</style>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
           {/* header skeleton */}
@@ -484,7 +484,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
 
   /* ── render ── */
   return (
-    <div className="h-full overflow-y-auto" style={{ background: "#080810", color: T.text }}>
+    <div className="h-full overflow-y-auto" style={{ background: "linear-gradient(135deg, #030712 0%, #080C17 100%)", color: T.text }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
         * { font-family:'DM Sans',sans-serif; }
@@ -495,8 +495,8 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
 
       {/* ambient orbs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
-        <div style={{ position:"absolute", top:-100, left:-80, width:420, height:420, borderRadius:"50%", background:"rgba(108,99,255,0.07)", filter:"blur(100px)" }} />
-        <div style={{ position:"absolute", bottom:-60, right:-40, width:320, height:320, borderRadius:"50%", background:"rgba(245,158,11,0.05)", filter:"blur(100px)" }} />
+        <div style={{ position:"absolute", top:-100, left:-80, width:420, height:420, borderRadius:"50%", background:"rgba(59,130,246,0.12)", filter:"blur(100px)" }} />
+        <div style={{ position:"absolute", bottom:-60, right:-40, width:320, height:320, borderRadius:"50%", background:"rgba(14,165,233,0.08)", filter:"blur(100px)" }} />
       </div>
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-20">
@@ -593,7 +593,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
           style={{ background: T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)" }}
         >
           {/* top accent bar */}
-          <div className="h-0.5" style={{ background:`linear-gradient(90deg,${T.accent},#8B5CF6,transparent)` }} />
+          <div className="h-0.5" style={{ background:`linear-gradient(90deg,${T.accent},#1D4ED8,transparent)` }} />
 
           {processedMembers.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-20 text-center px-6">
@@ -614,7 +614,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
                       if (allSelected) setSelectedUsers(new Set());
                       else setSelectedUsers(new Set(selectableMembers.map(m => m.user._id)));
                     }}
-                    className="w-4 h-4 rounded border-gray-600 bg-gray-900/50 checked:bg-indigo-500 checked:border-indigo-500 transition-colors cursor-pointer accent-indigo-500"
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-900/50 checked:bg-blue-500 checked:border-blue-500 transition-colors cursor-pointer accent-blue-500"
                   />
                   <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.muted }}>
                     {selectedUsers.size > 0 ? `${selectedUsers.size} selected` : "Select All"}
@@ -648,7 +648,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
                           disabled={member.user._id === session?.user?.id || member.role === "OWNER"}
                           checked={selectedUsers.has(member.user._id)}
                           onChange={() => toggleSelection(member.user._id)}
-                          className="w-4 h-4 rounded border-gray-600 bg-gray-900/50 disabled:opacity-30 cursor-pointer accent-indigo-500 shrink-0"
+                          className="w-4 h-4 rounded border-gray-600 bg-gray-900/50 disabled:opacity-30 cursor-pointer accent-blue-500 shrink-0"
                         />
                       )}
                       <Avatar name={member.user.username} role={member.role} />
@@ -710,7 +710,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
                                       onClick={() => changeRole(member.user._id, member.user.username, "MEMBER")}
                                       title="Demote to Member"
                                       icon={ChevronDown}
-                                      color={T.muted} lo="rgba(107,104,128,0.12)" md="rgba(107,104,128,0.22)"
+                                      color={T.muted} lo="rgba(148,163,184,0.12)" md="rgba(148,163,184,0.22)"
                                     />
                                   )}
                                   <ActionBtn
@@ -723,7 +723,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
                                     onClick={() => removeMember(member.user._id, member.user.username)}
                                     title="Remove Member"
                                     icon={Trash2}
-                                    color={T.red} lo={T.redLo} md="rgba(255,77,109,0.22)"
+                                    color={T.red} lo={T.redLo} md="rgba(239,68,68,0.22)"
                                   />
                                 </>
                               )}
@@ -741,7 +741,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
                                     onClick={() => removeMember(member.user._id, member.user.username)}
                                     title="Remove Member"
                                     icon={Trash2}
-                                    color={T.red} lo={T.redLo} md="rgba(255,77,109,0.22)"
+                                    color={T.red} lo={T.redLo} md="rgba(239,68,68,0.22)"
                                   />
                                 </>
                               )}
@@ -845,7 +845,7 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
                 onClick={handleBulkRemove}
                 disabled={bulkActionInProgress}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-                style={{ color: T.red, background: T.redLo, border: `1px solid rgba(255,77,109,0.2)` }}
+                style={{ color: T.red, background: T.redLo, border: `1px solid rgba(239,68,68,0.2)` }}
               >
                 {bulkActionInProgress ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                 Remove

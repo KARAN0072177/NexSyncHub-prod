@@ -8,6 +8,21 @@ import { User, Flag, ExternalLink, MoreHorizontal, GripVertical } from "lucide-r
 import TaskDetailModal from "./TaskDetailModal";
 import { useState } from "react";
 
+/* ─── design tokens (matches members/settings page) ──────────────────────── */
+const T = {
+  accent:   "#3B82F6",
+  accentLo: "rgba(59,130,246,0.12)",
+  accentMd: "rgba(59,130,246,0.25)",
+  surface:  "rgba(15,23,42,0.60)",
+  border:   "rgba(255,255,255,0.06)",
+  borderHi: "rgba(255,255,255,0.12)",
+  text:     "#F8FAFC",
+  muted:    "#94A3B8",
+  high:     "#EF4444",
+  medium:   "#F59E0B",
+  low:      "#94A3B8",
+};
+
 export default function TaskCard({
   task,
   updateTask,
@@ -37,11 +52,7 @@ export default function TaskCard({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const priorityConfig = {
-    low: { color: "text-gray-400", bg: "bg-gray-500/10", border: "border-gray-500/20" },
-    medium: { color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
-    high: { color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
-  };
+  const priorityColor = task.priority === "high" ? T.high : task.priority === "medium" ? T.medium : T.low;
 
   const isCreator = task.createdBy?._id === currentUserId;
   const isAssignee = task.assignee?._id === currentUserId;
@@ -57,76 +68,74 @@ export default function TaskCard({
   };
 
   return (
-
     <>
-
       <div
         ref={setNodeRef}
         {...attributes}
-        style={style}
+        style={{
+          ...style,
+          background: T.surface,
+          border: `1px solid ${isOverlay ? T.accentMd : "rgba(255,255,255,0.04)"}`,
+          boxShadow: isOverlay ? `0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px ${T.accentMd}` : "0 4px 20px rgba(0,0,0,0.2)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+        }}
         onClick={(e) => {
           e.stopPropagation();
           onOpenTask?.(task._id); // 🔥 IMPORTANT
         }}
-        className={`group relative bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 p-4 
-        shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-200
-        ${isOverlay ? "shadow-2xl ring-2 ring-indigo-500/50" : ""}`}
+        className={`group relative rounded-2xl p-5 hover:border-white/10 transition-all duration-300 overflow-hidden ${isOverlay ? "scale-105 z-50" : ""}`}
       >
         {/* Drag Handle (visible on hover/focus) */}
         <div
           {...listeners}
-          className="absolute left-1 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300"
+          className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-gray-500 hover:text-white"
           aria-label="Drag to reorder"
         >
-          <GripVertical size={18} />
+          <GripVertical size={15} />
         </div>
 
         {/* Priority indicator bar */}
         <div
-          className={`absolute top-0 left-0 w-1 h-full rounded-l-xl bg-gradient-to-b 
-          ${task.priority === "high"
-              ? "from-red-500 to-red-600"
-              : task.priority === "medium"
-                ? "from-yellow-500 to-yellow-600"
-                : "from-gray-500 to-gray-600"
-            }`}
+          className="absolute top-0 left-0 w-1 h-full opacity-80"
+          style={{ background: `linear-gradient(to bottom, ${priorityColor}, transparent)` }}
         />
 
-        <div className="pl-6 space-y-3">
+        <div className="pl-5">
           {/* Header: Title and menu */}
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-medium text-gray-200 text-sm leading-tight">
+          <div className="flex items-start justify-between gap-2 mb-4">
+            <h3 className="font-bold text-sm leading-snug pr-4" style={{ color: T.text, fontFamily: "'Sora', sans-serif" }}>
               {task.title}
             </h3>
-            <button className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-gray-300">
+            <button className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: T.muted }}>
               <MoreHorizontal size={14} />
             </button>
           </div>
 
           {/* Assignee Selector */}
-          <div className="relative">
-            <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-              <User size={12} />
+          <div className="relative mb-3">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: T.muted }}>
+              <User size={13} />
             </div>
             <select
               disabled={!isCreator && !isAdmin}
-              className="w-full pl-7 pr-2 py-1.5 text-xs bg-gray-900/50 border border-gray-700 rounded-lg
-              text-gray-300 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50
-              hover:bg-gray-800 transition-colors cursor-pointer"
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl outline-none appearance-none transition-all duration-200 cursor-pointer"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: `1px solid ${T.border}`,
+                color: T.text,
+                fontFamily: "'DM Sans', sans-serif"
+              }}
               value={task.assignee?._id || ""}
               onChange={(e) => {
-
-                console.log("ASSIGN SELECT VALUE:", e.target.value);
-
                 updateTask(task._id, {
                   assignee: e.target.value,
                 });
-
               }}
             >
-              <option value="">Unassigned</option>
+              <option value="" className="bg-gray-900">Unassigned</option>
               {members.map((m: any) => (
-                <option key={m.user._id} value={m.user._id}>
+                <option key={m.user._id} value={m.user._id} className="bg-gray-900">
                   {m.user.username}
                 </option>
               ))}
@@ -142,25 +151,26 @@ export default function TaskCard({
                 )
               }
               onPointerDown={handleInteractivePointerDown}
-              className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 
-              transition-colors group/link"
+              className="flex items-center gap-1.5 text-[11px] font-medium transition-colors group/link mb-3 w-fit px-2.5 py-1.5 rounded-lg"
+              style={{ color: T.accent, background: T.accentLo }}
             >
-              <ExternalLink size={12} className="group-hover/link:translate-x-0.5 transition-transform" />
-              <span>View linked message</span>
+              <ExternalLink size={11} className="group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5 transition-transform" />
+              <span>Linked Message</span>
             </button>
           )}
 
           {/* Status quick actions */}
-          <div className="flex gap-1.5 pt-1">
+          <div className="flex gap-2">
             <button
               disabled={!canUpdate}
               onClick={() => updateTask(task._id, { status: "todo" })}
               onPointerDown={handleInteractivePointerDown}
-              className={`text-xs px-2.5 py-1 rounded-lg border transition-all
-              ${task.status === "todo"
-                  ? "bg-gray-700/50 text-gray-200 border-gray-600"
-                  : "bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-gray-300"
-                }`}
+              className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-all disabled:cursor-not-allowed"
+              style={{
+                background: task.status === "todo" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.02)",
+                color: task.status === "todo" ? T.text : T.muted,
+                border: `1px solid ${task.status === "todo" ? T.borderHi : "transparent"}`
+              }}
             >
               Todo
             </button>
@@ -168,55 +178,46 @@ export default function TaskCard({
               disabled={!canUpdate}
               onClick={() => updateTask(task._id, { status: "in-progress" })}
               onPointerDown={handleInteractivePointerDown}
-              className={`text-xs px-2.5 py-1 rounded-lg border transition-all
-              ${task.status === "in-progress"
-                  ? "bg-blue-900/30 text-blue-300 border-blue-700/50"
-                  : "bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-gray-300"
-                }`}
+              className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-all disabled:cursor-not-allowed"
+              style={{
+                background: task.status === "in-progress" ? T.accentLo : "rgba(255,255,255,0.02)",
+                color: task.status === "in-progress" ? T.accent : T.muted,
+                border: `1px solid ${task.status === "in-progress" ? T.accentMd : "transparent"}`
+              }}
             >
-              Progress
+              Doing
             </button>
             <button
               disabled={!canUpdate}
               onClick={() => updateTask(task._id, { status: "done" })}
               onPointerDown={handleInteractivePointerDown}
-              className={`text-xs px-2.5 py-1 rounded-lg border transition-all
-              ${task.status === "done"
-                  ? "bg-green-900/30 text-green-300 border-green-700/50"
-                  : "bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-gray-300"
-                }`}
+              className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-all disabled:cursor-not-allowed"
+              style={{
+                background: task.status === "done" ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.02)",
+                color: task.status === "done" ? "#10B981" : T.muted,
+                border: `1px solid ${task.status === "done" ? "rgba(16,185,129,0.3)" : "transparent"}`
+              }}
             >
               Done
             </button>
           </div>
 
           {/* Footer: Priority and metadata */}
-          <div className="flex items-center justify-between pt-1 border-t border-gray-700/50">
+          <div className="flex items-center justify-between mt-4 pt-3 border-t" style={{ borderColor: T.border }}>
             <div className="flex items-center gap-1.5">
-              <Flag
-                size={12}
-                className={
-                  task.priority === "high"
-                    ? "text-red-400"
-                    : task.priority === "medium"
-                      ? "text-yellow-400"
-                      : "text-gray-400"
-                }
-              />
-              <span
-                className={`text-xs font-medium capitalize ${priorityConfig[task.priority as keyof typeof priorityConfig].color
-                  }`}
-              >
+              <Flag size={11} style={{ color: priorityColor }} />
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: priorityColor }}>
                 {task.priority}
               </span>
             </div>
             {task.createdBy && (
-              <span className="text-xs text-gray-500">@{task.createdBy.username}</span>
+              <span className="text-[10px] font-medium" style={{ color: T.muted, fontFamily: "'DM Sans', sans-serif" }}>
+                By @{task.createdBy.username}
+              </span>
             )}
           </div>
         </div>
       </div>
-
     </>
   );
 }
