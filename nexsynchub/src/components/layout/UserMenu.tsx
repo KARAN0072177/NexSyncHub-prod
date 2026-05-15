@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
     ChevronUp,
     User,
@@ -13,6 +14,8 @@ import {
 export default function UserMenu() {
 
     const { data: session, status } = useSession();
+
+    const router = useRouter();
 
     const [open, setOpen] = useState(false);
 
@@ -158,9 +161,13 @@ export default function UserMenu() {
                     <div className="p-2">
 
                         <button
+                            onClick={() => {
+                                router.push("/dashboard/profile");
+                                setOpen(false);
+                            }}
                             className="w-full flex items-center gap-3 px-3 py-2.5
               rounded-xl hover:bg-gray-800/70
-              text-gray-300 transition-colors cursor-pointer cursor-pointer"
+              text-gray-300 transition-colors cursor-pointer"
                         >
                             <User size={16} />
                             <span className="text-sm">
@@ -169,6 +176,10 @@ export default function UserMenu() {
                         </button>
 
                         <button
+                            onClick={() => {
+                                router.push("/dashboard/settings");
+                                setOpen(false);
+                            }}
                             className="w-full flex items-center gap-3 px-3 py-2.5
               rounded-xl hover:bg-gray-800/70
               text-gray-300 transition-colors cursor-pointer"
@@ -180,6 +191,10 @@ export default function UserMenu() {
                         </button>
 
                         <button
+                            onClick={() => {
+                                router.push("/dashboard/notifications");
+                                setOpen(false);
+                            }}
                             className="w-full flex items-center gap-3 px-3 py-2.5
               rounded-xl hover:bg-gray-800/70
               text-gray-300 transition-colors cursor-pointer"
