@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import {
   Crown, Shield, User, Loader2, Trash2,
-  ChevronUp, ChevronDown, Users, X, AlertTriangle,
+  ChevronUp, ChevronDown, Users, X, AlertTriangle, Check, Search,
+  Download, Filter, ArrowUpDown, Calendar,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -57,6 +58,7 @@ type Role = "OWNER" | "ADMIN" | "MEMBER";
 type Member = {
   _id: string;
   role: Role;
+  createdAt?: string;
   user: { _id: string; username: string; email: string };
 };
 
@@ -221,9 +223,22 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
   const [loading, setLoading]             = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [roleFilter, setRoleFilter]       = useState<"ALL" | Role>("ALL");
+  const [sortBy, setSortBy]               = useState<"NEWEST" | "OLDEST" | "ALPHABETICAL">("NEWEST");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
   const [modal, setModal]                 = useState<ModalState>({
     isOpen: false, title: "", message: "", confirmText: "Confirm", type: "danger", onConfirm: () => {},
   });
+
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -252,13 +267,20 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
       type: "danger",
       onConfirm: async () => {
         setActionInProgress(userId);
-        await fetch("/api/workspace/member/remove", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workspaceId, targetUserId: userId }),
-        });
-        setMembers(prev => prev.filter(m => m.user._id !== userId));
-        setActionInProgress(null);
+        try {
+          const res = await fetch("/api/workspace/member/remove", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ workspaceId, targetUserId: userId }),
+          });
+          const data = await res.json();
+          if (!res.ok) return showToast(data.error || "Failed to remove member", "error");
+          
+          setMembers(prev => prev.filter(m => m.user._id !== userId));
+          showToast(`Removed @${username} from the workspace`, "success");
+        } catch (err) {
+          console.error(err); showToast("An unexpected error occurred", "error");
+        } finally { setActionInProgress(null); }
       },
     });
 
@@ -274,14 +296,113 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
       type: isOwner ? "gold" : isPromotion ? "primary" : "danger",
       onConfirm: async () => {
         setActionInProgress(userId);
-        await fetch("/api/workspace/member/role", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workspaceId, targetUserId: userId, role }),
-        });
-        setMembers(prev => prev.map(m => m.user._id === userId ? { ...m, role } : m));
-        setActionInProgress(null);
+        try {
+          const res = await fetch("/api/workspace/member/role", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ workspaceId, targetUserId: userId, role }),
+          });
+          const data = await res.json();
+          if (!res.ok) return showToast(data.error || "Failed to change role", "error");
+          
+          setMembers(prev => prev.map(m => m.user._id === userId ? { ...m, role } : m));
+          showToast(`Role updated to ${ROLE[role].label} for @${username}`, "success");
+        } catch (err) {
+          console.error(err); showToast("An unexpected error occurred", "error");
+        } finally { setActionInProgress(null); }
       },
+    });
+  };
+
+  // Helper: Extract date from MongoDB ObjectId if createdAt is missing
+  const getMemberDate = (m: Member) => {
+    if (m.createdAt) return new Date(m.createdAt).getTime();
+    if (m._id && m._id.length === 24) return parseInt(m._id.substring(0, 8), 16) * 1000;
+    return 0;
+  };
+
+  const formatDate = (m: Member) => {
+    const timestamp = getMemberDate(m);
+    if (!timestamp) return "Recently";
+    return new Date(timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const exportCSV = () => {
+    const headers = ["Username", "Email", "Role", "Joined Date"];
+    const rows = members.map(m => [
+      m.user.username, m.user.email, ROLE[m.role].label, formatDate(m)
+    ]);
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `workspace_members_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Member list exported to CSV", "success");
+  };
+
+  const toggleSelection = (userId: string) => {
+    setSelectedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const handleBulkRemove = () => {
+    openModal({
+      title: "Remove Multiple Members",
+      message: `Are you sure you want to remove ${selectedUsers.size} members? This action cannot be undone.`,
+      confirmText: "Remove All",
+      type: "danger",
+      onConfirm: async () => {
+        setBulkActionInProgress(true);
+        try {
+          const promises = Array.from(selectedUsers).map(userId =>
+            fetch("/api/workspace/member/remove", {
+              method: "DELETE", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ workspaceId, targetUserId: userId }),
+            })
+          );
+          await Promise.all(promises);
+          setMembers(prev => prev.filter(m => !selectedUsers.has(m.user._id)));
+          showToast(`Successfully removed ${selectedUsers.size} members`, "success");
+          setSelectedUsers(new Set());
+        } catch (err) {
+          console.error(err); showToast("Failed to remove some members", "error");
+        } finally { setBulkActionInProgress(false); }
+      }
+    });
+  };
+
+  const handleBulkRoleChange = (newRole: Role) => {
+    if (!newRole) return;
+    openModal({
+      title: `Change Role to ${ROLE[newRole].label}`,
+      message: `Are you sure you want to change the role of ${selectedUsers.size} members to ${ROLE[newRole].label}?`,
+      confirmText: `Set as ${ROLE[newRole].label}`,
+      type: "primary",
+      onConfirm: async () => {
+        setBulkActionInProgress(true);
+        try {
+          const promises = Array.from(selectedUsers).map(userId =>
+            fetch("/api/workspace/member/role", {
+              method: "PATCH", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ workspaceId, targetUserId: userId, role: newRole }),
+            })
+          );
+          await Promise.all(promises);
+          setMembers(prev => prev.map(m => selectedUsers.has(m.user._id) ? { ...m, role: newRole } : m));
+          showToast(`Successfully updated roles for ${selectedUsers.size} members`, "success");
+          setSelectedUsers(new Set());
+        } catch (err) {
+          console.error(err); showToast("Failed to change some roles", "error");
+        } finally { setBulkActionInProgress(false); }
+      }
     });
   };
 
@@ -311,6 +432,28 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
       </div>
     );
   }
+
+  let processedMembers = members.filter(m => {
+    if (roleFilter !== "ALL" && m.role !== roleFilter) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return m.user.username.toLowerCase().includes(q) || m.user.email.toLowerCase().includes(q);
+  });
+
+  processedMembers.sort((a, b) => {
+    if (sortBy === "ALPHABETICAL") {
+      return a.user.username.localeCompare(b.user.username);
+    }
+    const dateA = getMemberDate(a);
+    const dateB = getMemberDate(b);
+    if (sortBy === "NEWEST") return dateB - dateA;
+    if (sortBy === "OLDEST") return dateA - dateB;
+    return 0;
+  });
+
+  const currentUserIsAdminOrOwner = currentUserRole === "OWNER" || currentUserRole === "ADMIN";
+  const selectableMembers = processedMembers.filter(m => m.user._id !== session?.user?.id && m.role !== "OWNER");
+  const allSelected = selectableMembers.length > 0 && selectableMembers.every(m => selectedUsers.has(m.user._id));
 
   // framer-motion Variants typing can be strict about easing arrays; cast to any to avoid type mismatch
   const container: any = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
@@ -352,12 +495,69 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
               </div>
             </div>
 
-            <span
-              className="text-xs font-bold px-3 py-1.5 rounded-xl"
-              style={{ background: T.accentLo, color: T.accent, border:`1px solid ${T.accentMd}`, fontFamily:"'DM Sans',sans-serif" }}
-            >
-              {members.length} {members.length === 1 ? "member" : "members"}
-            </span>
+            <div className="flex items-center gap-3">
+              <span
+                className="text-xs font-bold px-3 py-1.5 rounded-xl shrink-0"
+                style={{ background: T.accentLo, color: T.accent, border:`1px solid ${T.accentMd}`, fontFamily:"'DM Sans',sans-serif" }}
+              >
+                {members.length} {members.length === 1 ? "member" : "members"}
+              </span>
+              <button
+                onClick={exportCSV}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-white/5 transition-colors"
+                style={{ border:`1px solid ${T.border}`, color: T.text, fontFamily:"'DM Sans',sans-serif" }}
+              >
+                <Download size={13} /> Export CSV
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── FILTERS & SEARCH ── */}
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.45, ease:[0.22,1,0.36,1], delay:0.04 }} className="mb-6 flex flex-col sm:flex-row gap-3">
+          <div
+            className="relative flex-1 flex items-center rounded-2xl transition-all duration-300"
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: `1px solid ${T.border}`,
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = T.accentMd;
+              e.currentTarget.style.boxShadow = `0 0 0 3px ${T.accentLo}`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = T.border;
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          >
+            <Search size={16} className="absolute left-4" style={{ color: T.muted }} />
+            <input
+              type="text"
+              placeholder="Search members by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent outline-none py-3.5 pl-11 pr-4 text-sm"
+              style={{ color: T.text, fontFamily: "'DM Sans', sans-serif" }}
+            />
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="relative flex items-center rounded-2xl px-3 py-1.5" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
+              <Filter size={14} className="mr-2" style={{ color: T.muted }} />
+              <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as any)} className="bg-transparent text-sm outline-none appearance-none cursor-pointer pr-4" style={{ color: T.text }}>
+                <option value="ALL" className="bg-gray-900">All Roles</option>
+                <option value="OWNER" className="bg-gray-900">Owners</option>
+                <option value="ADMIN" className="bg-gray-900">Admins</option>
+                <option value="MEMBER" className="bg-gray-900">Members</option>
+              </select>
+            </div>
+            <div className="relative flex items-center rounded-2xl px-3 py-1.5" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
+              <ArrowUpDown size={14} className="mr-2" style={{ color: T.muted }} />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-transparent text-sm outline-none appearance-none cursor-pointer pr-4" style={{ color: T.text }}>
+                <option value="NEWEST" className="bg-gray-900">Newest</option>
+                <option value="OLDEST" className="bg-gray-900">Oldest</option>
+                <option value="ALPHABETICAL" className="bg-gray-900">Alphabetical</option>
+              </select>
+            </div>
           </div>
         </motion.div>
 
@@ -372,21 +572,37 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
           {/* top accent bar */}
           <div className="h-0.5" style={{ background:`linear-gradient(90deg,${T.accent},#8B5CF6,transparent)` }} />
 
-          {members.length === 0 ? (
+          {processedMembers.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-20 text-center px-6">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: T.accentLo, border:`1px solid ${T.accentMd}` }}>
-                <Users size={22} style={{ color: T.accent }} />
+                {searchQuery || roleFilter !== "ALL" ? <Search size={22} style={{ color: T.accent }} /> : <Users size={22} style={{ color: T.accent }} />}
               </div>
-              <p className="text-base font-semibold text-white" style={{ fontFamily:"'Sora',sans-serif" }}>No members yet</p>
-              <p className="text-sm" style={{ color: T.muted }}>Invite people to get started.</p>
+              <p className="text-base font-semibold text-white" style={{ fontFamily:"'Sora',sans-serif" }}>{searchQuery || roleFilter !== "ALL" ? "No members found" : "No members yet"}</p>
+              <p className="text-sm" style={{ color: T.muted }}>{searchQuery || roleFilter !== "ALL" ? `Adjust your filters to see more results.` : "Invite people to get started."}</p>
             </div>
           ) : (
             <motion.div variants={container} initial="hidden" animate="show">
-              {members.map((member, idx) => {
+              {currentUserIsAdminOrOwner && processedMembers.length > 0 && (
+                <div className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: `1px solid ${T.borderHi}`, background: "rgba(255,255,255,0.01)" }}>
+                  <input 
+                    type="checkbox" 
+                    checked={allSelected}
+                    onChange={() => {
+                      if (allSelected) setSelectedUsers(new Set());
+                      else setSelectedUsers(new Set(selectableMembers.map(m => m.user._id)));
+                    }}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-900/50 checked:bg-indigo-500 checked:border-indigo-500 transition-colors cursor-pointer accent-indigo-500"
+                  />
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: T.muted }}>
+                    {selectedUsers.size > 0 ? `${selectedUsers.size} selected` : "Select All"}
+                  </span>
+                </div>
+              )}
+              {processedMembers.map((member, idx) => {
                 const cfg           = ROLE[member.role];
                 const isCurrentUser = member.user._id === session?.user?.id;
                 const isProcessing  = actionInProgress === member.user._id;
-                const isLast        = idx === members.length - 1;
+                const isLast        = idx === processedMembers.length - 1;
                 const canOwnerAct   = currentUserRole === "OWNER" && member.role !== "OWNER";
                 const canAdminAct   = currentUserRole === "ADMIN" && member.role === "MEMBER";
 
@@ -403,6 +619,15 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
                   >
                     {/* LEFT */}
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      {currentUserIsAdminOrOwner && (
+                        <input 
+                          type="checkbox" 
+                          disabled={member.user._id === session?.user?.id || member.role === "OWNER"}
+                          checked={selectedUsers.has(member.user._id)}
+                          onChange={() => toggleSelection(member.user._id)}
+                          className="w-4 h-4 rounded border-gray-600 bg-gray-900/50 disabled:opacity-30 cursor-pointer accent-indigo-500 shrink-0"
+                        />
+                      )}
                       <Avatar name={member.user.username} role={member.role} />
 
                       <div className="min-w-0">
@@ -419,9 +644,15 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
                             </span>
                           )}
                         </div>
-                        <p className="text-xs truncate mt-0.5" style={{ color: T.muted }}>
-                          {member.user.email}
-                        </p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <p className="text-xs truncate" style={{ color: T.muted }}>
+                            {member.user.email}
+                          </p>
+                          <div className="w-1 h-1 rounded-full shrink-0" style={{ background: T.borderHi }} />
+                          <p className="text-[11px] shrink-0 flex items-center gap-1" style={{ color: T.muted }}>
+                            <Calendar size={10} /> Joined {formatDate(member)}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -524,6 +755,73 @@ export default function MembersClient({ workspaceId }: { workspaceId: string }) 
       </div>
 
       <ConfirmModal modal={modal} onClose={closeModal} />
+
+      {/* ── BULK ACTIONS FAB ── */}
+      <AnimatePresence>
+        {selectedUsers.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.95 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-4 rounded-2xl shadow-2xl"
+            style={{ background: T.surface, border: `1px solid ${T.borderHi}`, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
+          >
+            <span className="text-sm font-bold text-white whitespace-nowrap">
+              {selectedUsers.size} Selected
+            </span>
+            <div className="w-px h-5" style={{ background: T.borderHi }} />
+            
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center rounded-xl px-2 py-1.5 transition-colors hover:bg-white/5" style={{ border: `1px solid ${T.border}` }}>
+                <Shield size={14} className="mr-1.5" style={{ color: T.muted }} />
+                <select 
+                  onChange={e => { handleBulkRoleChange(e.target.value as Role); e.target.value = ""; }} 
+                  defaultValue="" 
+                  className="bg-transparent text-sm font-medium outline-none appearance-none cursor-pointer pr-4" 
+                  style={{ color: T.text }}
+                >
+                  <option value="" disabled className="bg-gray-900">Change Role...</option>
+                  <option value="ADMIN" className="bg-gray-900">Set as Admin</option>
+                  <option value="MEMBER" className="bg-gray-900">Set as Member</option>
+                </select>
+              </div>
+              
+              <button
+                onClick={handleBulkRemove}
+                disabled={bulkActionInProgress}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                style={{ color: T.red, background: T.redLo, border: `1px solid rgba(255,77,109,0.2)` }}
+              >
+                {bulkActionInProgress ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                Remove
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── TOAST ── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className={`fixed bottom-6 right-6 z-[1000] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-md ${
+              toast.type === "success"
+                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                : "bg-red-500/10 border-red-500/20 text-red-400"
+            }`}
+            style={{ fontFamily: "'DM Sans', sans-serif" }}
+          >
+            {toast.type === "success" ? <Check size={18} /> : <AlertTriangle size={18} />}
+            <span className="text-sm font-semibold">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100 transition-opacity">
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
