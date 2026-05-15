@@ -249,15 +249,43 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="h-full overflow-y-auto bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-6 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+        <div className="max-w-[1600px] mx-auto pb-12">
           <div className="flex items-center gap-3 mb-8">
             <div className="h-8 w-8 rounded-lg bg-gray-800 animate-pulse" />
             <div className="h-8 w-48 bg-gray-800 rounded animate-pulse" />
           </div>
-          <div className="grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-gray-900/50 rounded-2xl p-4 h-64 animate-pulse" />
+              <div key={i} className="flex flex-col rounded-2xl border border-gray-800/50 bg-gray-900/40 shadow-xl overflow-hidden">
+                {/* Column Header Skeleton */}
+                <div className="p-4 pb-2 flex items-center justify-between border-b border-gray-800/50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-gray-700 animate-pulse" />
+                    <div className="h-5 w-24 bg-gray-800 rounded animate-pulse" />
+                    <div className="h-4 w-6 bg-gray-800 rounded-full animate-pulse ml-1" />
+                  </div>
+                  <div className="h-4 w-4 bg-gray-800 rounded animate-pulse" />
+                </div>
+                {/* Column Body Skeleton */}
+                <div className="p-3 space-y-2.5 min-h-[300px]">
+                  {[1, 2].map((j) => (
+                    <div key={j} className="bg-gray-800/40 rounded-xl border border-gray-700/50 p-4">
+                      <div className="h-4 w-3/4 bg-gray-700/50 rounded animate-pulse mb-3" />
+                      <div className="h-8 w-full bg-gray-700/30 rounded-lg animate-pulse mb-3" />
+                      <div className="flex gap-1.5 mb-3">
+                        <div className="h-5 w-12 bg-gray-700/40 rounded-md animate-pulse" />
+                        <div className="h-5 w-16 bg-gray-700/40 rounded-md animate-pulse" />
+                        <div className="h-5 w-12 bg-gray-700/40 rounded-md animate-pulse" />
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-700/50">
+                        <div className="h-3 w-16 bg-gray-700/50 rounded animate-pulse" />
+                        <div className="h-3 w-20 bg-gray-700/50 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -266,8 +294,8 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
-      <div className="p-6 max-w-[1600px] mx-auto">
+    <div className="h-full overflow-y-auto bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+      <div className="p-6 pb-12 max-w-[1600px] mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">

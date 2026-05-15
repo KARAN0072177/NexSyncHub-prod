@@ -15,8 +15,21 @@ import {
   Check,
   Activity,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
+
+/* ─── design tokens (matches members/settings page) ──────────────────────── */
+const T = {
+  accent:   "#6C63FF",
+  accentLo: "rgba(108,99,255,0.12)",
+  accentMd: "rgba(108,99,255,0.25)",
+  surface:  "rgba(16,15,22,0.98)",
+  border:   "rgba(255,255,255,0.07)",
+  borderHi: "rgba(255,255,255,0.13)",
+  text:     "#E8E6F0",
+  muted:    "#6B6880",
+};
 
 export default function TaskDetailModal({ taskId, onClose }: any) {
   const [task, setTask] = useState<any>(null);
@@ -174,48 +187,68 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
 
   if (!task) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-          </div>
-        </div>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0" style={{ background: "rgba(5,5,8,0.78)", backdropFilter: "blur(10px)" }} onClick={onClose} />
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative z-10 p-8 rounded-3xl" style={{ background: T.surface, border: `1px solid ${T.borderHi}` }}>
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: T.accent }} />
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" style={{ fontFamily: "'DM Sans', sans-serif", color: T.text }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+      `}</style>
+      
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="absolute inset-0"
+        style={{ background: "rgba(5,5,8,0.78)", backdropFilter: "blur(10px)" }}
+        onClick={onClose}
+      />
 
-      <div className="relative bg-gray-900/95 backdrop-blur-xl border border-gray-800 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 28, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.32, ease: [0.22,1,0.36,1] } }}
+        className="relative w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col shadow-2xl max-h-[90vh]"
+        style={{ background: T.surface, border: `1px solid ${T.borderHi}`, backdropFilter: "blur(40px)" }}
+      >
+        <div className="h-0.5 w-full absolute top-0 left-0" style={{ background: `linear-gradient(90deg, ${T.accent}, transparent)` }} />
+
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-800/50">
-          <div className="flex items-center gap-2 min-w-0">
-            <MessageSquare className="w-5 h-5 text-indigo-400 flex-shrink-0" />
-            <h2 className="text-lg font-semibold text-white truncate">{task.title}</h2>
+        <div className="flex items-center justify-between px-6 py-5 shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
+              <MessageSquare size={18} style={{ color: T.accent }} />
+            </div>
+            <h2 className="text-xl font-bold truncate text-white" style={{ fontFamily: "'Sora', sans-serif" }}>{task.title}</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-gray-200 flex-shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-xl transition-colors shrink-0 hover:bg-white/5"
+            style={{ color: T.muted }}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Body - scrollable */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+          
           {/* Description Section */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: T.muted }}>
                 Description
               </label>
               {!isEditingDescription && (
                 <button
                   onClick={startEditing}
-                  className="p-1 hover:bg-gray-800 rounded-md transition-colors text-gray-400 hover:text-gray-200"
+                  className="p-1.5 hover:bg-white/5 rounded-lg transition-colors"
+                  style={{ color: T.muted }}
                   title="Edit description"
                 >
                   <Edit size={14} />
@@ -225,75 +258,80 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
 
             {isEditingDescription ? (
               <div className="space-y-2">
-                <textarea
-                  value={editedDescription}
-                  onChange={(e) => setEditedDescription(e.target.value)}
-                  placeholder="Add a description..."
-                  rows={3}
-                  className="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3
-                    text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 
-                    focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all resize-none"
-                  autoFocus
-                />
+                <div
+                  className="relative rounded-2xl transition-all duration-300"
+                  style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.accentMd}`, boxShadow: `0 0 0 3px ${T.accentLo}` }}
+                >
+                  <textarea
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    placeholder="Add a description..."
+                    rows={4}
+                    className="w-full bg-transparent rounded-2xl px-5 py-4 text-sm outline-none resize-none transition-all duration-300"
+                    style={{ color: T.text }}
+                    autoFocus
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={saveDescription}
                     disabled={saving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                      bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30
-                      transition-all disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 active:scale-95 text-white"
+                    style={{ background: `linear-gradient(135deg, ${T.accent}, #8B5CF6)`, boxShadow: `0 4px 20px ${T.accentMd}` }}
                   >
                     {saving ? (
                       <>
                         <Loader2 size={14} className="animate-spin" />
-                        Saving...
+                        Saving
                       </>
                     ) : (
                       <>
                         <Check size={14} />
-                        Save
+                        Save Changes
                       </>
                     )}
                   </button>
                   <button
                     onClick={cancelEditing}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 
-                      hover:bg-gray-800 hover:text-gray-200 transition-all"
+                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                    style={{ color: T.muted, background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}` }}
                   >
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl px-4 py-3">
+              <div className="rounded-2xl px-5 py-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.borderHi}` }}>
                 {task.description ? (
-                  <p className="text-gray-200 text-sm whitespace-pre-wrap break-words">
+                  <p className="text-sm whitespace-pre-wrap break-words leading-relaxed" style={{ color: "rgba(232,230,240,0.85)" }}>
                     {task.description}
                   </p>
                 ) : (
-                  <p className="text-gray-500 text-sm italic">No description yet</p>
+                  <p className="text-sm italic" style={{ color: T.muted }}>No description yet</p>
                 )}
               </div>
             )}
           </div>
 
           {/* Activity Section */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+          <div className="space-y-3">
+            <label className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: T.muted }}>
               Activity
             </label>
             <div
               ref={activitiesContainerRef}
-              className="max-h-32 overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+              className="max-h-40 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
             >
               {activities.length === 0 ? (
-                <p className="text-xs text-gray-500 italic">No activity yet</p>
+                <p className="text-sm italic" style={{ color: T.muted }}>No activity yet</p>
               ) : (
                 activities.map((a) => (
-                  <div key={a._id} className="flex items-start gap-2">
-                    <Activity className="w-3 h-3 text-gray-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-gray-400">
-                      <span className="font-medium text-gray-300">{a.sender?.username}</span>{" "}
+                  <div key={a._id} className="flex items-start gap-3">
+                    <div className="mt-1 flex items-center justify-center w-5 h-5 rounded-full shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
+                      <Activity size={10} style={{ color: T.muted }} />
+                    </div>
+                    <p className="text-sm leading-relaxed" style={{ color: T.muted }}>
+                      <span className="font-semibold" style={{ color: T.text }}>{a.sender?.username}</span>{" "}
                       {a.content}
                     </p>
                   </div>
@@ -304,33 +342,32 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
 
           {/* Comments Section */}
           <div className="space-y-3">
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <label className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: T.muted }}>
               Comments ({comments.length})
             </label>
 
             <div
               ref={commentsContainerRef}
-              className="space-y-3 max-h-64 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+              className="space-y-4 max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
             >
               {comments.length === 0 ? (
-                <p className="text-sm text-gray-500 italic py-2">No comments yet</p>
+                <p className="text-sm italic" style={{ color: T.muted }}>No comments yet</p>
               ) : (
                 comments.map((c) => (
-                  <div key={c._id} className="flex gap-3">
-                    <div className="w-7 h-7 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0">
-                      <User className="w-3.5 h-3.5 text-gray-400" />
+                  <div key={c._id} className="flex gap-3.5">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${T.borderHi}` }}>
+                      <User size={14} style={{ color: T.muted }} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-gray-200">
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-sm font-semibold" style={{ color: T.text }}>
                           {c.sender?.username || "Unknown"}
                         </span>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(c.createdAt)}
+                        <span className="text-xs" style={{ color: T.muted }}>
+                          • {formatDate(c.createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-300 break-words mt-0.5">{c.content}</p>
+                      <p className="text-sm leading-relaxed break-words" style={{ color: "rgba(232,230,240,0.85)" }}>{c.content}</p>
                     </div>
                   </div>
                 ))
@@ -340,34 +377,45 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
         </div>
 
         {/* Footer - Add Comment */}
-        <div className="p-5 border-t border-gray-800/50">
-          <div className="flex gap-2">
-            <input
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  addComment();
-                }
+        <div className="p-5 shrink-0" style={{ borderTop: `1px solid ${T.border}`, background: "rgba(0,0,0,0.2)" }}>
+          <div className="flex gap-3 items-end">
+            <div 
+              className="flex-1 relative rounded-2xl transition-all duration-300" 
+              style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = T.accentMd;
+                e.currentTarget.style.boxShadow = `0 0 0 3px ${T.accentLo}`;
               }}
-              placeholder="Write a comment..."
-              className="flex-1 bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-2.5
-                text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 
-                focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
-            />
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = T.border;
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <input
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    addComment();
+                  }
+                }}
+                placeholder="Write a comment..."
+                className="w-full bg-transparent outline-none px-5 py-3.5 text-sm"
+                style={{ color: T.text }}
+              />
+            </div>
             <button
               onClick={addComment}
               disabled={sending || !content.trim()}
-              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 
-                disabled:cursor-not-allowed text-white rounded-xl transition-all flex items-center gap-2
-                shadow-lg shadow-indigo-600/20"
+              className="flex items-center justify-center w-12 h-12 rounded-2xl disabled:opacity-50 transition-all active:scale-95 shrink-0 text-white"
+              style={{ background: `linear-gradient(135deg, ${T.accent}, #8B5CF6)`, boxShadow: `0 4px 20px ${T.accentMd}` }}
             >
               {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
