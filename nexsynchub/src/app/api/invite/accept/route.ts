@@ -40,9 +40,13 @@ export async function POST(req: Request) {
     });
 
     if (existing) {
-      return NextResponse.json({
-        message: "Already a member",
-      });
+      return NextResponse.json(
+        { 
+          error: "You are already a member of this workspace",
+          workspaceId: invite.workspace
+        },
+        { status: 400 }
+      );
     }
 
     // ✅ Create membership
@@ -54,6 +58,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       message: "Joined workspace successfully",
+      workspaceId: invite.workspace
     });
   } catch (error) {
     console.error("ACCEPT INVITE ERROR:", error);
