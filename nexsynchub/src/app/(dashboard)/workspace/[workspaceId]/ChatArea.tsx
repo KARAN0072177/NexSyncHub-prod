@@ -109,16 +109,44 @@ export default function ChatArea({ channel }: { channel: any }) {
                 setMessages(data.messages);
                 setCursor(data.nextCursor); // ✅ IMPORTANT
 
+                if (data.messages.length > 0) {
+                    const lastMsg = data.messages[data.messages.length - 1];
+                    
+                    // Safely extract from possible backend field names
+                    let readers = lastMsg.readBy || lastMsg.seenBy || lastMsg.viewedBy || lastMsg.readers || [];
+                    if (!Array.isArray(readers) && typeof readers === "object") {
+                        readers = Object.keys(readers); // Handle if backend returns a dictionary map
+                    }
+
+                    const initialSeen = new Set<string>();
+                    if (Array.isArray(readers)) {
+                        readers.forEach((u: any) => {
+                            const id = u?._id || u?.user || u?.id || (typeof u === "string" ? u : null);
+                            if (id && String(id) !== String(userId)) {
+                                initialSeen.add(String(id));
+                            }
+                        });
+                    }
+                    setSeenUsers(initialSeen);
+                }
+
                 if (unreadCount > 0 && data.messages.length > 0) {
                     const firstUnreadIndex = Math.max(0, data.messages.length - unreadCount);
                     if (data.messages[firstUnreadIndex]) {
                         setFirstUnreadId(data.messages[firstUnreadIndex]._id);
                     }
                 }
+
+                // 🔥 Mark channel as read since the user just opened it!
+                fetch("/api/channel/read", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ channelId: channel._id }),
+                }).catch(err => console.error("Failed to mark channel as read:", err));
             }
         };
         fetchMessages();
-    }, [channel._id, channel.workspace]);
+    }, [channel._id, channel.workspace, userId]);
 
     // 🔥 Load more messages (pagination)
 
@@ -362,8 +390,10 @@ export default function ChatArea({ channel }: { channel: any }) {
             }
         );
 
-        socket.on("message_seen", ({ userId }: any) => {
-            setSeenUsers((prev) => new Set(prev).add(userId));
+        socket.on("message_seen", (payload: any) => {
+            const seenId = payload?.userId || payload?.user || payload;
+            if (!seenId || String(seenId) === String(userId)) return;
+            setSeenUsers((prev) => new Set(prev).add(String(seenId)));
         });
 
         socket.on("message_reaction_update", ({ messageId, reactions }: any) => {
@@ -517,8 +547,37 @@ export default function ChatArea({ channel }: { channel: any }) {
             // 🔥 Replace messages completely
             setMessages(data.messages);
 
+            // Initialize seenUsers for the loaded context's last message
+            if (data.messages.length > 0) {
+                const lastMsg = data.messages[data.messages.length - 1];
+                
+                // Safely extract from possible backend field names
+                let readers = lastMsg.readBy || lastMsg.seenBy || lastMsg.viewedBy || lastMsg.readers || [];
+                if (!Array.isArray(readers) && typeof readers === "object") {
+                    readers = Object.keys(readers); // Handle if backend returns a dictionary map
+                }
+
+                const initialSeen = new Set<string>();
+                if (Array.isArray(readers)) {
+                    readers.forEach((u: any) => {
+                        const id = u?._id || u?.user || u?.id || (typeof u === "string" ? u : null);
+                        if (id && String(id) !== String(userId)) {
+                            initialSeen.add(String(id));
+                        }
+                    });
+                }
+                setSeenUsers(initialSeen);
+            }
+
             // 🔥 Stop pagination (optional but recommended)
             setCursor(null);
+
+            // 🔥 Mark channel as read when deep linking
+            fetch("/api/channel/read", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ channelId: channel._id }),
+            }).catch(err => console.error("Failed to mark channel as read:", err));
 
         } catch (err) {
             console.error("Context load failed:", err);
