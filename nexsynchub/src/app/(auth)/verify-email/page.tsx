@@ -9,15 +9,12 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-export default function VerifyEmailPage({
-  searchParams,
-}: {
-  searchParams: {
-    token?: string;
-  };
-}) {
-  const token = searchParams?.token;
+export default function VerifyEmailPage() {
+  const searchParams = useSearchParams();
+
+  const token = searchParams.get("token");
 
   const [status, setStatus] = useState<
     "loading" | "success" | "error"
@@ -82,7 +79,6 @@ export default function VerifyEmailPage({
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-2xl blur-xl opacity-50" />
 
         <div className="relative bg-gray-900/80 backdrop-blur-xl border border-gray-800 rounded-2xl p-8 shadow-2xl text-center">
-          {/* Icon */}
           <div
             className={`inline-flex p-4 rounded-full mb-4 border ${
               status === "loading"

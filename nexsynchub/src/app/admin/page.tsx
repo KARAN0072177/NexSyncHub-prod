@@ -1,287 +1,295 @@
 "use client";
 
 import {
-  useEffect,
-  useState,
+    useEffect,
+    useState,
 } from "react";
 
 import {
-  Users,
-  Building2,
-  Hash,
-  CheckSquare,
-  MessageSquare,
-  Shield,
-  Crown,
-  BadgeCheck,
-  Loader2,
+    Users,
+    Building2,
+    Hash,
+    CheckSquare,
+    MessageSquare,
+    Shield,
+    Crown,
+    BadgeCheck,
+    Loader2,
 } from "lucide-react";
+
+import { useSession } from "next-auth/react";
 
 interface AdminStats {
 
-  totalUsers: number;
+    totalUsers: number;
 
-  totalWorkspaces: number;
+    totalWorkspaces: number;
 
-  totalChannels: number;
+    totalChannels: number;
 
-  totalTasks: number;
+    totalTasks: number;
 
-  totalMessages: number;
+    totalMessages: number;
 
-  verifiedUsers: number;
+    verifiedUsers: number;
 
-  admins: number;
+    admins: number;
 
-  superAdmins: number;
+    superAdmins: number;
 
 }
 
 export default function AdminPage() {
 
-  const [stats, setStats] =
-    useState<AdminStats | null>(
-      null
-    );
+    const {
+        data: session,
+    } = useSession();
 
-  const [loading, setLoading] =
-    useState(true);
+    console.log(session);
 
-  useEffect(() => {
+    const [stats, setStats] =
+        useState<AdminStats | null>(
+            null
+        );
 
-    const fetchStats =
-      async () => {
+    const [loading, setLoading] =
+        useState(true);
 
-        try {
+    useEffect(() => {
 
-          const res =
-            await fetch(
-              "/api/admin/stats"
-            );
+        const fetchStats =
+            async () => {
 
-          const data =
-            await res.json();
+                try {
 
-          if (res.ok) {
+                    const res =
+                        await fetch(
+                            "/api/admin/stats"
+                        );
 
-            setStats(
-              data.stats
-            );
+                    const data =
+                        await res.json();
 
-          }
+                    if (res.ok) {
 
-        } catch (error) {
+                        setStats(
+                            data.stats
+                        );
 
-          console.error(
-            "ADMIN STATS ERROR:",
-            error
-          );
+                    }
 
-        } finally {
+                } catch (error) {
 
-          setLoading(false);
+                    console.error(
+                        "ADMIN STATS ERROR:",
+                        error
+                    );
 
-        }
+                } finally {
 
-      };
+                    setLoading(false);
 
-    fetchStats();
+                }
 
-  }, []);
+            };
 
-  const cards = [
+        fetchStats();
 
-    {
-      title:
-        "Total Users",
+    }, []);
 
-      value:
-        stats?.totalUsers || 0,
+    const cards = [
 
-      icon: Users,
-    },
+        {
+            title:
+                "Total Users",
 
-    {
-      title:
-        "Workspaces",
+            value:
+                stats?.totalUsers || 0,
 
-      value:
-        stats?.totalWorkspaces || 0,
+            icon: Users,
+        },
 
-      icon: Building2,
-    },
+        {
+            title:
+                "Workspaces",
 
-    {
-      title:
-        "Channels",
+            value:
+                stats?.totalWorkspaces || 0,
 
-      value:
-        stats?.totalChannels || 0,
+            icon: Building2,
+        },
 
-      icon: Hash,
-    },
+        {
+            title:
+                "Channels",
 
-    {
-      title:
-        "Tasks",
+            value:
+                stats?.totalChannels || 0,
 
-      value:
-        stats?.totalTasks || 0,
+            icon: Hash,
+        },
 
-      icon: CheckSquare,
-    },
+        {
+            title:
+                "Tasks",
 
-    {
-      title:
-        "Messages",
+            value:
+                stats?.totalTasks || 0,
 
-      value:
-        stats?.totalMessages || 0,
+            icon: CheckSquare,
+        },
 
-      icon:
-        MessageSquare,
-    },
+        {
+            title:
+                "Messages",
 
-    {
-      title:
-        "Verified Users",
+            value:
+                stats?.totalMessages || 0,
 
-      value:
-        stats?.verifiedUsers || 0,
+            icon:
+                MessageSquare,
+        },
 
-      icon:
-        BadgeCheck,
-    },
+        {
+            title:
+                "Verified Users",
 
-    {
-      title:
-        "Admins",
+            value:
+                stats?.verifiedUsers || 0,
 
-      value:
-        stats?.admins || 0,
+            icon:
+                BadgeCheck,
+        },
 
-      icon: Shield,
-    },
+        {
+            title:
+                "Admins",
 
-    {
-      title:
-        "Super Admins",
+            value:
+                stats?.admins || 0,
 
-      value:
-        stats?.superAdmins || 0,
+            icon: Shield,
+        },
 
-      icon: Crown,
-    },
+        {
+            title:
+                "Super Admins",
 
-  ];
+            value:
+                stats?.superAdmins || 0,
 
-  if (loading) {
+            icon: Crown,
+        },
+
+    ];
+
+    if (loading) {
+
+        return (
+
+            <div
+                className="min-h-screen bg-black flex items-center justify-center"
+            >
+
+                <Loader2
+                    className="w-10 h-10 text-indigo-500 animate-spin"
+                />
+
+            </div>
+
+        );
+
+    }
 
     return (
 
-      <div
-        className="min-h-screen bg-black flex items-center justify-center"
-      >
+        <div
+            className="min-h-screen bg-black text-white p-6"
+        >
 
-        <Loader2
-          className="w-10 h-10 text-indigo-500 animate-spin"
-        />
+            {/* Header */}
+            <div
+                className="mb-8"
+            >
 
-      </div>
+                <h1
+                    className="text-3xl font-bold"
+                >
+                    NexSyncHub Admin
+                </h1>
+
+                <p
+                    className="text-gray-400 mt-2"
+                >
+                    Platform overview dashboard
+                </p>
+
+            </div>
+
+            {/* Stats Grid */}
+            <div
+                className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5"
+            >
+
+                {cards.map(
+                    (
+                        card,
+                        index
+                    ) => {
+
+                        const Icon =
+                            card.icon;
+
+                        return (
+
+                            <div
+                                key={index}
+                                className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-indigo-500/40 transition-all"
+                            >
+
+                                <div
+                                    className="flex items-center justify-between"
+                                >
+
+                                    <div>
+
+                                        <p
+                                            className="text-sm text-gray-400"
+                                        >
+                                            {card.title}
+                                        </p>
+
+                                        <h2
+                                            className="text-3xl font-bold mt-2"
+                                        >
+                                            {card.value}
+                                        </h2>
+
+                                    </div>
+
+                                    <div
+                                        className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20"
+                                    >
+
+                                        <Icon
+                                            className="w-6 h-6 text-indigo-400"
+                                        />
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        );
+
+                    }
+                )}
+
+            </div>
+
+        </div>
 
     );
-
-  }
-
-  return (
-
-    <div
-      className="min-h-screen bg-black text-white p-6"
-    >
-
-      {/* Header */}
-      <div
-        className="mb-8"
-      >
-
-        <h1
-          className="text-3xl font-bold"
-        >
-          NexSyncHub Admin
-        </h1>
-
-        <p
-          className="text-gray-400 mt-2"
-        >
-          Platform overview dashboard
-        </p>
-
-      </div>
-
-      {/* Stats Grid */}
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5"
-      >
-
-        {cards.map(
-          (
-            card,
-            index
-          ) => {
-
-            const Icon =
-              card.icon;
-
-            return (
-
-              <div
-                key={index}
-                className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-indigo-500/40 transition-all"
-              >
-
-                <div
-                  className="flex items-center justify-between"
-                >
-
-                  <div>
-
-                    <p
-                      className="text-sm text-gray-400"
-                    >
-                      {card.title}
-                    </p>
-
-                    <h2
-                      className="text-3xl font-bold mt-2"
-                    >
-                      {card.value}
-                    </h2>
-
-                  </div>
-
-                  <div
-                    className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20"
-                  >
-
-                    <Icon
-                      className="w-6 h-6 text-indigo-400"
-                    />
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            );
-
-          }
-        )}
-
-      </div>
-
-    </div>
-
-  );
 
 }

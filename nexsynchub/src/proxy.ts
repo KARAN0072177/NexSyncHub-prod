@@ -1,12 +1,21 @@
-import { withAuth }
-  from "next-auth/middleware";
+import {
+  withAuth,
+} from "next-auth/middleware";
 
 export default withAuth(
 
-  function middleware(req) {
+  function proxy(req) {
+
+    const token =
+      req.nextauth.token;
+
+    console.log(
+      "PROXY TOKEN:",
+      token
+    );
 
     const role =
-      req.nextauth.token?.role;
+      token?.role as string;
 
     const pathname =
       req.nextUrl.pathname;
@@ -18,7 +27,7 @@ export default withAuth(
       )
     ) {
 
-      // ❌ Not admin
+      // ❌ Block normal users
       if (
         role !== "admin" &&
         role !== "super_admin"
