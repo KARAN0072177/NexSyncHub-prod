@@ -21,6 +21,8 @@ import Membership
 import Message
     from "@/models/Message";
 
+import { createAuditLog } from "@/lib/audit";
+
 export async function DELETE(
     req: Request
 ) {
@@ -167,6 +169,32 @@ export async function DELETE(
             );
 
         }
+
+        await createAuditLog({
+
+            workspaceId:
+                String(channel.workspace),
+
+            actorId:
+                session.user.id,
+
+            action:
+                "channel_deleted",
+
+            targetType:
+                "channel",
+
+            targetId:
+                String(channel._id),
+
+            metadata: {
+
+                channelName:
+                    channel.name,
+
+            },
+
+        });
 
         // 🔥 Delete messages
         await Message.deleteMany({
