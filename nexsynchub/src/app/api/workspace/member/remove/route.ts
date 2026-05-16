@@ -1,8 +1,12 @@
+// Next.js API route for removing a member from a workspace (by owner/admin)
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Membership from "@/models/Membership";
 import Message from "@/models/Message";
 import Channel from "@/models/Channel";
+
+import { createAuditLog } from "@/lib/audit";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
@@ -66,6 +70,38 @@ export async function DELETE(req: Request) {
     // OWNER → can remove anyone
     // =============================
     if (current.role === "OWNER") {
+
+      await createAuditLog({
+
+        workspaceId,
+
+        actorId:
+          session.user.id,
+
+        action:
+          "member_removed",
+
+        targetType:
+          "member",
+
+        targetId:
+          targetUserId,
+
+        metadata: {
+
+          removedByRole:
+            current.role,
+
+          targetRole:
+            target.role,
+
+          targetUsername:
+            target.user.username,
+
+        },
+
+      });
+
       await target.deleteOne();
 
       const actionText = `${current.user.username} removed ${target.user.username} from the workspace`;
@@ -99,6 +135,38 @@ export async function DELETE(req: Request) {
     // ADMIN → can remove only MEMBERS
     // =============================
     if (current.role === "ADMIN" && target.role === "MEMBER") {
+
+      await createAuditLog({
+
+        workspaceId,
+
+        actorId:
+          session.user.id,
+
+        action:
+          "member_removed",
+
+        targetType:
+          "member",
+
+        targetId:
+          targetUserId,
+
+        metadata: {
+
+          removedByRole:
+            current.role,
+
+          targetRole:
+            target.role,
+
+          targetUsername:
+            target.user.username,
+
+        },
+
+      });
+
       await target.deleteOne();
 
       const actionText = `${current.user.username} removed ${target.user.username} from workspace`;
