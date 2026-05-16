@@ -263,13 +263,13 @@ export default function WorkspaceSidebar({
                                         "/dashboard/browse"
                                     )
                                 }
-                                className="p-2 rounded-xl transition-all hover:bg-white/5" style={{ color: T.muted }}
+                                className="p-2 rounded-xl transition-all hover:bg-white/5 cursor-pointer" style={{ color: T.muted }}
                             >
                                 <Globe size={16} />
                             </button>
 
                             <button
-                                className="p-2 rounded-xl transition-all hover:bg-white/5" style={{ color: T.muted }}
+                                className="p-2 rounded-xl transition-all hover:bg-white/5 cursor-pointer" style={{ color: T.muted }}
                             >
                                 <Settings size={16} />
                             </button>
@@ -312,7 +312,7 @@ export default function WorkspaceSidebar({
                                 onClick={() =>
                                     setShowModal(true)
                                 }
-                                className="p-1.5 rounded-lg transition-all hover:bg-white/5" style={{ color: T.muted }}
+                                className="p-1.5 rounded-lg transition-all hover:bg-white/5 cursor-pointer" style={{ color: T.muted }}
                             >
                                 <Plus size={15} />
                             </button>
@@ -346,9 +346,18 @@ export default function WorkspaceSidebar({
                                             )
                                         }
 
-                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5"
+                                        className="relative w-full flex items-center gap-3 pl-3 pr-8 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
                                         style={isActive ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
                                     >
+
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeSidebarLink"
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                                style={{ background: T.accent, boxShadow: `0 0 10px ${T.accent}` }}
+                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                            />
+                                        )}
 
                                         <Hash
                                             size={16}
@@ -399,6 +408,13 @@ export default function WorkspaceSidebar({
 
                         <div className="space-y-1">
 
+                            {(() => {
+                                const isTasksActive = pathname.includes("/tasks");
+                                const isMembersActive = pathname.includes("/members");
+                                const isActivityActive = pathname.includes("/activity");
+                                const isSettingsActive = pathname.includes("/settings");
+                                return (
+                                    <>
                             {/* Tasks */}
                             <button
                                 onClick={() =>
@@ -407,15 +423,24 @@ export default function WorkspaceSidebar({
                                     )
                                 }
 
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5"
-                                style={pathname.includes("/tasks") ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
+                                className="relative w-full flex items-center gap-3 pl-3 pr-8 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
+                                style={isTasksActive ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
                             >
+
+                                {isTasksActive && (
+                                    <motion.div
+                                        layoutId="activeSidebarLink"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                        style={{ background: T.accent, boxShadow: `0 0 10px ${T.accent}` }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    />
+                                )}
 
                                 <CheckSquare
                                     size={16} className="opacity-70 group-hover:opacity-100 transition-opacity"
                                 />
 
-                                <span className="transition-colors group-hover:text-white" style={pathname.includes("/tasks") ? { color: T.text } : {}}>Tasks</span>
+                                <span className="transition-colors group-hover:text-white" style={isTasksActive ? { color: T.text } : {}}>Tasks</span>
 
                             </button>
 
@@ -427,13 +452,22 @@ export default function WorkspaceSidebar({
                                     )
                                 }
 
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5"
-                                style={pathname.includes("/members") ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
+                                className="relative w-full flex items-center gap-3 pl-3 pr-8 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
+                                style={isMembersActive ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
                             >
+
+                                {isMembersActive && (
+                                    <motion.div
+                                        layoutId="activeSidebarLink"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                        style={{ background: T.accent, boxShadow: `0 0 10px ${T.accent}` }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    />
+                                )}
 
                                 <Users size={16} className="opacity-70 group-hover:opacity-100 transition-opacity" />
 
-                                <span className="transition-colors group-hover:text-white" style={pathname.includes("/members") ? { color: T.text } : {}}>Members</span>
+                                <span className="transition-colors group-hover:text-white" style={isMembersActive ? { color: T.text } : {}}>Members</span>
 
                             </button>
 
@@ -445,15 +479,24 @@ export default function WorkspaceSidebar({
                                     )
                                 }
 
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5"
-                                style={pathname.includes("/activity") ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
+                                className="relative w-full flex items-center gap-3 pl-3 pr-8 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
+                                style={isActivityActive ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
                             >
+
+                                {isActivityActive && (
+                                    <motion.div
+                                        layoutId="activeSidebarLink"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                        style={{ background: T.accent, boxShadow: `0 0 10px ${T.accent}` }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    />
+                                )}
 
                                 <Settings
                                     size={16} className="opacity-70 group-hover:opacity-100 transition-opacity"
                                 />
 
-                                <span className="transition-colors group-hover:text-white" style={pathname.includes("/activity") ? { color: T.text } : {}}>Activity</span>
+                                <span className="transition-colors group-hover:text-white" style={isActivityActive ? { color: T.text } : {}}>Activity</span>
 
                             </button>
 
@@ -466,17 +509,29 @@ export default function WorkspaceSidebar({
                                     )
                                 }
 
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5"
-                                style={pathname.includes("/settings") ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
+                                className="relative w-full flex items-center gap-3 pl-3 pr-8 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
+                                style={isSettingsActive ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
                             >
+
+                                {isSettingsActive && (
+                                    <motion.div
+                                        layoutId="activeSidebarLink"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                        style={{ background: T.accent, boxShadow: `0 0 10px ${T.accent}` }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    />
+                                )}
 
                                 <Settings
                                     size={16} className="opacity-70 group-hover:opacity-100 transition-opacity"
                                 />
 
-                                <span className="transition-colors group-hover:text-white" style={pathname.includes("/settings") ? { color: T.text } : {}}>Settings</span>
+                                <span className="transition-colors group-hover:text-white" style={isSettingsActive ? { color: T.text } : {}}>Settings</span>
 
                             </button>
+                                    </>
+                                );
+                            })()}
 
                         </div>
 
@@ -532,7 +587,7 @@ export default function WorkspaceSidebar({
                                 onClick={() =>
                                     setShowModal(false)
                                 }
-                                className="w-8 h-8 flex items-center justify-center rounded-xl transition-colors hover:bg-white/5" style={{ color: T.muted }}
+                                className="w-8 h-8 flex items-center justify-center rounded-xl transition-colors hover:bg-white/5 cursor-pointer" style={{ color: T.muted }}
                             >
 
                                 <X size={16} />
@@ -575,7 +630,7 @@ export default function WorkspaceSidebar({
                                 onClick={() =>
                                     setShowModal(false)
                                 }
-                                className="px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all hover:bg-white/5"
+                                className="px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all hover:bg-white/5 cursor-pointer"
                                 style={{ color: T.muted, border: `1px solid ${T.border}` }}
                             >
                                 Cancel
@@ -586,7 +641,7 @@ export default function WorkspaceSidebar({
                                 disabled={
                                     isCreating || !channelName.trim()
                                 }
-                                className="px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all active:scale-95 text-white disabled:opacity-50 flex items-center gap-2"
+                                className="px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all active:scale-95 text-white disabled:opacity-50 flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                                 style={{ background: `linear-gradient(135deg, ${T.accent}, #1D4ED8)`, boxShadow: `0 4px 20px ${T.accentMd}` }}
                             >
 
