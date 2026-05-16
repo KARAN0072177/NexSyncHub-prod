@@ -57,7 +57,44 @@ function LoginContent() {
     if (res?.error) {
       setError(res.error);
     } else {
-      router.push("/set-username");
+      const sessionRes =
+        await fetch(
+          "/api/auth/session"
+        );
+
+      const session =
+        await sessionRes.json();
+
+      const role =
+        session?.user?.role;
+
+      const username =
+        session?.user?.username;
+
+      if (
+        role === "admin" ||
+        role === "super_admin"
+      ) {
+
+        router.push("/admin");
+
+      }
+
+      else if (!username) {
+
+        router.push(
+          "/set-username"
+        );
+
+      }
+
+      else {
+
+        router.push(
+          "/dashboard"
+        );
+
+      }
     }
 
     setLoading(false);
