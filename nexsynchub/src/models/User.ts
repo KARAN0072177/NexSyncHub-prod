@@ -1,86 +1,141 @@
-import mongoose, { Schema, models, model } from "mongoose";
+import mongoose, {
+  Schema,
+  models,
+  model,
+} from "mongoose";
 
 export interface IUser {
   email: string;
+
   password: string;
+
   isEmailVerified: boolean;
+
+  // 🔥 Platform role
+  role:
+    | "user"
+    | "admin"
+    | "super_admin";
 
   username?: string | null;
 
   // 🔥 Profile fields
   displayName?: string | null;
+
   bio?: string | null;
+
   avatar?: string | null;
 
   emailVerificationToken?: string;
+
   emailVerificationExpires?: Date;
 
   createdAt: Date;
+
   updatedAt: Date;
 }
 
-const UserSchema = new Schema<IUser>(
-  {
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      index: true,
-    },
+const UserSchema =
+  new Schema<IUser>(
+    {
+      email: {
+        type: String,
 
-    password: {
-      type: String,
-      required: true,
-    },
+        required: true,
 
-    isEmailVerified: {
-      type: Boolean,
-      default: false,
-    },
+        unique: true,
 
-    username: {
-      type: String,
-      unique: true,
-      sparse: true, // allows null values but enforces uniqueness when set
-      lowercase: true,
-      trim: true,
-    },
+        lowercase: true,
 
-    // 🔥 Display name
-    displayName: {
-      type: String,
-      trim: true,
-      maxlength: 50,
-    },
+        trim: true,
 
-    // 🔥 Short profile bio
-    bio: {
-      type: String,
-      trim: true,
-      maxlength: 160,
-    },
+        index: true,
+      },
 
-    // 🔥 Avatar image URL
-    avatar: {
-      type: String,
-    },
+      password: {
+        type: String,
 
-    emailVerificationToken: {
-      type: String,
-    },
+        required: true,
+      },
 
-    emailVerificationExpires: {
-      type: Date,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
+      isEmailVerified: {
+        type: Boolean,
 
-// Prevent model overwrite in dev (Next.js hot reload issue)
-const User = models.User || model<IUser>("User", UserSchema);
+        default: false,
+      },
+
+      // 🔥 Platform role
+      role: {
+        type: String,
+
+        enum: [
+          "user",
+          "admin",
+          "super_admin",
+        ],
+
+        default: "user",
+
+        index: true,
+      },
+
+      username: {
+        type: String,
+
+        unique: true,
+
+        sparse: true,
+
+        lowercase: true,
+
+        trim: true,
+      },
+
+      // 🔥 Display name
+      displayName: {
+        type: String,
+
+        trim: true,
+
+        maxlength: 50,
+      },
+
+      // 🔥 Short profile bio
+      bio: {
+        type: String,
+
+        trim: true,
+
+        maxlength: 160,
+      },
+
+      // 🔥 Avatar image URL
+      avatar: {
+        type: String,
+      },
+
+      emailVerificationToken: {
+        type: String,
+      },
+
+      emailVerificationExpires: {
+        type: Date,
+      },
+    },
+    {
+      timestamps: true,
+    }
+  );
+
+// Prevent model overwrite
+// in dev (Next.js hot reload)
+
+const User =
+  models.User ||
+
+  model<IUser>(
+    "User",
+    UserSchema
+  );
 
 export default User;
