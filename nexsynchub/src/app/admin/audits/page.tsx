@@ -14,6 +14,8 @@ import {
     formatDistanceToNow,
 } from "date-fns";
 
+import { socket } from "@/lib/socket";
+
 interface Audit {
 
     _id: string;
@@ -86,6 +88,42 @@ export default function AdminAuditsPage() {
             };
 
         fetchAudits();
+
+    }, []);
+
+    // 🔥 Realtime audits
+    useEffect(() => {
+
+        // 🔥 Join admin room
+        socket.emit(
+            "join_admin_global"
+        );
+
+        // 🔥 Listen new audits
+        socket.on(
+            "admin_audit_created",
+            (newAudit) => {
+
+                setAudits(
+                    (prev) => [
+
+                        newAudit,
+
+                        ...prev,
+
+                    ]
+                );
+
+            }
+        );
+
+        return () => {
+
+            socket.off(
+                "admin_audit_created"
+            );
+
+        };
 
     }, []);
 

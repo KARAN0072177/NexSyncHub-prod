@@ -102,6 +102,18 @@ io.on("connection", (socket) => {
         }
     );
 
+    // 🔥 Admin realtime audits
+    socket.on(
+        "join_admin_global",
+        () => {
+
+            socket.join(
+                "admin_global"
+            );
+
+        }
+    );
+
     // 🔥 Disconnect
     socket.on("disconnect", () => {
 

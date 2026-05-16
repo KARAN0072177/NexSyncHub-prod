@@ -187,14 +187,15 @@ export default function AdminUsersPage() {
                     >
 
                       {/* Avatar */}
-                      <div
-                        className="w-11 h-11 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-sm font-semibold text-indigo-400"
-                      >
-
-                        {user.username?.[0]?.toUpperCase() ||
-                          "U"}
-
-                      </div>
+                        {user.avatar ? (
+                          <img src={user.avatar} alt={user.username || "User"} className="w-11 h-11 rounded-full object-cover border border-indigo-500/20 shrink-0" />
+                        ) : (
+                          <div
+                            className="w-11 h-11 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-sm font-semibold text-indigo-400 shrink-0"
+                          >
+                            {user.username?.[0]?.toUpperCase() || "U"}
+                          </div>
+                        )}
 
                       {/* Info */}
                       <div>
