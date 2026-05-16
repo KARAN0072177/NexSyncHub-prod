@@ -10,6 +10,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { createNotification } from "@/lib/notification";
 
+import { createAuditLog } from "@/lib/audit";
+
 export async function PATCH(req: Request) {
     try {
         await connectDB();
@@ -33,6 +35,12 @@ export async function PATCH(req: Request) {
         }
 
         const task = await Task.findById(taskId);
+
+        const oldStatus =
+            task.status;
+
+        const oldAssignee =
+            task.assignee?.toString();
 
         if (!task) {
             return NextResponse.json(
@@ -88,6 +96,90 @@ export async function PATCH(req: Request) {
         }
 
         await task.save();
+
+        // 🔥 Assignment audit
+        if (
+            assignee !== undefined &&
+            oldAssignee !==
+            String(assignee || "")
+        ) {
+
+            await createAuditLog({
+
+                workspaceId:
+                    String(task.workspace),
+
+                actorId:
+                    session.user.id,
+
+                action:
+                    assignee
+                        ? "task_assigned"
+                        : "task_unassigned",
+
+                targetType:
+                    "task",
+
+                targetId:
+                    String(task._id),
+
+                metadata: {
+
+                    taskTitle:
+                        task.title,
+
+                    oldAssignee,
+
+                    newAssignee:
+                        assignee || null,
+
+                },
+
+            });
+
+        }
+
+        // 🔥 Assignment audit
+        if (
+            assignee !== undefined &&
+            oldAssignee !==
+            String(assignee || "")
+        ) {
+
+            await createAuditLog({
+
+                workspaceId:
+                    String(task.workspace),
+
+                actorId:
+                    session.user.id,
+
+                action:
+                    assignee
+                        ? "task_assigned"
+                        : "task_unassigned",
+
+                targetType:
+                    "task",
+
+                targetId:
+                    String(task._id),
+
+                metadata: {
+
+                    taskTitle:
+                        task.title,
+
+                    oldAssignee,
+
+                    newAssignee:
+                        assignee || null,
+
+                },
+
+            });
+
+        }
 
         // 🔥 POPULATE TASK BEFORE EMIT (CRITICAL FIX)
         const populatedTask = await Task.findById(task._id)
