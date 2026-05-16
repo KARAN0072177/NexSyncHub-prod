@@ -71,7 +71,7 @@ function formatAction(audit: Audit): { prefix: string; highlight: string[]; suff
   switch (audit.action) {
     case "workspace_created":     return { prefix: `${u} created workspace`, highlight: [w], suffix: "" };
     case "workspace_deleted":     return { prefix: `${u} deleted workspace`, highlight: [w], suffix: "" };
-    case "workspace_renamed":     return { prefix: `${u} renamed workspace`, highlight: [audit.metadata?.oldName ?? ""], suffix: `to`, };
+    case "workspace_renamed":     return { prefix: `${u} renamed workspace`, highlight: [audit.metadata?.oldName ?? "", audit.metadata?.newName ?? ""], suffix: "" };
     case "channel_created":       return { prefix: `${u} created channel`, highlight: [`#${audit.metadata?.channelName}`], suffix: "" };
     case "channel_deleted":       return { prefix: `${u} deleted channel`, highlight: [`#${audit.metadata?.channelName}`], suffix: "" };
     case "channel_renamed":       return { prefix: `${u} renamed`, highlight: [`#${audit.metadata?.oldName}`, `#${audit.metadata?.newName}`], suffix: "" };
