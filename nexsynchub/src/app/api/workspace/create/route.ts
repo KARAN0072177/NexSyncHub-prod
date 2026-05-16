@@ -5,6 +5,7 @@ import Membership from "@/models/Membership";
 import { createWorkspaceSchema } from "@/lib/validators/workspace";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { createAuditLog } from "@/lib/audit";
 
 export async function POST(req: Request) {
   try {
@@ -39,6 +40,32 @@ export async function POST(req: Request) {
       name,
       owner: session.user.id,
       isPrivate: isPrivate ?? true, // Default to private if not provided
+    });
+
+    await createAuditLog({
+
+      workspaceId:
+        String(workspace._id),
+
+      actorId:
+        session.user.id,
+
+      action:
+        "workspace_created",
+
+      targetType:
+        "workspace",
+
+      targetId:
+        String(workspace._id),
+
+      metadata: {
+
+        workspaceName:
+          workspace.name,
+
+      },
+
     });
 
     // 👑 Create OWNER membership
