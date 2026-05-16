@@ -8,6 +8,8 @@ import Message from "@/models/Message";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 
+import { createAuditLog } from "@/lib/audit";
+
 export async function POST(req: Request) {
   try {
     await connectDB();
@@ -75,6 +77,37 @@ export async function POST(req: Request) {
       priority,
       dueDate,
       linkedMessage,
+    });
+
+    await createAuditLog({
+
+      workspaceId,
+
+      actorId:
+        session.user.id,
+
+      action:
+        "task_created",
+
+      targetType:
+        "task",
+
+      targetId:
+        String(task._id),
+
+      metadata: {
+
+        taskTitle:
+          task.title,
+
+        status:
+          task.status,
+
+        priority:
+          task.priority,
+
+      },
+
     });
 
 
