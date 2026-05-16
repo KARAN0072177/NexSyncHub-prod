@@ -66,3 +66,39 @@ export async function isSuperAdmin(
   );
 
 }
+
+// 🔥 Require platform admin
+export async function requireAdmin(
+  userId: string
+) {
+
+  const allowed =
+    await isAdmin(userId);
+
+  if (!allowed) {
+
+    throw new Error(
+      "Admin access required"
+    );
+
+  }
+
+}
+
+// 🔥 Require super admin
+export async function requireSuperAdmin(
+  userId: string
+) {
+
+  const allowed =
+    await isSuperAdmin(userId);
+
+  if (!allowed) {
+
+    throw new Error(
+      "Super admin access required"
+    );
+
+  }
+
+}
