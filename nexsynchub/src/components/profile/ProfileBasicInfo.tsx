@@ -39,13 +39,14 @@ export default function ProfileBasicInfo({ initialProfile }: ProfileBasicInfoPro
     const [toast, setToast] = useState<{
         type: "success" | "error";
         message: string;
+        position?: "top-right" | "center";
     } | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const showToast = (type: "success" | "error", message: string) => {
-        setToast({ type, message });
-        setTimeout(() => setToast(null), 4000);
+    const showToast = (type: "success" | "error", message: string, position: "top-right" | "center" = "top-right") => {
+        setToast({ type, message, position });
+        setTimeout(() => setToast(null), position === "center" ? 6000 : 4000);
     };
 
     const handleAvatarUpload = async (file: File) => {
@@ -59,7 +60,11 @@ export default function ProfileBasicInfo({ initialProfile }: ProfileBasicInfoPro
             });
             const data = await res.json();
             if (!res.ok) {
-                showToast("error", data.error || "Upload failed");
+                if (data.error?.includes("community guidelines")) {
+                    showToast("error", "❌ This image violates our community guidelines. Please upload a different image.", "center");
+                } else {
+                    showToast("error", data.error || "Upload failed");
+                }
                 return;
             }
             setAvatar(data.avatar);
@@ -110,24 +115,31 @@ export default function ProfileBasicInfo({ initialProfile }: ProfileBasicInfoPro
         <div className="bg-gray-900/40 border border-gray-800 rounded-3xl p-6 backdrop-blur-sm relative">
             {/* Toast Notification */}
             {toast && (
-                <div
-                    className={`absolute top-4 right-4 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-md animate-slide-in ${toast.type === "success"
-                            ? "bg-emerald-500/20 border border-emerald-400/30 text-emerald-300"
-                            : "bg-rose-500/20 border border-rose-400/30 text-rose-300"
+                <div className={toast.position === "center" ? "fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none" : "absolute top-4 right-4 z-50 pointer-events-none"}>
+                    <div
+                        className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-md animate-slide-in pointer-events-auto ${
+                            toast.position === "center"
+                                ? "bg-[#0f172a]/95 border border-rose-500/50 text-white shadow-[0_0_40px_rgba(225,29,72,0.15)] py-4 px-6 max-w-[90vw] sm:max-w-md text-center"
+                                : toast.type === "success"
+                                    ? "bg-emerald-500/20 border border-emerald-400/30 text-emerald-300"
+                                    : "bg-rose-500/20 border border-rose-400/30 text-rose-300"
                         }`}
-                >
-                    {toast.type === "success" ? (
-                        <CheckCircle size={18} className="text-emerald-400" />
-                    ) : (
-                        <AlertCircle size={18} className="text-rose-400" />
-                    )}
-                    <span className="text-sm font-medium">{toast.message}</span>
-                    <button
-                        onClick={() => setToast(null)}
-                        className="ml-auto text-gray-300 hover:text-white transition-colors"
                     >
-                        <X size={14} />
-                    </button>
+                        {toast.position !== "center" && (
+                            toast.type === "success" ? (
+                                <CheckCircle size={18} className="text-emerald-400 shrink-0" />
+                            ) : (
+                                <AlertCircle size={18} className="text-rose-400 shrink-0" />
+                            )
+                        )}
+                        <span className="text-sm font-medium leading-relaxed">{toast.message}</span>
+                        <button
+                            onClick={() => setToast(null)}
+                            className="ml-auto pl-3 text-gray-400 hover:text-white transition-colors shrink-0"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
                 </div>
             )}
 
