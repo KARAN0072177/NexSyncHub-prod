@@ -1,8 +1,12 @@
+// Next.js API route for updating a member's role in a workspace (promote/demote/transfer ownership)
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Membership from "@/models/Membership";
 import Message from "@/models/Message";
 import Channel from "@/models/Channel"; // ✅ NEW
+
+import { createAuditLog } from "@/lib/audit";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
@@ -67,8 +71,40 @@ export async function PATCH(req: Request) {
         );
       }
 
+      const oldRole = target.role; // ✅ for audit log
+
       target.role = role;
       await target.save();
+
+      await createAuditLog({
+
+        workspaceId,
+
+        actorId:
+          session.user.id,
+
+        action:
+          "member_role_updated",
+
+        targetType:
+          "member",
+
+        targetId:
+          targetUserId,
+
+        metadata: {
+
+          oldRole,
+
+          newRole:
+            role,
+
+          targetUsername:
+            target.user.username,
+
+        },
+
+      });
 
       // 🔥 SYSTEM MESSAGE TEXT
       let actionText = "";
@@ -117,8 +153,43 @@ export async function PATCH(req: Request) {
         );
       }
 
+      const oldRole = target.role; // ✅ for audit log
+
       current.role = "ADMIN";
       await current.save();
+
+      await createAuditLog({
+
+        workspaceId,
+
+        actorId:
+          session.user.id,
+
+        action:
+          "ownership_transferred",
+
+        targetType:
+          "member",
+
+        targetId:
+          targetUserId,
+
+        metadata: {
+
+          previousOwner:
+            session.user.username,
+
+          newOwner:
+            target.user.username,
+
+          oldRole,
+
+          newRole:
+            "OWNER",
+
+        },
+
+      });
 
       target.role = "OWNER";
       await target.save();
