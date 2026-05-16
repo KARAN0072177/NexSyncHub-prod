@@ -1,3 +1,5 @@
+// Next.js API route for joining a workspace (public only)
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Membership from "@/models/Membership";
@@ -5,6 +7,8 @@ import Workspace from "@/models/Workspace";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+
+import { createAuditLog } from "@/lib/audit";
 
 export async function POST(req: Request) {
   try {
@@ -52,10 +56,36 @@ export async function POST(req: Request) {
     }
 
     // ✅ Join
-    await Membership.create({
-      user: session.user.id,
-      workspace: workspaceId,
-      role: "MEMBER",
+    const membership =
+      await Membership.create({
+        user: session.user.id,
+        workspace: workspaceId,
+        role: "MEMBER",
+      });
+
+    await createAuditLog({
+
+      workspaceId,
+
+      actorId:
+        session.user.id,
+
+      action:
+        "member_joined",
+
+      targetType:
+        "member",
+
+      targetId:
+        session.user.id,
+
+      metadata: {
+
+        role:
+          membership.role,
+
+      },
+
     });
 
     return NextResponse.json({ success: true });

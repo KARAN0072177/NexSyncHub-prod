@@ -1,3 +1,5 @@
+// Next.js API route for leaving a workspace (only for non-owners)
+
 import { NextResponse } from "next/server";
 
 import { getServerSession }
@@ -11,6 +13,8 @@ import { connectDB }
 
 import Membership
     from "@/models/Membership";
+
+import { createAuditLog } from "@/lib/audit";
 
 export async function DELETE(
     req: Request
@@ -107,6 +111,31 @@ export async function DELETE(
             );
 
         }
+
+        await createAuditLog({
+
+            workspaceId,
+
+            actorId:
+                session.user.id,
+
+            action:
+                "member_left",
+
+            targetType:
+                "member",
+
+            targetId:
+                session.user.id,
+
+            metadata: {
+
+                role:
+                    membership.role,
+
+            },
+
+        });
 
         // 🔥 Remove membership
         await Membership.findByIdAndDelete(
