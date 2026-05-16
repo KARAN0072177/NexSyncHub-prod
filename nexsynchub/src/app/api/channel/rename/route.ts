@@ -16,6 +16,8 @@ import Channel
 import Membership
     from "@/models/Membership";
 
+import { createAuditLog } from "@/lib/audit";
+
 export async function PATCH(
     req: Request
 ) {
@@ -155,11 +157,41 @@ export async function PATCH(
 
         }
 
+        const oldName = channel.name;
+
         // 🔥 Rename
         channel.name =
             name.trim();
 
         await channel.save();
+
+        await createAuditLog({
+
+            workspaceId:
+                String(channel.workspace),
+
+            actorId:
+                session.user.id,
+
+            action:
+                "channel_renamed",
+
+            targetType:
+                "channel",
+
+            targetId:
+                String(channel._id),
+
+            metadata: {
+
+                oldName,
+
+                newName:
+                    channel.name,
+
+            },
+
+        });
 
         return NextResponse.json({
 
