@@ -180,6 +180,8 @@ export async function PATCH(
                 newName:
                     name.trim(),
 
+                    workspaceName: name.trim(),
+
             },
 
         });

@@ -1,307 +1,336 @@
 "use client";
 
 import {
-  useEffect,
-  useState,
+    useEffect,
+    useState,
 } from "react";
 
 import {
-  Loader2,
-  Shield,
+    Loader2,
+    Shield,
 } from "lucide-react";
+
+import {
+    formatDistanceToNow,
+} from "date-fns";
 
 interface Audit {
 
-  _id: string;
+    _id: string;
 
-  action: string;
+    action: string;
 
-  targetType: string;
+    targetType: string;
 
-  metadata?: any;
+    metadata?: any;
 
-  createdAt: string;
+    createdAt: string;
 
-  actor?: {
-    username?: string;
-    email?: string;
-    avatar?: string;
-  };
+    actor?: {
+        username?: string;
+        email?: string;
+        avatar?: string;
+    };
 
-  workspace?: {
-    name?: string;
-  };
+    workspace?: {
+        name?: string;
+    };
 
 }
 
 export default function AdminAuditsPage() {
 
-  const [audits, setAudits] =
-    useState<Audit[]>([]);
+    const [audits, setAudits] =
+        useState<Audit[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+    const [loading, setLoading] =
+        useState(true);
 
-  // 🔥 Fetch audits
-  useEffect(() => {
+    // 🔥 Fetch audits
+    useEffect(() => {
 
-    const fetchAudits =
-      async () => {
+        const fetchAudits =
+            async () => {
 
-        try {
+                try {
 
-          const res =
-            await fetch(
-              "/api/admin/audits/list"
-            );
+                    const res =
+                        await fetch(
+                            "/api/admin/audits/list"
+                        );
 
-          const data =
-            await res.json();
+                    const data =
+                        await res.json();
 
-          if (res.ok) {
+                    if (res.ok) {
 
-            setAudits(
-              data.audits
-            );
+                        setAudits(
+                            data.audits
+                        );
 
-          }
+                    }
 
-        } catch (error) {
+                } catch (error) {
 
-          console.error(
-            "FETCH AUDITS ERROR:",
-            error
-          );
+                    console.error(
+                        "FETCH AUDITS ERROR:",
+                        error
+                    );
 
-        } finally {
+                } finally {
 
-          setLoading(false);
+                    setLoading(false);
 
-        }
+                }
 
-      };
+            };
 
-    fetchAudits();
+        fetchAudits();
 
-  }, []);
+    }, []);
 
-  // 🔥 Format action
-  const formatAction =
-    (audit: Audit) => {
+    // 🔥 Format action
+    const formatAction =
+        (audit: Audit) => {
 
-      const username =
-        audit.actor?.username ||
-        "Unknown";
+            const username =
+                audit.actor?.username ||
+                "Unknown";
 
-      const workspace =
-        audit.workspace?.name ||
-        "Unknown Workspace";
+            const workspace =
+                audit.workspace?.name ||
 
-      switch (
-        audit.action
-      ) {
+                audit.metadata?.workspaceName ||
 
-        case "workspace_created":
-          return `${username} created workspace "${workspace}"`;
+                "Unknown Workspace";
 
-        case "workspace_deleted":
-          return `${username} deleted workspace "${workspace}"`;
+            switch (
+            audit.action
+            ) {
 
-        case "workspace_renamed":
-          return `${username} renamed workspace`;
+                case "workspace_created":
 
-        case "channel_created":
-          return `${username} created a channel`;
+                    return `${username} created workspace "${workspace}"`;
 
-        case "channel_deleted":
-          return `${username} deleted a channel`;
+                case "workspace_deleted":
 
-        case "channel_renamed":
-          return `${username} renamed a channel`;
+                    return `${username} deleted workspace "${workspace}"`;
 
-        case "member_joined":
-          return `${username} joined workspace "${workspace}"`;
+                case "workspace_renamed":
 
-        case "member_left":
-          return `${username} left workspace "${workspace}"`;
+                    return `${username} renamed workspace "${audit.metadata?.oldName}" to "${audit.metadata?.newName}"`;
 
-        case "member_removed":
-          return `${username} removed a member`;
+                case "channel_created":
 
-        case "member_role_updated":
-          return `${username} updated member role`;
+                    return `${username} created channel "#${audit.metadata?.channelName}"`;
 
-        case "ownership_transferred":
-          return `${username} transferred workspace ownership`;
+                case "channel_deleted":
 
-        case "task_created":
-          return `${username} created a task`;
+                    return `${username} deleted channel "#${audit.metadata?.channelName}"`;
 
-        case "task_status_changed":
-          return `${username} changed task status`;
+                case "channel_renamed":
 
-        case "task_assigned":
-          return `${username} assigned a task`;
+                    return `${username} renamed channel "#${audit.metadata?.oldName}" to "#${audit.metadata?.newName}"`;
 
-        case "task_unassigned":
-          return `${username} unassigned a task`;
+                case "member_joined":
 
-        default:
-          return `${username} performed ${audit.action}`;
+                    return `${username} joined workspace "${workspace}"`;
 
-      }
+                case "member_left":
 
-    };
+                    return `${username} left workspace "${workspace}"`;
 
-  if (loading) {
+                case "member_removed":
 
-    return (
+                    return `${username} removed "${audit.metadata?.targetUsername}" from workspace`;
 
-      <div
-        className="h-full flex items-center justify-center"
-      >
+                case "member_role_updated":
 
-        <Loader2
-          className="w-10 h-10 text-indigo-500 animate-spin"
-        />
+                    return `${username} changed "${audit.metadata?.targetUsername}" role from "${audit.metadata?.oldRole}" to "${audit.metadata?.newRole}"`;
 
-      </div>
+                case "ownership_transferred":
 
-    );
+                    return `${username} transferred workspace ownership to "${audit.metadata?.targetUsername}"`;
 
-  }
+                case "task_created":
 
-  return (
+                    return `${username} created task "${audit.metadata?.taskTitle}"`;
 
-    <div
-      className="p-6 text-white"
-    >
+                case "task_status_changed":
 
-      {/* Header */}
-      <div
-        className="mb-8"
-      >
+                    return `${username} changed task "${audit.metadata?.taskTitle}" status from "${audit.metadata?.oldStatus}" to "${audit.metadata?.newStatus}"`;
 
-        <h1
-          className="text-3xl font-bold"
-        >
-          Platform Audits
-        </h1>
+                case "task_assigned":
 
-        <p
-          className="text-gray-400 mt-2"
-        >
-          Platform-wide activity timeline
-        </p>
+                    return `${username} assigned "${audit.metadata?.targetUsername}" to task "${audit.metadata?.taskTitle}"`;
 
-      </div>
+                case "task_unassigned":
 
-      {/* Empty State */}
-      {audits.length === 0 && (
+                    return `${username} unassigned "${audit.metadata?.targetUsername}" from task "${audit.metadata?.taskTitle}"`;
 
-        <div
-          className="bg-gray-900 border border-gray-800 rounded-2xl p-10 text-center"
-        >
+                default:
 
-          <Shield
-            className="w-12 h-12 text-gray-600 mx-auto mb-4"
-          />
+                    return `${username} performed ${audit.action}`;
 
-          <h2
-            className="text-xl font-semibold"
-          >
-            No audits yet
-          </h2>
+            }
 
-          <p
-            className="text-gray-400 mt-2"
-          >
-            Platform audit activity will appear here
-          </p>
+        };
 
-        </div>
+    if (loading) {
 
-      )}
-
-      {/* Timeline */}
-      <div
-        className="space-y-4"
-      >
-
-        {audits.map(
-          (audit) => (
+        return (
 
             <div
-              key={audit._id}
-              className="bg-gray-900 border border-gray-800 rounded-2xl p-5"
+                className="h-full flex items-center justify-center"
             >
 
-              <div
-                className="flex items-start gap-4"
-              >
-
-                {/* Icon */}
-                <div
-                  className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20"
-                >
-
-                  <Shield
-                    className="w-5 h-5 text-indigo-400"
-                  />
-
-                </div>
-
-                {/* Content */}
-                <div
-                  className="flex-1"
-                >
-
-                  <p
-                    className="text-white font-medium"
-                  >
-
-                    {formatAction(
-                      audit
-                    )}
-
-                  </p>
-
-                  {/* Workspace */}
-                  <p
-                    className="text-sm text-gray-400 mt-1"
-                  >
-
-                    Workspace:
-                    {" "}
-                    {audit.workspace?.name ||
-                      "Unknown"}
-
-                  </p>
-
-                  {/* Time */}
-                  <p
-                    className="text-xs text-gray-500 mt-3"
-                  >
-
-                    {new Date(
-                      audit.createdAt
-                    ).toLocaleString()}
-
-                  </p>
-
-                </div>
-
-              </div>
+                <Loader2
+                    className="w-10 h-10 text-indigo-500 animate-spin"
+                />
 
             </div>
 
-          )
-        )}
+        );
 
-      </div>
+    }
 
-    </div>
+    return (
 
-  );
+        <div
+            className="p-6 text-white"
+        >
+
+            {/* Header */}
+            <div
+                className="mb-8"
+            >
+
+                <h1
+                    className="text-3xl font-bold"
+                >
+                    Platform Audits
+                </h1>
+
+                <p
+                    className="text-gray-400 mt-2"
+                >
+                    Platform-wide activity timeline
+                </p>
+
+            </div>
+
+            {/* Empty State */}
+            {audits.length === 0 && (
+
+                <div
+                    className="bg-gray-900 border border-gray-800 rounded-2xl p-10 text-center"
+                >
+
+                    <Shield
+                        className="w-12 h-12 text-gray-600 mx-auto mb-4"
+                    />
+
+                    <h2
+                        className="text-xl font-semibold"
+                    >
+                        No audits yet
+                    </h2>
+
+                    <p
+                        className="text-gray-400 mt-2"
+                    >
+                        Platform audit activity will appear here
+                    </p>
+
+                </div>
+
+            )}
+
+            {/* Timeline */}
+            <div
+                className="space-y-4"
+            >
+
+                {audits.map(
+                    (audit) => (
+
+                        <div
+                            key={audit._id}
+                            className="bg-gray-900 border border-gray-800 rounded-2xl p-5"
+                        >
+
+                            <div
+                                className="flex items-start gap-4"
+                            >
+
+                                {/* Icon */}
+                                <div
+                                    className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20"
+                                >
+
+                                    <Shield
+                                        className="w-5 h-5 text-indigo-400"
+                                    />
+
+                                </div>
+
+                                {/* Content */}
+                                <div
+                                    className="flex-1"
+                                >
+
+                                    <p
+                                        className="text-white font-medium"
+                                    >
+
+                                        {formatAction(
+                                            audit
+                                        )}
+
+                                    </p>
+
+                                    {/* Workspace */}
+                                    <p
+                                        className="text-sm text-gray-400 mt-1"
+                                    >
+
+                                        Workspace:
+                                        {" "}
+                                        {audit.workspace?.name ||
+
+                                            audit.metadata?.workspaceName ||
+
+                                            "Unknown"}
+
+                                    </p>
+
+                                    {/* Time */}
+                                    <p
+                                        className="text-xs text-gray-500 mt-3"
+                                    >
+
+                                        {formatDistanceToNow(
+                                            new Date(audit.createdAt),
+                                            {
+                                                addSuffix: true,
+                                            }
+                                        )}
+
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    )
+                )}
+
+            </div>
+
+        </div>
+
+    );
 
 }
