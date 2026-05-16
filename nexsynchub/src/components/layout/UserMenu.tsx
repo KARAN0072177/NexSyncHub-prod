@@ -60,10 +60,13 @@ export default function UserMenu() {
     }
 
     const username =
-        session?.user?.username || "User";
+        session?.user?.username || session?.user?.name || "User";
 
     const email =
         session?.user?.email || "";
+
+    const avatarUrl = 
+        session?.user?.image || (session?.user as any)?.avatar;
 
     // 🔥 Initials avatar
     const initials = username
@@ -80,23 +83,24 @@ export default function UserMenu() {
             <button
                 onClick={() => setOpen(!open)}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-xl
-        hover:bg-gray-800/60 transition-colors cursor-pointer"
+        hover:bg-white/5 transition-colors cursor-pointer"
             >
 
                 {/* Avatar */}
-                <div
-                    className="relative w-9 h-9 rounded-full
-          bg-indigo-600/20 border border-indigo-500/30
-          flex items-center justify-center
-          text-sm font-semibold text-indigo-300"
-                >
-                    {initials}
+                <div className="relative shrink-0">
+                    {avatarUrl ? (
+                        <img src={avatarUrl} alt={username} className="w-9 h-9 rounded-full object-cover border border-blue-500/30" />
+                    ) : (
+                        <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-semibold text-blue-400">
+                            {initials}
+                        </div>
+                    )}
 
                     {/* Online dot */}
                     <span
                         className="absolute bottom-0 right-0
             w-3 h-3 rounded-full
-            bg-green-500 border-2 border-gray-950"
+            bg-emerald-500 border-2 border-[#030712]"
                     />
                 </div>
 
@@ -123,25 +127,24 @@ export default function UserMenu() {
             {open && (
                 <div
                     className="absolute bottom-14 left-0 w-72
-          bg-[#090B14]/95 backdrop-blur-xl
-          border border-gray-800
+          bg-[#0f172a]/95 backdrop-blur-[40px]
+          border border-white/10
           rounded-2xl shadow-2xl
           overflow-hidden z-[9999]"
                 >
 
                     {/* Header */}
-                    <div className="p-4 border-b border-gray-800">
+                    <div className="p-4 border-b border-white/10">
 
                         <div className="flex items-center gap-3">
 
-                            <div
-                                className="w-11 h-11 rounded-full
-                bg-indigo-600/20 border border-indigo-500/30
-                flex items-center justify-center
-                text-sm font-semibold text-indigo-300"
-                            >
-                                {initials}
-                            </div>
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt={username} className="w-11 h-11 rounded-full object-cover border border-blue-500/30 shrink-0" />
+                            ) : (
+                                <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-semibold text-blue-400 shrink-0">
+                                    {initials}
+                                </div>
+                            )}
 
                             <div className="min-w-0">
                                 <p className="text-sm font-semibold text-white truncate">
@@ -166,7 +169,7 @@ export default function UserMenu() {
                                 setOpen(false);
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2.5
-              rounded-xl hover:bg-gray-800/70
+              rounded-xl hover:bg-white/5
               text-gray-300 transition-colors cursor-pointer"
                         >
                             <User size={16} />
@@ -181,7 +184,7 @@ export default function UserMenu() {
                                 setOpen(false);
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2.5
-              rounded-xl hover:bg-gray-800/70
+              rounded-xl hover:bg-white/5
               text-gray-300 transition-colors cursor-pointer"
                         >
                             <Settings size={16} />
@@ -196,7 +199,7 @@ export default function UserMenu() {
                                 setOpen(false);
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2.5
-              rounded-xl hover:bg-gray-800/70
+              rounded-xl hover:bg-white/5
               text-gray-300 transition-colors cursor-pointer"
                         >
                             <Bell size={16} />
@@ -205,7 +208,7 @@ export default function UserMenu() {
                             </span>
                         </button>
 
-                        <div className="my-2 border-t border-gray-800" />
+                        <div className="my-2 border-t border-white/5" />
 
                         <button
                             onClick={() =>
