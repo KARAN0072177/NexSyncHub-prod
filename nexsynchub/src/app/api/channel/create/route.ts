@@ -8,6 +8,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { createChannelSchema } from "@/lib/validators/channel";
 
+import { createAuditLog } from "@/lib/audit";
+
 export async function POST(req: Request) {
     try {
         await connectDB();
@@ -51,6 +53,31 @@ export async function POST(req: Request) {
         const channel = await Channel.create({
             name,
             workspace: workspaceId,
+        });
+
+        await createAuditLog({
+
+            workspaceId,
+
+            actorId:
+                session.user.id,
+
+            action:
+                "channel_created",
+
+            targetType:
+                "channel",
+
+            targetId:
+                String(channel._id),
+
+            metadata: {
+
+                channelName:
+                    channel.name,
+
+            },
+
         });
 
         return NextResponse.json(
