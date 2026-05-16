@@ -29,6 +29,8 @@ import Message
 import Task
     from "@/models/Task";
 
+import { createAuditLog } from "@/lib/audit";
+
 export async function DELETE(
     req: Request
 ) {
@@ -122,6 +124,36 @@ export async function DELETE(
             );
 
         }
+
+        const workspace =
+            await Workspace.findById(
+                workspaceId
+            );
+
+        await createAuditLog({
+
+            workspaceId,
+
+            actorId:
+                session.user.id,
+
+            action:
+                "workspace_deleted",
+
+            targetType:
+                "workspace",
+
+            targetId:
+                workspaceId,
+
+            metadata: {
+
+                workspaceName:
+                    workspace.name,
+
+            },
+
+        });
 
         // 🔥 Find all channels
         const channels =
