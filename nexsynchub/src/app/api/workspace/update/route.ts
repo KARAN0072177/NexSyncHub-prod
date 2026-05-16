@@ -1,3 +1,5 @@
+// Next.js API route for updating a workspace details (name, description)
+
 import { NextResponse } from "next/server";
 
 import { getServerSession } from "next-auth";
@@ -7,6 +9,8 @@ import { connectDB } from "@/lib/db";
 
 import Workspace from "@/models/Workspace";
 import Membership from "@/models/Membership";
+
+import { createAuditLog } from "@/lib/audit";
 
 export async function PATCH(
     req: Request
@@ -127,6 +131,13 @@ export async function PATCH(
 
         }
 
+        // 🔥 Audit log
+
+        const existingWorkspace =
+            await Workspace.findById(
+                workspaceId
+            );
+
         // 🔥 Update workspace
         const workspace =
             await Workspace.findByIdAndUpdate(
@@ -144,6 +155,34 @@ export async function PATCH(
                     new: true,
                 }
             );
+
+        await createAuditLog({
+
+            workspaceId,
+
+            actorId:
+                session.user.id,
+
+            action:
+                "workspace_renamed",
+
+            targetType:
+                "workspace",
+
+            targetId:
+                workspaceId,
+
+            metadata: {
+
+                oldName:
+                    existingWorkspace?.name,
+
+                newName:
+                    name.trim(),
+
+            },
+
+        });
 
         return NextResponse.json({
 
