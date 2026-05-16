@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 
 import UserAvatar from "../shared/UserAvatar";
+import Cropper from "react-easy-crop";
+import getCroppedImg from "@/utils/cropImage";
 
 type ProfileBasicInfoProps = {
     initialProfile: any;
@@ -27,6 +29,11 @@ export default function ProfileBasicInfo({ initialProfile }: ProfileBasicInfoPro
     const [avatar, setAvatar] = useState(initialProfile.avatar || "");
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
     // Toast notification state
     const [toast, setToast] = useState<{
@@ -182,7 +189,14 @@ export default function ProfileBasicInfo({ initialProfile }: ProfileBasicInfoPro
                         className="hidden"
                         onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) handleAvatarUpload(file);
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                    setSelectedImage(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                            e.target.value = ""; // Reset input so the same file can be chosen again
                         }}
                     />
 
@@ -309,6 +323,71 @@ export default function ProfileBasicInfo({ initialProfile }: ProfileBasicInfoPro
           animation: slideIn 0.3s ease-out;
         }
       `}</style>
+
+            {/* Cropper Modal */}
+            {selectedImage && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-[#030712]/85 backdrop-blur-sm"
+                        onClick={() => setSelectedImage(null)}
+                    />
+                    <div className="relative bg-[#0f172a]/95 border border-white/10 rounded-3xl w-full max-w-md p-6 shadow-2xl backdrop-blur-xl flex flex-col animate-slide-in">
+                        <h3 className="text-xl font-bold text-white mb-5" style={{ fontFamily: "'Sora', sans-serif" }}>Crop Avatar</h3>
+
+                        <div className="relative w-full h-64 bg-black/50 rounded-2xl overflow-hidden mb-6">
+                            <Cropper
+                                image={selectedImage}
+                                crop={crop}
+                                zoom={zoom}
+                                aspect={1}
+                                cropShape="round"
+                                showGrid={false}
+                                onCropChange={setCrop}
+                                onCropComplete={(_, croppedPixels) => setCroppedAreaPixels(croppedPixels)}
+                                onZoomChange={setZoom}
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-4 mb-8 px-2">
+                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Zoom</span>
+                            <input
+                                type="range"
+                                value={zoom}
+                                min={1}
+                                max={3}
+                                step={0.1}
+                                onChange={(e) => setZoom(Number(e.target.value))}
+                                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setSelectedImage(null)}
+                                className="px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all hover:bg-white/5 border border-white/10 text-gray-400 hover:text-white"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!croppedAreaPixels || !selectedImage) return;
+                                    const croppedFile = await getCroppedImg(selectedImage, croppedAreaPixels);
+                                    if (croppedFile) {
+                                        await handleAvatarUpload(croppedFile);
+                                        setSelectedImage(null);
+                                    }
+                                }}
+                                disabled={uploadingAvatar}
+                                className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                                style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", boxShadow: "0 4px 20px rgba(59,130,246,0.25)" }}
+                            >
+                                {uploadingAvatar ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                                Set Avatar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
