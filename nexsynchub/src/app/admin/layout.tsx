@@ -7,6 +7,7 @@ import {
     ScrollText,
     Users,
     Shield,
+    Building2,
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -32,6 +33,11 @@ export default function AdminLayout({
             label: "Users",
             href: "/admin/users",
             icon: Users,
+        },
+        {
+            label: "Workspaces",
+            href: "/admin/workspaces",
+            icon: Building2,
         },
     ];
 
@@ -79,8 +85,8 @@ export default function AdminLayout({
                                 key={link.href}
                                 href={link.href}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active
-                                        ? "bg-indigo-500/10 border border-indigo-500/20 text-indigo-400"
-                                        : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                                    ? "bg-indigo-500/10 border border-indigo-500/20 text-indigo-400"
+                                    : "text-gray-400 hover:bg-gray-900 hover:text-white"
                                     }`}
                             >
 
