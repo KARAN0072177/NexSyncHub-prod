@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import {
+  moderateImage,
+} from "@/lib/moderation";
+
+import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 
@@ -86,6 +90,31 @@ export async function POST(
 
     const buffer =
       Buffer.from(bytes);
+
+    // 🔥 Moderate image
+    const moderation =
+      await moderateImage(
+        buffer
+      );
+
+    console.log(
+      moderation.labels
+    );
+
+    // ❌ Unsafe image
+    if (!moderation.safe) {
+
+      return NextResponse.json(
+        {
+          error:
+            "This image violates our community guidelines. Please upload a different image.",
+        },
+        {
+          status: 400,
+        }
+      );
+
+    }
 
     // 🔥 Generate unique key
     const extension =
