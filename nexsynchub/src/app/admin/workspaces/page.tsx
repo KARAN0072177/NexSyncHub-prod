@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Building2, Users, Hash, CheckSquare,
-  Search, X, ChevronUp, ChevronDown, Crown,
+  Search, X, ChevronUp, ChevronDown, Crown, ChevronLeft, ChevronRight, Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -71,18 +71,25 @@ function StatChip({ icon: Icon, value, color, lo, md }: { icon: React.ElementTyp
 /* ─── skeleton row ───────────────────────────────────────────────────────── */
 function SkeletonRow({ idx }: { idx: number }) {
   return (
-    <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:idx*0.05 }}
-      className="flex items-center gap-4 px-5 py-4" style={{ borderBottom:`1px solid ${T.border}` }}>
-      <div className="w-10 h-10 rounded-2xl animate-pulse shrink-0" style={{ background:"rgba(99,140,255,0.07)" }} />
-      <div className="flex-1 space-y-2">
-        <div className="h-3.5 w-36 rounded-lg animate-pulse" style={{ background:"rgba(99,140,255,0.07)" }} />
-        <div className="h-3 w-24 rounded-lg animate-pulse" style={{ background:"rgba(99,140,255,0.05)" }} />
-      </div>
-      {[1,2,3].map(i => (
-        <div key={i} className="h-5 w-10 rounded-lg animate-pulse hidden sm:block" style={{ background:"rgba(99,140,255,0.06)" }} />
-      ))}
-      <div className="h-4 w-20 rounded-lg animate-pulse hidden md:block" style={{ background:"rgba(99,140,255,0.05)" }} />
-    </motion.div>
+    <motion.tr initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:idx*0.05 }}
+      style={{ borderBottom:`1px solid ${T.border}` }}>
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl animate-pulse shrink-0" style={{ background:"rgba(99,140,255,0.07)" }} />
+          <div className="h-3.5 w-32 rounded-lg animate-pulse" style={{ background:"rgba(99,140,255,0.07)" }} />
+        </div>
+      </td>
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg animate-pulse shrink-0" style={{ background:"rgba(99,140,255,0.07)" }} />
+          <div className="h-3.5 w-24 rounded-lg animate-pulse" style={{ background:"rgba(99,140,255,0.05)" }} />
+        </div>
+      </td>
+      <td className="px-5 py-4"><div className="h-5 w-12 rounded-lg animate-pulse" style={{ background:"rgba(99,140,255,0.06)" }} /></td>
+      <td className="px-5 py-4"><div className="h-5 w-12 rounded-lg animate-pulse" style={{ background:"rgba(99,140,255,0.06)" }} /></td>
+      <td className="px-5 py-4"><div className="h-5 w-12 rounded-lg animate-pulse" style={{ background:"rgba(99,140,255,0.06)" }} /></td>
+      <td className="px-5 py-4"><div className="h-4 w-20 rounded-lg animate-pulse" style={{ background:"rgba(99,140,255,0.05)" }} /></td>
+    </motion.tr>
   );
 }
 
@@ -93,6 +100,12 @@ export default function AdminWorkspacesPage() {
   const [search, setSearch]         = useState("");
   const [sortKey, setSortKey]       = useState<SortKey>("createdAt");
   const [sortAsc, setSortAsc]       = useState(false);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [isPaginating, setIsPaginating] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchWorkspaces = async () => {
@@ -114,6 +127,11 @@ export default function AdminWorkspacesPage() {
     else { setSortKey(key); setSortAsc(false); }
   };
 
+  // Reset page when filtering/sorting changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, sortKey, sortAsc, itemsPerPage]);
+
   const filtered = workspaces
     .filter(w => {
       const q = search.toLowerCase();
@@ -132,6 +150,45 @@ export default function AdminWorkspacesPage() {
       if (typeof va === "number") return sortAsc ? va - (vb as number) : (vb as number) - va;
       return sortAsc ? (va as string).localeCompare(vb as string) : (vb as string).localeCompare(va as string);
     });
+
+  // CSV Export Function
+  const exportToCSV = () => {
+    const headers = ["Workspace ID", "Name", "Owner Username", "Owner Email", "Members", "Channels", "Tasks", "Created Date"];
+    const rows = filtered.map(w => {
+      const escapeCSV = (str?: string) => `"${(str || "").replace(/"/g, '""')}"`;
+      return [
+        escapeCSV(w._id),
+        escapeCSV(w.name),
+        escapeCSV(w.owner?.username || "Unknown"),
+        escapeCSV(w.owner?.email || "N/A"),
+        w.members,
+        w.channels,
+        w.tasks,
+        escapeCSV(new Date(w.createdAt).toISOString())
+      ].join(",");
+    });
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `workspaces_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedWorkspaces = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages || p === currentPage) return;
+    setIsPaginating(true);
+    setCurrentPage(p);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => setIsPaginating(false), 400); // Wait briefly for skeleton effect
+  };
 
   /* ── loading ── */
   if (loading) {
@@ -180,7 +237,7 @@ export default function AdminWorkspacesPage() {
         <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(99,140,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(99,140,255,0.03) 1px,transparent 1px)", backgroundSize:"48px 48px" }} />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-20" ref={topRef}>
 
         {/* HEADER */}
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, ease:[0.22,1,0.36,1] }} className="mb-8">
@@ -194,9 +251,20 @@ export default function AdminWorkspacesPage() {
                 <p className="text-sm" style={{ color:T.muted }}>Monitor and inspect all workspaces</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm" style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)" }}>
-              <span style={{ color:T.text, fontWeight:600 }}>{workspaces.length}</span>
-              <span style={{ color:T.muted }}>workspaces</span>
+            
+            <div className="flex items-center gap-3">
+              {/* export button */}
+              <button onClick={exportToCSV} disabled={filtered.length === 0 || loading}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
+                style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>
+                <Download size={14} />
+                <span className="font-semibold hidden sm:block">Export CSV</span>
+              </button>
+              
+              <div className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm" style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)" }}>
+                <span style={{ color:T.text, fontWeight:600 }}>{workspaces.length}</span>
+                <span style={{ color:T.muted }}>workspaces</span>
+              </div>
             </div>
           </div>
 
@@ -237,6 +305,47 @@ export default function AdminWorkspacesPage() {
             )}
           </div>
         </motion.div>
+
+        {/* PAGINATION (TOP) */}
+        {!loading && filtered.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 px-1">
+            <div className="flex items-center gap-3">
+              <p className="text-sm" style={{ color: T.muted }}>
+                Showing <span style={{ color: T.text, fontWeight: 600 }}>{(currentPage - 1) * itemsPerPage + 1}</span> to <span style={{ color: T.text, fontWeight: 600 }}>{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span style={{ color: T.text, fontWeight: 600 }}>{filtered.length}</span> workspaces
+              </p>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="text-sm rounded-xl px-3 py-1.5 outline-none cursor-pointer hover:bg-white/5 transition-colors"
+                style={{ background: T.surface, border: `1px solid ${T.borderHi}`, color: T.text }}
+              >
+                <option value={5} style={{ background: T.bg }}>5 per page</option>
+                <option value={10} style={{ background: T.bg }}>10 per page</option>
+                <option value={50} style={{ background: T.bg }}>50 per page</option>
+              </select>
+            </div>
+            
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1 || isPaginating}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5"
+                  style={{ border: `1px solid ${T.borderHi}`, background: T.surface }}>
+                  <ChevronLeft size={16} />
+                </button>
+                <div className="flex items-center gap-1 px-2">
+                  <span className="text-sm font-semibold text-white">{currentPage}</span>
+                  <span className="text-sm text-gray-500">/</span>
+                  <span className="text-sm text-gray-500">{totalPages}</span>
+                </div>
+                <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages || isPaginating}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5"
+                  style={{ border: `1px solid ${T.borderHi}`, background: T.surface }}>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* TABLE CARD */}
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.15, duration:0.5, ease:[0.22,1,0.36,1] }}
@@ -279,7 +388,7 @@ export default function AdminWorkspacesPage() {
 
               <tbody>
                 <AnimatePresence mode="popLayout">
-                  {filtered.length === 0 ? (
+                  {!loading && !isPaginating && filtered.length === 0 ? (
                     <tr>
                       <td colSpan={6}>
                         <div className="flex flex-col items-center gap-3 py-20 text-center">
@@ -291,9 +400,13 @@ export default function AdminWorkspacesPage() {
                         </div>
                       </td>
                     </tr>
+                  ) : isPaginating ? (
+                    Array.from({ length: paginatedWorkspaces.length || 1 }).map((_, idx) => (
+                      <SkeletonRow key={`skel-${idx}`} idx={idx} />
+                    ))
                   ) : (
-                    filtered.map((ws, idx) => {
-                      const isLast = idx === filtered.length - 1;
+                    paginatedWorkspaces.map((ws, idx) => {
+                      const isLast = idx === paginatedWorkspaces.length - 1;
                       const hue    = ws.name.split("").reduce((a,c)=>a+c.charCodeAt(0),0) % 360;
 
                       return (
@@ -366,10 +479,10 @@ export default function AdminWorkspacesPage() {
           </div>
 
           {/* footer */}
-          {filtered.length > 0 && (
+          {!loading && !isPaginating && filtered.length > 0 && (
             <div className="flex items-center justify-between px-5 py-3.5" style={{ borderTop:`1px solid ${T.border}`, background:"rgba(6,12,32,0.40)" }}>
               <p className="text-xs" style={{ color:T.muted }}>
-                Showing <span style={{ color:T.text, fontWeight:600 }}>{filtered.length}</span> of <span style={{ color:T.text, fontWeight:600 }}>{workspaces.length}</span> workspaces
+                Showing <span style={{ color:T.text, fontWeight:600 }}>{paginatedWorkspaces.length}</span> on this page out of <span style={{ color:T.text, fontWeight:600 }}>{filtered.length}</span> total workspaces
               </p>
               <div className="flex items-center gap-4 text-xs" style={{ color:T.muted }}>
                 {[

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Shield, Activity, Building2, Hash, Users, CheckSquare,
-  Crown, ArrowRight, Zap, RefreshCw, Search, X,
+  Crown, ArrowRight, Zap, RefreshCw, Search, X, ChevronLeft, ChevronRight, Download
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -101,6 +101,36 @@ function ActorAvatar({ actor, color }: { actor?: Audit["actor"]; color: string }
   );
 }
 
+/* ─── skeleton ───────────────────────────────────────────────────────────── */
+function AuditSkeleton({ idx }: { idx: number }) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -20, scale: 0.98 }}
+      animate={{ opacity: 1, x: 0, scale: 1, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 } }}
+      exit={{ opacity: 0, x: 20, scale: 0.97, transition: { duration: 0.2 } }}
+      className="relative flex items-start gap-4 group"
+    >
+      <div className="relative z-10 shrink-0 mt-0.5">
+        <div className="w-11 h-11 rounded-2xl animate-pulse" style={{ background: "rgba(99,140,255,0.12)", border: `1px solid ${T.borderHi}` }} />
+      </div>
+      <div className="flex-1 rounded-2xl p-4 sm:p-5 animate-pulse" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl" style={{ background: "rgba(99,140,255,0.12)" }} />
+            <div className="h-4 w-32 sm:w-48 rounded-lg" style={{ background: "rgba(99,140,255,0.08)" }} />
+          </div>
+          <div className="h-5 w-16 rounded-lg" style={{ background: "rgba(99,140,255,0.12)" }} />
+        </div>
+        <div className="flex items-center gap-4 mt-3">
+          <div className="h-3 w-20 sm:w-24 rounded-lg" style={{ background: "rgba(99,140,255,0.08)" }} />
+          <div className="h-3 w-16 sm:w-20 rounded-lg ml-auto" style={{ background: "rgba(99,140,255,0.08)" }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 /* ─── CATEGORIES for filter ──────────────────────────────────────────────── */
 const CATEGORIES = ["All", "Workspace", "Channel", "Member", "Task"];
 
@@ -111,6 +141,14 @@ export default function AdminAuditsPage() {
   const [search, setSearch]       = useState("");
   const [category, setCategory]   = useState("All");
   const [liveCount, setLiveCount] = useState(0);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isPaginating, setIsPaginating] = useState(false);
+  
+  const topRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchAudits = async () => {
@@ -136,6 +174,11 @@ export default function AdminAuditsPage() {
     return () => { socket.off("admin_audit_created"); };
   }, []);
 
+  // Reset page when filtering or sorting
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, category, itemsPerPage, sortOrder]);
+
   const filtered = audits.filter(a => {
     const cfg         = getActionCfg(a.action);
     const matchCat    = category === "All" || cfg.category === category;
@@ -146,25 +189,56 @@ export default function AdminAuditsPage() {
       || (a.workspace?.name ?? "").toLowerCase().includes(q)
       || a.action.toLowerCase().includes(q);
     return matchCat && matchSearch;
+  }).sort((a, b) => {
+    const timeA = new Date(a.createdAt).getTime();
+    const timeB = new Date(b.createdAt).getTime();
+    return sortOrder === "newest" ? timeB - timeA : timeA - timeB;
   });
 
-  /* ── loading ── */
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: T.bg }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');`}</style>
-        <div className="flex flex-col items-center gap-5">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
-              <Activity size={28} style={{ color: T.accent }} className="animate-pulse" />
-            </div>
-            <div className="absolute inset-0 rounded-2xl animate-ping" style={{ background: T.accentLo, animationDuration: "2s" }} />
-          </div>
-          <p className="text-sm font-medium" style={{ color: T.muted, fontFamily: "'DM Sans',sans-serif" }}>Loading audit log…</p>
-        </div>
-      </div>
-    );
-  }
+  // CSV Export Function
+  const exportToCSV = () => {
+    const headers = ["Action", "Category", "Actor", "Workspace", "Details", "Date"];
+    const rows = filtered.map(a => {
+      const cfg = getActionCfg(a.action);
+      const w = a.workspace?.name || a.metadata?.workspaceName || "";
+      const actor = a.actor?.username || a.actor?.email || "";
+      const parts = formatAction(a);
+      const details = `${parts.prefix} ${parts.highlight.join(" ")} ${parts.suffix}`.trim();
+
+      // Escape quotes for safe CSV
+      const escapeCSV = (str?: string) => `"${(str || "").replace(/"/g, '""')}"`;
+
+      return [
+        escapeCSV(a.action),
+        escapeCSV(cfg.category),
+        escapeCSV(actor),
+        escapeCSV(w),
+        escapeCSV(details),
+        escapeCSV(new Date(a.createdAt).toISOString())
+      ].join(",");
+    });
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `audit_log_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedAudits = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages || p === currentPage) return;
+    setIsPaginating(true);
+    setCurrentPage(p);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => setIsPaginating(false), 400); // Wait briefly for skeleton effect
+  };
 
   return (
     <div className="min-h-screen" style={{ background: T.bg, color: T.text }}>
@@ -183,7 +257,7 @@ export default function AdminAuditsPage() {
         <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(99,140,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(99,140,255,0.03) 1px,transparent 1px)", backgroundSize:"48px 48px" }} />
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-20">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-20" ref={topRef}>
 
         {/* HEADER */}
         <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, ease:[0.22,1,0.36,1] }} className="mb-8">
@@ -199,6 +273,14 @@ export default function AdminAuditsPage() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* export */}
+              <button onClick={exportToCSV} disabled={filtered.length === 0 || loading}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
+                style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>
+                <Download size={14} />
+                <span className="font-semibold hidden sm:block">Export CSV</span>
+              </button>
+
               {/* live badge */}
               <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm" style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)" }}>
                 <span className="relative flex h-2 w-2">
@@ -237,28 +319,82 @@ export default function AdminAuditsPage() {
             )}
           </div>
 
-          {/* category tabs */}
-          <div className="flex items-center gap-1 p-1 rounded-2xl" style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)" }}>
-            {CATEGORIES.map(cat => {
-              const isActive = category === cat;
-              return (
-                <button key={cat} onClick={() => setCategory(cat)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200"
-                  style={{
-                    background: isActive ? T.accentLo : "transparent",
-                    color: isActive ? T.accent : T.muted,
-                    border: isActive ? `1px solid ${T.accentMd}` : "1px solid transparent",
-                    fontFamily: "'DM Sans',sans-serif",
-                  }}>
-                  {cat}
-                </button>
-              );
-            })}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* sort */}
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")}
+              className="text-sm rounded-2xl px-3 py-2 outline-none cursor-pointer transition-colors"
+              style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, backdropFilter: "blur(20px)", fontFamily: "'DM Sans',sans-serif" }}
+            >
+              <option value="newest" style={{ background: T.bg }}>Newest First</option>
+              <option value="oldest" style={{ background: T.bg }}>Oldest First</option>
+            </select>
+
+            {/* category tabs */}
+            <div className="flex items-center gap-1 p-1 rounded-2xl" style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)" }}>
+              {CATEGORIES.map(cat => {
+                const isActive = category === cat;
+                return (
+                  <button key={cat} onClick={() => setCategory(cat)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200"
+                    style={{
+                      background: isActive ? T.accentLo : "transparent",
+                      color: isActive ? T.accent : T.muted,
+                      border: isActive ? `1px solid ${T.accentMd}` : "1px solid transparent",
+                      fontFamily: "'DM Sans',sans-serif",
+                    }}>
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </motion.div>
 
+        {/* PAGINATION (TOP) */}
+        {!loading && filtered.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 px-1">
+            <div className="flex items-center gap-3">
+              <p className="text-sm" style={{ color: T.muted }}>
+                Showing <span style={{ color: T.text, fontWeight: 600 }}>{(currentPage - 1) * itemsPerPage + 1}</span> to <span style={{ color: T.text, fontWeight: 600 }}>{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span style={{ color: T.text, fontWeight: 600 }}>{filtered.length}</span> events
+              </p>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="text-sm rounded-xl px-3 py-1.5 outline-none cursor-pointer hover:bg-white/5 transition-colors"
+                style={{ background: T.surface, border: `1px solid ${T.borderHi}`, color: T.text }}
+              >
+                <option value={5} style={{ background: T.bg }}>5 per page</option>
+                <option value={10} style={{ background: T.bg }}>10 per page</option>
+                <option value={50} style={{ background: T.bg }}>50 per page</option>
+              </select>
+            </div>
+            
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+              <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1 || isPaginating}
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5"
+                style={{ border: `1px solid ${T.borderHi}`, background: T.surface }}>
+                <ChevronLeft size={16} />
+              </button>
+              <div className="flex items-center gap-1 px-2">
+                <span className="text-sm font-semibold text-white">{currentPage}</span>
+                <span className="text-sm text-gray-500">/</span>
+                <span className="text-sm text-gray-500">{totalPages}</span>
+              </div>
+              <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages || isPaginating}
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5"
+                style={{ border: `1px solid ${T.borderHi}`, background: T.surface }}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            )}
+          </motion.div>
+        )}
+
         {/* EMPTY STATE */}
-        {filtered.length === 0 && (
+        {!loading && !isPaginating && filtered.length === 0 && (
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
             className="flex flex-col items-center gap-4 py-24 text-center rounded-3xl"
             style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)" }}>
@@ -273,13 +409,17 @@ export default function AdminAuditsPage() {
         {/* TIMELINE */}
         <div className="relative">
           {/* vertical line */}
-          {filtered.length > 0 && (
+          {(loading || isPaginating || filtered.length > 0) && (
             <div className="absolute left-[23px] top-0 bottom-0 w-px" style={{ background:`linear-gradient(180deg,${T.accent},${T.violet},transparent)`, opacity:0.20 }} />
           )}
 
           <div className="space-y-3">
             <AnimatePresence mode="popLayout" initial={false}>
-              {filtered.map((audit, idx) => {
+              {(loading || isPaginating) ? (
+                Array.from({ length: paginatedAudits.length || 1 }).map((_, idx) => (
+                  <AuditSkeleton key={`skel-${idx}`} idx={idx} />
+                ))
+              ) : paginatedAudits.map((audit, idx) => {
                 const cfg   = getActionCfg(audit.action);
                 const Icon  = cfg.icon;
                 const parts = formatAction(audit);
@@ -364,10 +504,10 @@ export default function AdminAuditsPage() {
           </div>
         </div>
 
-        {filtered.length > 0 && (
+        {!loading && !isPaginating && filtered.length > 0 && (
           <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.6 }}
             className="text-center text-xs mt-8" style={{ color:T.muted }}>
-            Showing <span style={{ color:T.text, fontWeight:600 }}>{filtered.length}</span> of <span style={{ color:T.text, fontWeight:600 }}>{audits.length}</span> events · Updates in real time
+            Showing <span style={{ color:T.text, fontWeight:600 }}>{paginatedAudits.length}</span> on this page out of <span style={{ color:T.text, fontWeight:600 }}>{filtered.length}</span> total filtered events · Updates in real time
           </motion.p>
         )}
       </div>

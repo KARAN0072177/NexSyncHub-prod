@@ -10,6 +10,7 @@ import {
     Bell,
     LogOut,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function UserMenu() {
 
@@ -124,14 +125,15 @@ export default function UserMenu() {
             </button>
 
             {/* Dropdown */}
-            {open && (
-                <div
-                    className="absolute bottom-14 left-0 w-72
-          bg-[#0f172a]/95 backdrop-blur-[40px]
-          border border-white/10
-          rounded-2xl shadow-2xl
-          overflow-hidden z-[9999]"
-                >
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute bottom-full left-0 right-0 mb-3 bg-[#0f172a]/95 backdrop-blur-[40px] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[9999]"
+                    >
 
                     {/* Header */}
                     <div className="p-4 border-b border-white/10">
@@ -227,8 +229,9 @@ export default function UserMenu() {
                         </button>
 
                     </div>
-                </div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
         </div>
     );

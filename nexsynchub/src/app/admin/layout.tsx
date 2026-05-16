@@ -55,7 +55,7 @@ function AdminUserMenu() {
     const initials = username.slice(0, 2).toUpperCase();
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative w-full" ref={dropdownRef}>
             <button
                 onClick={() => setOpen(!open)}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer text-left"
@@ -103,7 +103,7 @@ function AdminUserMenu() {
                                 <p className="text-sm font-semibold text-white truncate">
                                     {username}
                                 </p>
-                                <p className="text-xs truncate" style={{ color: T.muted }}>
+                                <p className="text-xs truncate" style={{ color: T.muted }} title={email}>
                                     {email}
                                 </p>
                             </div>
@@ -173,7 +173,7 @@ export default function AdminLayout({
     ];
 
     return (
-        <div className="min-h-screen flex text-white" style={{ background: "linear-gradient(135deg, #030712 0%, #080C17 100%)", fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="h-screen overflow-hidden flex text-white" style={{ background: "linear-gradient(135deg, #030712 0%, #080C17 100%)", fontFamily: "'DM Sans', sans-serif" }}>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
                 ::-webkit-scrollbar { width:4px; }
