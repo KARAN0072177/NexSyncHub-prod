@@ -9,11 +9,6 @@ export default withAuth(
     const token =
       req.nextauth.token;
 
-    console.log(
-      "PROXY TOKEN:",
-      token
-    );
-
     const role =
       token?.role as string;
 
