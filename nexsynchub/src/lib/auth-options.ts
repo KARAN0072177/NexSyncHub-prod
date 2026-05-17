@@ -21,22 +21,15 @@ export const authOptions: NextAuthOptions = {
 
         // 🔥 Log login attempt
 
+        const forwardedFor =
+          req?.headers?.["x-forwarded-for"] as string;
+
         const ip =
-
-          req?.headers
-            ?.get("x-forwarded-for")
-
-          ||
-
+          forwardedFor?.split(",")[0]?.trim() ||
           "Unknown";
 
         const userAgent =
-
-          req?.headers
-            ?.get("user-agent")
-
-          ||
-
+          (req?.headers?.["user-agent"] as string) ||
           "Unknown";
 
         const { email, password } = credentials as {
