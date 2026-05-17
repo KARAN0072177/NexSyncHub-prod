@@ -187,6 +187,11 @@ export default function AdminLayout({
             href: "/admin/auth-logs",
             icon: Key,
         },
+        {
+            label: "Moderation",
+            href: "/admin/moderation",
+            icon: Shield,
+        },
     ];
 
     const renderLink = (link: { label: string; href: string; icon: React.ElementType }) => {

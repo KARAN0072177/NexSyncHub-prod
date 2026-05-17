@@ -16,6 +16,10 @@ import { s3 } from "@/lib/s3";
 
 import User from "@/models/User";
 
+import {
+  createSecurityLog,
+} from "@/lib/security";
+
 export async function POST(
   req: Request
 ) {
@@ -23,6 +27,26 @@ export async function POST(
   try {
 
     await connectDB();
+
+    const ip =
+
+      req.headers.get(
+        "x-forwarded-for"
+      )
+
+      ||
+
+      "Unknown";
+
+    const userAgent =
+
+      req.headers.get(
+        "user-agent"
+      )
+
+      ||
+
+      "Unknown";
 
     // 🔐 Auth check
     const session =
@@ -102,7 +126,53 @@ export async function POST(
     );
 
     // ❌ Unsafe image
+    // ❌ Unsafe image
     if (!moderation.safe) {
+
+      // 🔥 Security log
+      await createSecurityLog({
+
+        userId:
+          session.user.id,
+
+        action:
+          "unsafe_avatar_upload",
+
+        ip,
+
+        userAgent,
+
+        metadata: {
+
+          filename:
+            file.name,
+
+          mimeType:
+            file.type,
+
+          size:
+            file.size,
+
+          moderationLabels:
+
+            moderation.labels.map(
+              (label) => ({
+
+                name:
+                  label.Name,
+
+                confidence:
+                  label.Confidence,
+
+                parent:
+                  label.ParentName,
+
+              })
+            ),
+
+        },
+
+      });
 
       return NextResponse.json(
         {
