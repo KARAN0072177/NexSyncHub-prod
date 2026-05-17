@@ -5,6 +5,8 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
+import { createSecurityLog } from "@/lib/security";
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -14,8 +16,28 @@ export const authOptions: NextAuthOptions = {
         password: {},
       },
 
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         await connectDB();
+
+        // 🔥 Log login attempt
+
+        const ip =
+
+          req?.headers
+            ?.get("x-forwarded-for")
+
+          ||
+
+          "Unknown";
+
+        const userAgent =
+
+          req?.headers
+            ?.get("user-agent")
+
+          ||
+
+          "Unknown";
 
         const { email, password } = credentials as {
           email: string;
@@ -25,7 +47,32 @@ export const authOptions: NextAuthOptions = {
         const user = await User.findOne({ email });
 
         if (!user) {
-          throw new Error("Invalid credentials");
+
+          // 🔥 Security log
+          await createSecurityLog({
+
+            action:
+              "auth_login_failed",
+
+            ip,
+
+            userAgent,
+
+            metadata: {
+
+              email,
+
+              reason:
+                "User not found",
+
+            },
+
+          });
+
+          throw new Error(
+            "Invalid credentials"
+          );
+
         }
 
         if (!user.isEmailVerified) {
@@ -35,8 +82,51 @@ export const authOptions: NextAuthOptions = {
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
-          throw new Error("Invalid credentials");
+
+          // 🔥 Security log
+          await createSecurityLog({
+
+            userId:
+              user._id.toString(),
+
+            action:
+              "auth_login_failed",
+
+            ip,
+
+            userAgent,
+
+            metadata: {
+
+              email,
+
+              reason:
+                "Wrong password",
+
+            },
+
+          });
+
+          throw new Error(
+            "Invalid credentials"
+          );
+
         }
+
+        // 🔥 Security log
+        await createSecurityLog({
+
+          userId:
+            user._id.toString(),
+
+          action:
+            "auth_login",
+
+          ip,
+
+          userAgent,
+
+        });
 
         return {
           id: user._id.toString(),
