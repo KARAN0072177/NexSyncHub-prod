@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { logout } from "@/lib/client/logout";
 import {
     LayoutDashboard,
     ScrollText,
@@ -127,7 +128,7 @@ function AdminUserMenu() {
                         <div className="my-1 border-t" style={{ borderColor: T.border }} />
                         
                         <button
-                            onClick={() => signOut({ callbackUrl: "/login" })}
+                            onClick={() => logout()}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
                             style={{ color: T.red }}
                             onMouseEnter={e => e.currentTarget.style.background = T.redLo}

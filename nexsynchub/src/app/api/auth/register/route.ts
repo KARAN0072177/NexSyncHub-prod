@@ -7,9 +7,31 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { sendVerificationEmail } from "@/lib/mail";
 
+import { createSecurityLog } from "@/lib/security";
+
 export async function POST(req: Request) {
   try {
     await connectDB();
+
+    const ip =
+
+      req.headers.get(
+        "x-forwarded-for"
+      )
+
+      ||
+
+      "Unknown";
+
+    const userAgent =
+
+      req.headers.get(
+        "user-agent"
+      )
+
+      ||
+
+      "Unknown";
 
     const body = await req.json();
 
@@ -48,15 +70,35 @@ export async function POST(req: Request) {
     const { token, hashedToken, expires } = generateVerificationToken();
 
     // 💾 Create user
-    await User.create({
-      email,
-      password: hashedPassword,
-      isEmailVerified: false,
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: expires,
+    const user =
+      await User.create({
+        email,
+        password: hashedPassword,
+        isEmailVerified: false,
+        emailVerificationToken: hashedToken,
+        emailVerificationExpires: expires,
+      });
+
+    // 🔥 Security log
+    await createSecurityLog({
+
+      userId:
+        user._id.toString(),
+
+      action:
+        "auth_register",
+
+      ip,
+
+      userAgent,
+
+      metadata: {
+
+        email,
+
+      },
+
     });
-
-
 
     // after user creation
     await sendVerificationEmail(email, token);

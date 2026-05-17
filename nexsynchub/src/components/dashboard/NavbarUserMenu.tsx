@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 
 import Link from "next/link";
 
-import { signOut } from "next-auth/react";
+import { logout } from "@/lib/client/logout";
 
 import {
   Settings,
@@ -71,9 +71,7 @@ export default function NavbarUserMenu({
 
       setLoggingOut(true);
 
-      await signOut({
-        callbackUrl: "/login",
-      });
+      await logout();
 
     } catch (err) {
 
