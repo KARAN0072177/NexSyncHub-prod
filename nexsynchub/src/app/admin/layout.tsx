@@ -13,6 +13,8 @@ import {
     ChevronUp,
     Home,
     LogOut,
+    User,
+    Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -170,6 +172,11 @@ export default function AdminLayout({
             href: "/admin/workspaces",
             icon: Building2,
         },
+        {
+            label: "Profile",
+            href: "/admin/profile",
+            icon: User,
+        },
     ];
 
     return (
@@ -201,22 +208,28 @@ export default function AdminLayout({
                 {/* Header */}
                 <div className="p-5" style={{ borderBottom: `1px solid ${T.borderHi}` }}>
 
-                    <div className="flex items-center gap-3">
-
-                        <div className="p-2.5 rounded-2xl flex items-center justify-center shrink-0 shadow-inner" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
-                            <Shield size={20} style={{ color: T.accent }} />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+    
+                            <div className="p-2.5 rounded-2xl flex items-center justify-center shrink-0 shadow-inner" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
+                                <Shield size={20} style={{ color: T.accent }} />
+                            </div>
+    
+                            <div>
+                                <h1 className="font-bold text-lg tracking-tight" style={{ fontFamily: "'Sora', sans-serif" }}>
+                                    NexSyncHub
+                                </h1>
+    
+                                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: T.muted }}>
+                                    Admin Panel
+                                </p>
+                            </div>
+    
                         </div>
-
-                        <div>
-                            <h1 className="font-bold text-lg tracking-tight" style={{ fontFamily: "'Sora', sans-serif" }}>
-                                NexSyncHub
-                            </h1>
-
-                            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: T.muted }}>
-                                Admin Panel
-                            </p>
-                        </div>
-
+                        
+                        <Link href="/admin/settings" className="p-2 -mr-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-white" title="Admin Settings">
+                            <Settings size={18} />
+                        </Link>
                     </div>
 
                 </div>
