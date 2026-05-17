@@ -15,6 +15,7 @@ import {
     LogOut,
     User,
     Settings,
+    Key,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -179,6 +180,43 @@ export default function AdminLayout({
         },
     ];
 
+    const securityLinks = [
+        {
+            label: "Auth Logs",
+            href: "/admin/auth-logs",
+            icon: Key,
+        },
+    ];
+
+    const renderLink = (link: { label: string; href: string; icon: React.ElementType }) => {
+        const Icon = link.icon;
+        const active = pathname === link.href;
+
+        return (
+            <Link
+                key={link.href}
+                href={link.href}
+                className="relative w-full flex items-center gap-3 pl-3 pr-8 py-3 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
+                style={active ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
+            >
+                {active && (
+                    <motion.div
+                        layoutId="activeAdminSidebarLink"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                        style={{ background: T.accent, boxShadow: `0 0 10px ${T.accent}` }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                )}
+
+                <Icon size={18} className="opacity-70 group-hover:opacity-100 transition-opacity" />
+
+                <span className="transition-colors group-hover:text-white" style={active ? { color: T.text } : {}}>
+                    {link.label}
+                </span>
+            </Link>
+        );
+    };
+
     return (
         <div className="h-screen overflow-hidden flex text-white" style={{ background: "linear-gradient(135deg, #030712 0%, #080C17 100%)", fontFamily: "'DM Sans', sans-serif" }}>
             <style>{`
@@ -237,39 +275,15 @@ export default function AdminLayout({
                 {/* Navigation */}
                 <nav className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
 
-                    {links.map((link) => {
+                    {links.map(renderLink)}
 
-                        const Icon = link.icon;
+                    <div className="pt-6 pb-2 px-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: T.muted }}>
+                            Security
+                        </span>
+                    </div>
 
-                        const active =
-                            pathname === link.href;
-
-                        return (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className="relative w-full flex items-center gap-3 pl-3 pr-8 py-3 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
-                                style={active ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
-                            >
-                                {active && (
-                                    <motion.div
-                                        layoutId="activeAdminSidebarLink"
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
-                                        style={{ background: T.accent, boxShadow: `0 0 10px ${T.accent}` }}
-                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                    />
-                                )}
-
-                                <Icon size={18} className="opacity-70 group-hover:opacity-100 transition-opacity" />
-
-                                <span className="transition-colors group-hover:text-white" style={active ? { color: T.text } : {}}>
-                                    {link.label}
-                                </span>
-
-                            </Link>
-                        );
-
-                    })}
+                    {securityLinks.map(renderLink)}
 
                 </nav>
 
