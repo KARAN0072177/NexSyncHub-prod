@@ -219,6 +219,77 @@ export default function ModerationPage() {
     document.body.removeChild(link);
   };
 
+  // Print / PDF Export Function
+  const exportToPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Moderation Logs Report - NexSyncHub</title>
+          <style>
+            body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; padding: 40px; line-height: 1.6; max-width: 1000px; margin: 0 auto; }
+            h1 { color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 8px; }
+            .meta { color: #6b7280; font-size: 0.875rem; margin-bottom: 32px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.875rem; }
+            th, td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; }
+            th { background-color: #f9fafb; font-weight: 600; }
+            .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-right: 4px; }
+            .tag-Critical { background: #ffe4e6; color: #e11d48; border: 1px solid #fecdd3; }
+            .tag-High { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+            .tag-Medium { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+            @media print { body { padding: 0; } table { page-break-inside: auto; } tr { page-break-inside: avoid; page-break-after: auto; } }
+          </style>
+        </head>
+        <body>
+          <h1>Moderation Logs Report</h1>
+          <div class="meta">Generated on ${date} • NexSyncHub Platform</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Action</th>
+                <th>User</th>
+                <th>File Info</th>
+                <th>Detected Labels</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(l => {
+                const name = l.user?.username || l.user?.email || "Unknown User";
+                const fileInfo = l.metadata?.filename ? `${l.metadata.filename} (${fmtSize(l.metadata.size)})` : "—";
+                const labelsHtml = (l.metadata?.moderationLabels || []).map(lb => {
+                  const sev = severityColor(lb.confidence);
+                  return `<span class="tag tag-${sev.label}">${lb.name} (${Math.round(lb.confidence)}%)</span>`;
+                }).join("");
+                
+                return `
+                  <tr>
+                    <td>${new Date(l.createdAt).toLocaleString()}</td>
+                    <td>${l.action}</td>
+                    <td>${name}</td>
+                    <td>${fileInfo}</td>
+                    <td>${labelsHtml || "None"}</td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 250);
+  };
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedLogs = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -293,7 +364,14 @@ export default function ModerationPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* export button */}
+              {/* export buttons */}
+              <button onClick={exportToPDF} disabled={filtered.length === 0 || loading}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
+                style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>
+                <Download size={14} />
+                <span className="font-semibold hidden sm:block">Export PDF</span>
+              </button>
+
               <button onClick={exportToCSV} disabled={filtered.length === 0 || loading}
                 className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
                 style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>

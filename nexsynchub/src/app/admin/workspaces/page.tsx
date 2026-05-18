@@ -179,6 +179,60 @@ export default function AdminWorkspacesPage() {
     document.body.removeChild(link);
   };
 
+  // Print / PDF Export Function
+  const exportToPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Platform Workspaces Report - NexSyncHub</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            body { font-family: 'Inter', sans-serif; color: #1f2937; padding: 40px; max-width: 1000px; margin: 0 auto; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 30px; }
+            .title-section h1 { color: #111827; font-size: 24px; margin: 0 0 8px 0; letter-spacing: -0.025em; }
+            .meta { color: #6b7280; font-size: 0.875rem; }
+            .brand { font-weight: 700; font-size: 1.25rem; color: #3B82F6; letter-spacing: -0.025em; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.875rem; }
+            th, td { border: 1px solid #e5e7eb; padding: 12px 16px; text-align: left; vertical-align: top; }
+            th { background-color: #f9fafb; font-weight: 600; color: #374151; }
+            .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.75rem; color: #9ca3af; }
+            @media print { body { padding: 0; } table { page-break-inside: auto; } tr { page-break-inside: avoid; page-break-after: auto; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title-section">
+              <h1>Platform Workspaces Report</h1>
+              <div class="meta">Generated on ${date}</div>
+            </div>
+            <div class="brand">NexSyncHub</div>
+          </div>
+          <table>
+            <thead><tr><th>Created Date</th><th>Workspace</th><th>Owner</th><th>Members</th><th>Channels</th><th>Tasks</th></tr></thead>
+            <tbody>
+              ${filtered.map(w => {
+                const owner = w.owner?.username || w.owner?.email || "Unknown";
+                return `<tr><td>${new Date(w.createdAt).toLocaleString()}</td><td>${w.name}</td><td>${owner}</td><td>${w.members}</td><td>${w.channels}</td><td>${w.tasks}</td></tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+          <div class="footer">Confidential & Proprietary • NexSyncHub Admin Portal</div>
+        </body>
+      </html>
+    `;
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 250);
+  };
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedWorkspaces = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -253,7 +307,14 @@ export default function AdminWorkspacesPage() {
             </div>
             
             <div className="flex items-center gap-3">
-              {/* export button */}
+              {/* export buttons */}
+              <button onClick={exportToPDF} disabled={filtered.length === 0 || loading}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
+                style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>
+                <Download size={14} />
+                <span className="font-semibold hidden sm:block">Export PDF</span>
+              </button>
+
               <button onClick={exportToCSV} disabled={filtered.length === 0 || loading}
                 className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
                 style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>

@@ -221,6 +221,67 @@ export default function AdminUsersPage() {
     document.body.removeChild(link);
   };
 
+  // Print / PDF Export Function
+  const exportToPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Platform Users Report - NexSyncHub</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            body { font-family: 'Inter', sans-serif; color: #1f2937; padding: 40px; max-width: 1000px; margin: 0 auto; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 30px; }
+            .title-section h1 { color: #111827; font-size: 24px; margin: 0 0 8px 0; letter-spacing: -0.025em; }
+            .meta { color: #6b7280; font-size: 0.875rem; }
+            .brand { font-weight: 700; font-size: 1.25rem; color: #3B82F6; letter-spacing: -0.025em; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.875rem; }
+            th, td { border: 1px solid #e5e7eb; padding: 12px 16px; text-align: left; vertical-align: top; }
+            th { background-color: #f9fafb; font-weight: 600; color: #374151; }
+            .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+            .tag-super_admin { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+            .tag-admin { background: #dbeafe; color: #2563eb; border: 1px solid #bfdbfe; }
+            .tag-user { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+            .tag-verified { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
+            .tag-unverified { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+            .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.75rem; color: #9ca3af; }
+            @media print { body { padding: 0; } table { page-break-inside: auto; } tr { page-break-inside: avoid; page-break-after: auto; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title-section">
+              <h1>Platform Users Report</h1>
+              <div class="meta">Generated on ${date}</div>
+            </div>
+            <div class="brand">NexSyncHub</div>
+          </div>
+          <table>
+            <thead><tr><th>Joined Date</th><th>User</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+            <tbody>
+              ${filtered.map(u => {
+                const roleLabel = (ROLE_CFG[u.role] ?? ROLE_CFG.user).label;
+                const verifiedHtml = u.isEmailVerified ? '<span class="tag tag-verified">Verified</span>' : '<span class="tag tag-unverified">Unverified</span>';
+                return `<tr><td>${new Date(u.createdAt).toLocaleString()}</td><td>${u.username || "Unnamed"}</td><td>${u.email}</td><td><span class="tag tag-${u.role}">${roleLabel}</span></td><td>${verifiedHtml}</td></tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+          <div class="footer">Confidential & Proprietary • NexSyncHub Admin Portal</div>
+        </body>
+      </html>
+    `;
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 250);
+  };
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedUsers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -290,7 +351,14 @@ export default function AdminUsersPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* export button */}
+              {/* export buttons */}
+              <button onClick={exportToPDF} disabled={filtered.length === 0 || loading}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
+                style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>
+                <Download size={14} />
+                <span className="font-semibold hidden sm:block">Export PDF</span>
+              </button>
+
               <button onClick={exportToCSV} disabled={filtered.length === 0 || loading}
                 className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
                 style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>

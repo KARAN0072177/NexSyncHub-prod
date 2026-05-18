@@ -17,6 +17,7 @@ import {
     User,
     Settings,
     Key,
+    Brain,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -194,6 +195,14 @@ export default function AdminLayout({
         },
     ];
 
+    const aiLinks = [
+        {
+            label: "AI Insights",
+            href: "/admin/ai-insights",
+            icon: Brain,
+        },
+    ];
+
     const renderLink = (link: { label: string; href: string; icon: React.ElementType }) => {
         const Icon = link.icon;
         const active = pathname === link.href;
@@ -290,6 +299,14 @@ export default function AdminLayout({
                     </div>
 
                     {securityLinks.map(renderLink)}
+
+                    <div className="pt-6 pb-2 px-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: T.muted }}>
+                            AI
+                        </span>
+                    </div>
+
+                    {aiLinks.map(renderLink)}
 
                 </nav>
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Users, Building2, Hash, CheckSquare, MessageSquare,
-  Shield, Crown, BadgeCheck, Loader2, TrendingUp, Activity,
+  Shield, Crown, BadgeCheck, Loader2, TrendingUp, Activity, Download
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
@@ -270,6 +270,95 @@ export default function AdminPage() {
     fetchStats();
   }, []);
 
+  // Print / PDF Export Function
+  const exportToPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Platform Statistics Report - NexSyncHub</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            body { 
+              font-family: 'Inter', sans-serif; 
+              color: #1f2937; 
+              padding: 40px; 
+              max-width: 1000px; 
+              margin: 0 auto; 
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+              border-bottom: 2px solid #e5e7eb;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .title-section h1 { 
+              color: #111827; 
+              font-size: 24px;
+              margin: 0 0 8px 0;
+              letter-spacing: -0.025em;
+            }
+            .meta { color: #6b7280; font-size: 0.875rem; }
+            .brand { font-weight: 700; font-size: 1.25rem; color: #3B82F6; letter-spacing: -0.025em; }
+            .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+            .stat-card { 
+              border: 1px solid #e5e7eb; 
+              padding: 24px; 
+              border-radius: 12px; 
+              background: #ffffff;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+              position: relative;
+              overflow: hidden;
+            }
+            .stat-accent { position: absolute; top: 0; left: 0; width: 6px; height: 100%; }
+            .stat-label { font-size: 0.875rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+            .stat-value { font-size: 2.5rem; font-weight: 700; color: #111827; margin-bottom: 4px; line-height: 1; }
+            .stat-desc { font-size: 0.875rem; color: #9ca3af; margin-top: 8px; }
+            .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.75rem; color: #9ca3af; }
+            @media print { body { padding: 0; } .stat-card { break-inside: avoid; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title-section">
+              <h1>Platform Statistics Report</h1>
+              <div class="meta">Generated on ${date}</div>
+            </div>
+            <div class="brand">NexSyncHub</div>
+          </div>
+          <div class="stat-grid">
+            ${CARD_CFG.map(cfg => `
+              <div class="stat-card">
+                <div class="stat-accent" style="background: ${cfg.color}"></div>
+                <div class="stat-label">${cfg.title}</div>
+                <div class="stat-value">${(stats?.[cfg.key] || 0).toLocaleString()}</div>
+                <div class="stat-desc">${cfg.desc}</div>
+              </div>
+            `).join("")}
+          </div>
+          <div class="footer">
+            Confidential & Proprietary • NexSyncHub Admin Portal
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 250);
+  };
+
   /* ── loading ── */
   if (loading) {
     return (
@@ -364,16 +453,26 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* live indicator */}
-            <div
-              className="flex items-center gap-2.5 px-4 py-2 rounded-2xl text-sm"
-              style={{ background: T.surface, border: `1px solid ${T.border}`, backdropFilter:"blur(20px)" }}
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: T.emerald }} />
-                <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: T.emerald }} />
-              </span>
-              <span className="font-medium" style={{ color: T.text }}>Live Data</span>
+            <div className="flex items-center gap-3">
+              {/* export button */}
+              <button onClick={exportToPDF} disabled={!stats || loading}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
+                style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>
+                <Download size={14} />
+                <span className="font-semibold hidden sm:block">Export PDF</span>
+              </button>
+
+              {/* live indicator */}
+              <div
+                className="flex items-center gap-2.5 px-4 py-2 rounded-2xl text-sm"
+                style={{ background: T.surface, border: `1px solid ${T.border}`, backdropFilter:"blur(20px)" }}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: T.emerald }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: T.emerald }} />
+                </span>
+                <span className="font-medium" style={{ color: T.text }}>Live Data</span>
+              </div>
             </div>
           </div>
 

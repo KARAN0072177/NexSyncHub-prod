@@ -1,116 +1,177 @@
 import { NextResponse }
-  from "next/server";
+    from "next/server";
 
 import { getServerSession }
-  from "next-auth";
+    from "next-auth";
 
 import { authOptions }
-  from "@/lib/auth-options";
+    from "@/lib/auth-options";
 
 import { connectDB }
-  from "@/lib/db";
+    from "@/lib/db";
 
 import { openai }
-  from "@/lib/openai";
+    from "@/lib/openai";
 
 import AuditLog
-  from "@/models/AuditLog";
+    from "@/models/AuditLog";
 
 import SecurityLog
-  from "@/models/SecurityLog";
+    from "@/models/SecurityLog";
 
 import {
-  requireAdmin,
+    requireAdmin,
 } from "@/lib/permissions";
 
-export async function GET() {
+import AIInsightCache
+    from "@/models/AIInsightCache";
 
-  try {
+export async function GET(req: Request) {
 
-    await connectDB();
+    const {
+        searchParams,
+    } = new URL(req.url);
 
-    // 🔐 Session
-    const session =
-      await getServerSession(
-        authOptions
-      );
+    const forceRefresh =
 
-    if (
-      !session?.user?.id
-    ) {
+        searchParams.get(
+            "refresh"
+        ) === "true";
 
-      return NextResponse.json(
-        {
-          error:
-            "Unauthorized",
-        },
-        {
-          status: 401,
+    try {
+
+        await connectDB();
+
+        // 🔐 Session
+        const session =
+            await getServerSession(
+                authOptions
+            );
+
+        if (
+            !session?.user?.id
+        ) {
+
+            return NextResponse.json(
+                {
+                    error:
+                        "Unauthorized",
+                },
+                {
+                    status: 401,
+                }
+            );
+
         }
-      );
 
-    }
+        // 🔐 Admin check
+        await requireAdmin(
+            session.user.id
+        );
 
-    // 🔐 Admin check
-    await requireAdmin(
-      session.user.id
-    );
+        // 🔥 Fetch recent logs
+        const securityLogs =
+            await SecurityLog.find()
 
-    // 🔥 Fetch recent logs
-    const securityLogs =
-      await SecurityLog.find()
+                .sort({
+                    createdAt: -1,
+                })
 
-        .sort({
-          createdAt: -1,
-        })
+                .limit(20)
 
-        .limit(20)
+                .lean();
 
-        .lean();
+        const auditLogs =
+            await AuditLog.find()
 
-    const auditLogs =
-      await AuditLog.find()
+                .sort({
+                    createdAt: -1,
+                })
 
-        .sort({
-          createdAt: -1,
-        })
+                .limit(20)
 
-        .limit(20)
+                .lean();
 
-        .lean();
+        // 🔥 Build compact telemetry summary
+        const telemetry = [
 
-    // 🔥 Build compact telemetry summary
-    const telemetry = [
+            ...securityLogs.map(
+                (log) =>
 
-      ...securityLogs.map(
-        (log) =>
+                    `SECURITY: ${log.action}`
+            ),
 
-          `SECURITY: ${log.action}`
-      ),
+            ...auditLogs.map(
+                (log) =>
 
-      ...auditLogs.map(
-        (log) =>
+                    `AUDIT: ${log.action}`
+            ),
 
-          `AUDIT: ${log.action}`
-      ),
+        ].join("\n");
 
-    ].join("\n");
+        // 🔥 Check latest cache
+        const cache =
 
-    // 🔥 AI analysis
-    const completion =
-      await openai.chat.completions.create({
+            await AIInsightCache
+                .findOne()
+                .sort({
+                    generatedAt: -1,
+                });
 
-        model:
-          "gpt-4o-mini",
+        // 🔥 Cache validity
+        const THIRTY_MINUTES =
 
-        messages: [
+            1000 * 60 * 30;
 
-          {
-            role: "system",
+        const isFresh =
 
-            content:
+            cache &&
 
-              `You are an AI platform monitoring assistant.
+            Date.now() -
+
+            new Date(
+                cache.generatedAt
+            ).getTime()
+
+            < THIRTY_MINUTES;
+
+        // ✅ Return cached insights
+        if (
+            isFresh &&
+            !forceRefresh
+        ) {
+
+            return NextResponse.json({
+
+                success: true,
+
+                insights:
+                    cache.insights,
+
+                cached: true,
+
+                generatedAt:
+                    cache.generatedAt,
+
+            });
+
+        }
+
+        // 🔥 AI analysis
+        const completion =
+            await openai.chat.completions.create({
+
+                model:
+                    "gpt-4o-mini",
+
+                messages: [
+
+                    {
+                        role: "system",
+
+                        content:
+
+                            `You are an AI platform monitoring assistant.
 
 Analyze recent SaaS platform activity.
 
@@ -127,60 +188,67 @@ Return 3-5 short insights.
 Keep responses concise.
 
 Do not use markdown.`,
-          },
+                    },
 
-          {
-            role: "user",
+                    {
+                        role: "user",
 
-            content:
+                        content:
 
-              `Recent platform telemetry:
+                            `Recent platform telemetry:
 
 ${telemetry}`,
-          },
+                    },
 
-        ],
+                ],
 
-        temperature: 0.3,
+                temperature: 0.3,
 
-        max_tokens: 180,
+                max_tokens: 180,
 
-      });
+            });
 
-    const insights =
+        const insights =
 
-      completion.choices[0]
-        ?.message?.content
+            completion.choices[0]
+                ?.message?.content
 
-      ||
+            ||
 
-      "No insights available.";
+            "No insights available.";
 
-    return NextResponse.json({
+        // 🔥 Save fresh cache
+        await AIInsightCache.create({
 
-      success: true,
+            insights,
 
-      insights,
+        });
 
-    });
+        return NextResponse.json({
 
-  } catch (error) {
+            success: true,
 
-    console.error(
-      "AI INSIGHTS ERROR:",
-      error
-    );
+            insights,
 
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
-    );
+        });
 
-  }
+    } catch (error) {
+
+        console.error(
+            "AI INSIGHTS ERROR:",
+            error
+        );
+
+        return NextResponse.json(
+            {
+                error:
+                    "Something went wrong",
+            },
+            {
+                status: 500,
+            }
+        );
+
+    }
 
 }
