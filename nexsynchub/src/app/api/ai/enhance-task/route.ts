@@ -1,138 +1,53 @@
-import { NextResponse }
-  from "next/server";
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-import { getServerSession }
-  from "next-auth";
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-import { authOptions }
-  from "@/lib/auth-options";
-
-import { openai }
-  from "@/lib/openai";
-
-export async function POST(
-  req: Request
-) {
-
+export async function POST(req: Request) {
   try {
+    const { text } = await req.json();
 
-    // 🔐 Auth check
-    const session =
-      await getServerSession(
-        authOptions
-      );
-
-    if (
-      !session?.user?.id
-    ) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Unauthorized",
-        },
-        {
-          status: 401,
-        }
-      );
-
+    if (!text) {
+      return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
-    // 🔥 Parse body
-    const body =
-      await req.json();
+    const systemPrompt = `
+You are an expert project manager's assistant. Your task is to refine a raw task description into a clear, concise, and actionable format.
 
-    const {
-      text,
-    } = body;
+Follow these rules for the output:
+1.  **Summary:** Start with a single, impactful sentence that summarizes the core goal of the task.
+2.  **Key Objectives/Steps:** Use a markdown bulleted list (using '-') for the main objectives or action items.
+3.  **Concise:** Keep the entire output brief and to the point. Avoid jargon and unnecessary words.
+4.  **Format:** Use only markdown for formatting. Do not use headings.
 
-    if (!text?.trim()) {
+Example Input:
+"we need to fix the login page, it's not working on mobile and also the password reset is broken. users are complaining. also maybe update the button colors to match the new branding."
 
-      return NextResponse.json(
-        {
-          error:
-            "Text is required",
-        },
-        {
-          status: 400,
-        }
-      );
+Example Output:
+Resolve critical login issues and update UI to align with new branding.
+- Fix login functionality on mobile devices.
+- Repair the broken password reset flow.
+- Update button colors to match the new brand guidelines.
+`;
 
-    }
-
-    // 🔥 AI enhancement
-    const completion =
-      await openai.chat.completions.create({
-
-        model:
-          "gpt-4.1-mini",
-
-        messages: [
-
-          {
-            role: "system",
-
-            content:
-
-              `You are an assistant helping improve SaaS task descriptions.
-
-Expand short tasks into professional, clear, concise engineering task descriptions.
-
-Keep response under 120 words.
-
-Do not use markdown.`,
-
-          },
-
-          {
-            role: "user",
-
-            content:
-              text,
-
-          },
-
-        ],
-
-        temperature: 0.5,
-
-      });
-
-    const enhancedText =
-
-      completion.choices[0]
-        ?.message?.content
-
-      ||
-
-      text;
-
-    return NextResponse.json({
-
-      success: true,
-
-      text:
-        enhancedText,
-
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Refine this task description: "${text}"` },
+      ],
+      temperature: 0.5,
+      max_tokens: 150,
     });
 
+    const enhancedText = completion.choices[0].message.content?.trim();
+
+    return NextResponse.json({ text: enhancedText });
+
   } catch (error) {
-
-    console.error(
-      "AI TASK ENHANCE ERROR:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
-    );
-
+    console.error('AI ENHANCE API ERROR:', error);
+    return NextResponse.json({ error: 'Failed to enhance description with AI.' }, { status: 500 });
   }
-
 }

@@ -14,21 +14,24 @@ import {
   Edit,
   Check,
   Activity,
+  Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
 /* ─── design tokens (matches members/settings page) ──────────────────────── */
 const T = {
-  accent:   "#3B82F6",
+  accent: "#3B82F6",
   accentLo: "rgba(59,130,246,0.12)",
   accentMd: "rgba(59,130,246,0.25)",
-  surface:  "rgba(15,23,42,0.95)", // slightly more opaque for the modal pop
-  border:   "rgba(255,255,255,0.06)",
+  surface: "rgba(15,23,42,0.95)", // slightly more opaque for the modal pop
+  border: "rgba(255,255,255,0.06)",
   borderHi: "rgba(255,255,255,0.12)",
-  text:     "#F8FAFC",
-  muted:    "#94A3B8",
+  text: "#F8FAFC",
+  muted: "#94A3B8",
 };
 
 export default function TaskDetailModal({ taskId, onClose }: any) {
@@ -37,6 +40,7 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
   const [content, setContent] = useState("");
   const [activities, setActivities] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [sending, setSending] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState("");
@@ -165,6 +169,76 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
     setSaving(false);
   };
 
+  // 🚀 AI enhance description
+
+  const enhanceDescription =
+    async () => {
+
+      if (
+        !editedDescription.trim()
+      ) {
+        return;
+      }
+
+      try {
+
+        setEnhancing(true);
+
+        const res =
+          await fetch(
+            "/api/ai/enhance-task",
+            {
+
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+
+                  text:
+                    editedDescription,
+
+                }),
+
+            }
+          );
+
+        const data =
+          await res.json();
+
+        if (res.ok) {
+
+          setEditedDescription(
+            data.text
+          );
+
+        } else {
+
+          alert(
+            data.error
+          );
+
+        }
+
+      } catch (error) {
+
+        console.error(
+          "AI ENHANCE ERROR:",
+          error
+        );
+
+      } finally {
+
+        setEnhancing(false);
+
+      }
+
+    };
+
   const startEditing = () => {
     setEditedDescription(task?.description || "");
     setIsEditingDescription(true);
@@ -200,8 +274,12 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" style={{ fontFamily: "'DM Sans', sans-serif", color: T.text }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
       `}</style>
-      
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -212,7 +290,7 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
 
       <motion.div
         initial={{ opacity: 0, y: 28, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.32, ease: [0.22,1,0.36,1] } }}
+        animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] } }}
         className="relative w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col shadow-2xl max-h-[90vh]"
         style={{ background: T.surface, border: `1px solid ${T.borderHi}`, backdropFilter: "blur(40px)" }}
       >
@@ -237,7 +315,7 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
 
         {/* Body - scrollable */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-          
+
           {/* Description Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-1">
@@ -262,14 +340,30 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
                   className="relative rounded-2xl transition-all duration-300"
                   style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.accentMd}`, boxShadow: `0 0 0 3px ${T.accentLo}` }}
                 >
+                  <AnimatePresence>
+                    {enhancing && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 rounded-2xl pointer-events-none"
+                        style={{
+                          background: "linear-gradient(110deg, transparent 30%, rgba(124,58,237,0.15) 50%, transparent 70%)",
+                          backgroundSize: "200% 100%",
+                          animation: "shimmer 1.5s linear infinite",
+                        }}
+                      />
+                    )}
+                  </AnimatePresence>
                   <textarea
                     value={editedDescription}
                     onChange={(e) => setEditedDescription(e.target.value)}
                     placeholder="Add a description..."
                     rows={4}
-                    className="w-full bg-transparent rounded-2xl px-5 py-4 text-sm outline-none resize-none transition-all duration-300"
+                    className="w-full bg-transparent rounded-2xl px-5 py-4 text-sm outline-none resize-none transition-all duration-300 disabled:opacity-70"
                     style={{ color: T.text }}
                     autoFocus
+                    disabled={enhancing}
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -291,6 +385,60 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
                       </>
                     )}
                   </button>
+
+                  <button
+                    onClick={
+                      enhanceDescription
+                    }
+
+                    disabled={
+                      enhancing ||
+
+                      !editedDescription.trim()
+                    }
+
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 active:scale-95 text-white"
+
+                    style={{
+
+                      background:
+                        "linear-gradient(135deg, #7C3AED, #4F46E5)",
+
+                      boxShadow:
+                        "0 4px 20px rgba(124,58,237,0.25)",
+
+                    }}
+                  >
+
+                    {enhancing ? (
+
+                      <>
+
+                        <Loader2
+                          size={14}
+                          className="animate-spin"
+                        />
+
+                        Enhancing
+
+                      </>
+
+                    ) : (
+
+                      <>
+
+                        <Sparkles
+                          size={14}
+                        />
+
+                        Enhance with AI
+
+                      </>
+
+                    )}
+
+                  </button>
+
                   <button
                     onClick={cancelEditing}
                     className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
@@ -303,9 +451,11 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
             ) : (
               <div className="rounded-2xl px-5 py-4" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.borderHi}` }}>
                 {task.description ? (
-                  <p className="text-sm whitespace-pre-wrap break-words leading-relaxed" style={{ color: "rgba(232,230,240,0.85)" }}>
-                    {task.description}
-                  </p>
+                  <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed" style={{ color: "rgba(232,230,240,0.85)" }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {task.description}
+                    </ReactMarkdown>
+                  </div>
                 ) : (
                   <p className="text-sm italic" style={{ color: T.muted }}>No description yet</p>
                 )}
@@ -379,8 +529,8 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
         {/* Footer - Add Comment */}
         <div className="p-5 shrink-0" style={{ borderTop: `1px solid ${T.border}`, background: "rgba(0,0,0,0.2)" }}>
           <div className="flex gap-3 items-end">
-            <div 
-              className="flex-1 relative rounded-2xl transition-all duration-300" 
+            <div
+              className="flex-1 relative rounded-2xl transition-all duration-300"
               style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = T.accentMd;
