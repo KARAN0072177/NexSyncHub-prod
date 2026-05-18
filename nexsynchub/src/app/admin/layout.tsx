@@ -153,6 +153,7 @@ export default function AdminLayout({
 }) {
 
     const pathname = usePathname();
+    const router = useRouter();
 
     const links = [
         {
@@ -307,6 +308,17 @@ export default function AdminLayout({
                     </div>
 
                     {aiLinks.map(renderLink)}
+
+                    <div className="mt-6 pt-4 border-t" style={{ borderColor: T.borderHi }}>
+                        <button
+                            onClick={() => router.push("/")}
+                            className="relative w-full flex items-center gap-3 pl-3 pr-8 py-3 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer text-left"
+                            style={{ background: "transparent", color: T.muted, border: "1px solid transparent" }}
+                        >
+                            <Home size={18} className="opacity-70 group-hover:opacity-100 transition-opacity" />
+                            <span className="transition-colors group-hover:text-white">Home</span>
+                        </button>
+                    </div>
 
                 </nav>
 

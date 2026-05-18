@@ -171,23 +171,25 @@ export async function GET(req: Request) {
 
                         content:
 
-                            `You are an AI platform monitoring assistant.
+                            `You are an expert Chief Information Security Officer (CISO) and Platform Operations Manager.
+Analyze the provided platform data and generate 3-5 highly actionable, structured insights.
 
-Analyze recent SaaS platform activity.
+FORMATTING RULES:
+1. Separate each distinct insight with exactly TWO NEWLINES (\\n\\n). Do NOT use numbers like 1., 2., etc. to separate them.
+2. For each insight, start with a concise, bolded title, followed by a short summary.
+3. Use bullet points for specific impact metrics or recommendations.
+4. Keep the tone professional, urgent if necessary, and highly readable.
 
-Generate concise operational insights.
+Example Output Format:
+**Security Alert: Spike in Failed Logins**
+We detected a 45% increase in failed login attempts from unknown IP addresses over the last 24 hours.
+* **Impact:** Potential brute-force attack in progress.
+* **Action Needed:** Temporarily lower the threshold for account lockouts.
 
-Focus on:
-- security activity
-- moderation events
-- suspicious behavior
-- platform activity
-
-Return 3-5 short insights.
-
-Keep responses concise.
-
-Do not use markdown.`,
+**Growth Milestone: Record Registrations**
+New user registrations have grown by 15% week-over-week.
+* **Impact:** Increased load on database.
+* **Action Needed:** Monitor queue health and scale up background workers.`,
                     },
 
                     {
@@ -204,7 +206,7 @@ ${telemetry}`,
 
                 temperature: 0.3,
 
-                max_tokens: 180,
+                max_tokens: 500,
 
             });
 

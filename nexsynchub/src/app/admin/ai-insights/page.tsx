@@ -64,7 +64,7 @@ function classifyLine(line: string): {
 
 /* ─── strip leading bullet / number ─────────────────────────────────────── */
 function cleanLine(line: string): string {
-    return line.replace(/^[\s•\-*\d.]+/, "").trim();
+    return line.replace(/^(\d+\.|-|•)\s+/, "").trim();
 }
 
 /* ─── skeleton ───────────────────────────────────────────────────────────── */
@@ -145,7 +145,10 @@ function InsightCard({ item, index }: { item: { line: string; clean: string; cfg
                         <span className="text-xs" style={{ color: T.muted }}>#{String(index + 1).padStart(2, "0")}</span>
                     </div>
 
-                    <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed" style={{ color: "rgba(232,230,240,0.85)" }}>
+                    <div 
+                        className="prose prose-sm prose-invert max-w-none break-words leading-relaxed prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 prose-strong:text-white prose-strong:font-semibold" 
+                        style={{ color: "rgba(232,230,240,0.85)" }}
+                    >
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {clean}
                         </ReactMarkdown>
@@ -195,7 +198,8 @@ export default function AIInsightsPage() {
         setCurrentPage(1);
     }, [filter, itemsPerPage]);
 
-    const allInsights = insights.split("\n").map(l => l.trim()).filter(Boolean).map(line => {
+    // Split by double newline to support multi-line markdown blocks per card
+    const allInsights = insights.split(/(?:\r?\n){2,}/).map(l => l.trim()).filter(Boolean).map(line => {
         return {
             line,
             clean: cleanLine(line),

@@ -21,6 +21,7 @@ import {
     X,
     Loader2,
     Globe,
+    Home,
 } from "lucide-react";
 
 import UserMenu from "@/components/layout/UserMenu";
@@ -415,6 +416,18 @@ export default function WorkspaceSidebar({
                                 const isSettingsActive = pathname.includes("/settings");
                                 return (
                                     <>
+                            {/* Home (Full Page Escape) */}
+                            <button
+                                onClick={() =>
+                                    router.push("/")
+                                }
+                                className="relative w-full flex items-center gap-3 pl-3 pr-8 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
+                                style={{ background: "transparent", color: T.muted, border: "1px solid transparent" }}
+                            >
+                                <Home size={16} className="opacity-70 group-hover:opacity-100 transition-opacity" />
+                                <span className="transition-colors group-hover:text-white">Home</span>
+                            </button>
+
                             {/* Tasks */}
                             <button
                                 onClick={() =>
