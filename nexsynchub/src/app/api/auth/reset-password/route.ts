@@ -1,214 +1,264 @@
 import { NextResponse }
-  from "next/server";
+    from "next/server";
 
 import bcrypt
-  from "bcryptjs";
+    from "bcryptjs";
 
 import { connectDB }
-  from "@/lib/db";
+    from "@/lib/db";
 
 import User
-  from "@/models/User";
+    from "@/models/User";
 
 import PasswordResetToken
-  from "@/models/PasswordResetToken";
+    from "@/models/PasswordResetToken";
 
 import { resend }
-  from "@/lib/resend";
+    from "@/lib/resend";
+
+import { createSecurityLog } from "@/lib/security";
 
 export async function POST(
-  req: Request
+    req: Request
 ) {
 
-  try {
+    try {
 
-    await connectDB();
+        await connectDB();
 
-    // 🔥 Parse body
-    const body =
-      await req.json();
+        // 🔥 Parse body
+        const body =
+            await req.json();
 
-    const {
-      email,
-      password,
-      confirmPassword,
-    } = body;
+        const {
+            email,
+            password,
+            confirmPassword,
+        } = body;
 
-    // 🔥 Validate fields
-    if (
+        // 🔥 Validate fields
+        if (
 
-      !email?.trim() ||
+            !email?.trim() ||
 
-      !password?.trim() ||
+            !password?.trim() ||
 
-      !confirmPassword?.trim()
+            !confirmPassword?.trim()
 
-    ) {
+        ) {
 
-      return NextResponse.json(
-        {
-          error:
-            "All fields are required",
-        },
-        {
-          status: 400,
+            return NextResponse.json(
+                {
+                    error:
+                        "All fields are required",
+                },
+                {
+                    status: 400,
+                }
+            );
+
         }
-      );
 
-    }
+        // 🔥 Password match
+        if (
+            password !==
+            confirmPassword
+        ) {
 
-    // 🔥 Password match
-    if (
-      password !==
-      confirmPassword
-    ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Passwords do not match",
+                },
+                {
+                    status: 400,
+                }
+            );
 
-      return NextResponse.json(
-        {
-          error:
-            "Passwords do not match",
-        },
-        {
-          status: 400,
         }
-      );
 
-    }
+        // 🔥 Password length
+        if (
+            password.length < 6
+        ) {
 
-    // 🔥 Password length
-    if (
-      password.length < 6
-    ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Password must be at least 6 characters",
+                },
+                {
+                    status: 400,
+                }
+            );
 
-      return NextResponse.json(
-        {
-          error:
-            "Password must be at least 6 characters",
-        },
-        {
-          status: 400,
         }
-      );
 
-    }
+        // 🔥 Find user
+        const user =
+            await User.findOne({
 
-    // 🔥 Find user
-    const user =
-      await User.findOne({
+                email:
+                    email.toLowerCase(),
 
-        email:
-          email.toLowerCase(),
+            });
 
-      });
+        if (!user) {
 
-    if (!user) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Invalid request",
+                },
+                {
+                    status: 400,
+                }
+            );
 
-      return NextResponse.json(
-        {
-          error:
-            "Invalid request",
-        },
-        {
-          status: 400,
         }
-      );
 
-    }
+        // 🔥 Find verified token
+        const resetToken =
 
-    // 🔥 Find verified token
-    const resetToken =
+            await PasswordResetToken
+                .findOne({
 
-      await PasswordResetToken
-        .findOne({
+                    user: user._id,
 
-          user: user._id,
+                    verified: true,
 
-          verified: true,
+                })
 
-        })
+                .sort({
+                    createdAt: -1,
+                });
 
-        .sort({
-          createdAt: -1,
+        if (!resetToken) {
+
+            return NextResponse.json(
+                {
+                    error:
+                        "OTP verification required",
+                },
+                {
+                    status: 403,
+                }
+            );
+
+        }
+
+        // 🔥 Expiry check
+        if (
+
+            new Date() >
+
+            resetToken.expiresAt
+
+        ) {
+
+            return NextResponse.json(
+                {
+                    error:
+                        "Reset session expired",
+                },
+                {
+                    status: 400,
+                }
+            );
+
+        }
+
+        // 🔥 Hash new password
+        const hashedPassword =
+            await bcrypt.hash(
+                password,
+                10
+            );
+
+        // 🔥 Update password
+        user.password =
+            hashedPassword;
+
+        await user.save();
+
+        // 🔥 Request info
+        const ip =
+            req.headers.get(
+                "x-forwarded-for"
+            ) || "Unknown IP";
+
+        const userAgent =
+            req.headers.get(
+                "user-agent"
+            ) || "Unknown Device";
+
+        // 🔥 Create security log
+        const securityLog =
+            await createSecurityLog({
+
+                userId:
+                    user._id.toString(),
+
+                action:
+                    "password_reset_completed",
+
+                metadata: {
+
+                    ip,
+                    userAgent,
+
+                },
+
+            });
+
+        // 🔥 Emit realtime event
+        await fetch(
+            "http://localhost:4000/emit",
+            {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+
+                body:
+                    JSON.stringify({
+
+                        channelId:
+                            "admin_global",
+
+                        event:
+                            "security-log-created",
+
+                        data:
+                            securityLog,
+
+                    }),
+
+            }
+        );
+
+        // 🔥 Delete ALL reset tokens
+        await PasswordResetToken.deleteMany({
+
+            user: user._id,
+
         });
 
-    if (!resetToken) {
+        // 🔥 Send security email
+        await resend.emails.send({
 
-      return NextResponse.json(
-        {
-          error:
-            "OTP verification required",
-        },
-        {
-          status: 403,
-        }
-      );
+            from:
+                "NexSyncHub <onboarding@resend.dev>",
 
-    }
+            to: user.email,
 
-    // 🔥 Expiry check
-    if (
+            subject:
+                "Your NexSyncHub password was changed",
 
-      new Date() >
-
-      resetToken.expiresAt
-
-    ) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Reset session expired",
-        },
-        {
-          status: 400,
-        }
-      );
-
-    }
-
-    // 🔥 Hash new password
-    const hashedPassword =
-      await bcrypt.hash(
-        password,
-        10
-      );
-
-    // 🔥 Update password
-    user.password =
-      hashedPassword;
-
-    await user.save();
-
-    // 🔥 Delete ALL reset tokens
-    await PasswordResetToken.deleteMany({
-
-      user: user._id,
-
-    });
-
-    // 🔥 Get request info
-    const ip =
-      req.headers.get(
-        "x-forwarded-for"
-      ) || "Unknown IP";
-
-    const userAgent =
-      req.headers.get(
-        "user-agent"
-      ) || "Unknown Device";
-
-    // 🔥 Send security email
-    await resend.emails.send({
-
-      from:
-        "NexSyncHub <onboarding@resend.dev>",
-
-      to: user.email,
-
-      subject:
-        "Your NexSyncHub password was changed",
-
-      html: `
+            html: `
 
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px;">
 
@@ -247,34 +297,34 @@ export async function POST(
 
       `,
 
-    });
+        });
 
-    return NextResponse.json({
+        return NextResponse.json({
 
-      success: true,
+            success: true,
 
-      message:
-        "Password reset successful",
+            message:
+                "Password reset successful",
 
-    });
+        });
 
-  } catch (error) {
+    } catch (error) {
 
-    console.error(
-      "RESET PASSWORD ERROR:",
-      error
-    );
+        console.error(
+            "RESET PASSWORD ERROR:",
+            error
+        );
 
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
-    );
+        return NextResponse.json(
+            {
+                error:
+                    "Something went wrong",
+            },
+            {
+                status: 500,
+            }
+        );
 
-  }
+    }
 
 }

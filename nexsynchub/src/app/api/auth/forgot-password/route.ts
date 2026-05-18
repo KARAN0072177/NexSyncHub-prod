@@ -1,131 +1,133 @@
 import { NextResponse }
-  from "next/server";
+    from "next/server";
 
 import bcrypt
-  from "bcryptjs";
+    from "bcryptjs";
 
 import { connectDB }
-  from "@/lib/db";
+    from "@/lib/db";
 
 import User
-  from "@/models/User";
+    from "@/models/User";
 
 import PasswordResetToken
-  from "@/models/PasswordResetToken";
+    from "@/models/PasswordResetToken";
 
 import {
-  generateOTP,
+    generateOTP,
 } from "@/lib/generate-otp";
 
 import { resend }
-  from "@/lib/resend";
+    from "@/lib/resend";
+
+import { createSecurityLog } from "@/lib/security";
 
 export async function POST(
-  req: Request
+    req: Request
 ) {
 
-  try {
+    try {
 
-    await connectDB();
+        await connectDB();
 
-    // 🔥 Parse body
-    const body =
-      await req.json();
+        // 🔥 Parse body
+        const body =
+            await req.json();
 
-    const {
-      email,
-    } = body;
+        const {
+            email,
+        } = body;
 
-    // 🔥 Validate email
-    if (!email?.trim()) {
+        // 🔥 Validate email
+        if (!email?.trim()) {
 
-      return NextResponse.json(
-        {
-          error:
-            "Email is required",
-        },
-        {
-          status: 400,
+            return NextResponse.json(
+                {
+                    error:
+                        "Email is required",
+                },
+                {
+                    status: 400,
+                }
+            );
+
         }
-      );
 
-    }
+        // 🔥 Find user
+        const user =
+            await User.findOne({
 
-    // 🔥 Find user
-    const user =
-      await User.findOne({
+                email:
+                    email.toLowerCase(),
 
-        email:
-          email.toLowerCase(),
+            });
 
-      });
+        // 🔒 Generic response
+        // Prevent account enumeration
+        if (!user) {
 
-    // 🔒 Generic response
-    // Prevent account enumeration
-    if (!user) {
+            return NextResponse.json({
 
-      return NextResponse.json({
+                success: true,
 
-        success: true,
+                message:
 
-        message:
+                    "If an account exists, an OTP has been sent.",
 
-          "If an account exists, an OTP has been sent.",
+            });
 
-      });
+        }
 
-    }
+        // 🔥 Delete old OTPs
+        await PasswordResetToken.deleteMany({
 
-    // 🔥 Delete old OTPs
-    await PasswordResetToken.deleteMany({
+            user: user._id,
 
-      user: user._id,
+        });
 
-    });
+        // 🔥 Generate OTP
+        const otp =
+            generateOTP();
 
-    // 🔥 Generate OTP
-    const otp =
-      generateOTP();
+        // 🔥 Hash OTP
+        const otpHash =
+            await bcrypt.hash(
+                otp,
+                10
+            );
 
-    // 🔥 Hash OTP
-    const otpHash =
-      await bcrypt.hash(
-        otp,
-        10
-      );
+        // 🔥 Expiry
+        const expiresAt =
+            new Date(
 
-    // 🔥 Expiry
-    const expiresAt =
-      new Date(
+                Date.now() +
 
-        Date.now() +
+                1000 * 60 * 10
+            );
 
-        1000 * 60 * 10
-      );
+        // 🔥 Save token
+        await PasswordResetToken.create({
 
-    // 🔥 Save token
-    await PasswordResetToken.create({
+            user: user._id,
 
-      user: user._id,
+            otpHash,
 
-      otpHash,
+            expiresAt,
 
-      expiresAt,
+        });
 
-    });
+        // 🔥 Send email
+        await resend.emails.send({
 
-    // 🔥 Send email
-    await resend.emails.send({
+            from:
+                "NexSyncHub <onboarding@resend.dev>",
 
-      from:
-        "NexSyncHub <onboarding@resend.dev>",
+            to: user.email,
 
-      to: user.email,
+            subject:
+                "Reset your NexSyncHub password",
 
-      subject:
-        "Reset your NexSyncHub password",
-
-      html: `
+            html: `
 
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px;">
 
@@ -157,35 +159,94 @@ export async function POST(
 
       `,
 
-    });
+        });
 
-    return NextResponse.json({
+        // 🔥 Request info
+        const ip =
+            req.headers.get(
+                "x-forwarded-for"
+            ) || "Unknown IP";
 
-      success: true,
+        const userAgent =
+            req.headers.get(
+                "user-agent"
+            ) || "Unknown Device";
 
-      message:
+        // 🔥 Create security log
+        const securityLog =
+            await createSecurityLog({
 
-        "If an account exists, an OTP has been sent.",
+                userId:
+                    user._id.toString(),
 
-    });
+                action:
+                    "password_reset_requested",
 
-  } catch (error) {
+                metadata: {
 
-    console.error(
-      "FORGOT PASSWORD ERROR:",
-      error
-    );
+                    ip,
+                    userAgent,
 
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
-    );
+                },
 
-  }
+            });
+
+        // 🔥 Emit realtime event
+        await fetch(
+            "http://localhost:4000/emit",
+            {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+
+                body:
+                    JSON.stringify({
+
+                        channelId:
+                            "admin_global",
+
+                        event:
+                            "security-log-created",
+
+                        data:
+                            securityLog,
+
+                    }),
+
+            }
+        );
+
+        return NextResponse.json({
+
+            success: true,
+
+            message:
+
+                "If an account exists, an OTP has been sent.",
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "FORGOT PASSWORD ERROR:",
+            error
+        );
+
+        return NextResponse.json(
+            {
+                error:
+                    "Something went wrong",
+            },
+            {
+                status: 500,
+            }
+        );
+
+    }
 
 }
