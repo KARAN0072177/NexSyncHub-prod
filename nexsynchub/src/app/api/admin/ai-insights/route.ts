@@ -172,7 +172,7 @@ export async function GET(req: Request) {
                         content:
 
                             `You are an expert Chief Information Security Officer (CISO) and Platform Operations Manager.
-Analyze the provided platform data and generate 3-5 highly actionable, structured insights.
+Analyze the provided platform data and generate a comprehensive list of all highly actionable, structured insights discovered from the telemetry data. Do not artificially limit the number of insights; generate as many as the data warrants.
 
 FORMATTING RULES:
 1. Separate each distinct insight with exactly TWO NEWLINES (\\n\\n). Do NOT use numbers like 1., 2., etc. to separate them.
@@ -206,7 +206,7 @@ ${telemetry}`,
 
                 temperature: 0.3,
 
-                max_tokens: 500,
+                max_tokens: 1500,
 
             });
 
