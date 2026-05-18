@@ -13,6 +13,7 @@ import {
   LogIn,
   Zap,
   LayoutDashboard,
+  Shield,
   Menu,
   X,
 } from "lucide-react";
@@ -28,6 +29,8 @@ export default function PublicNavbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const isAdmin = (session?.user as any)?.role === "admin" || (session?.user as any)?.role === "super_admin";
 
   return (
     <header className="fixed top-4 inset-x-0 z-50 flex justify-center px-6">
@@ -76,13 +79,23 @@ export default function PublicNavbar() {
         {/* Right Side */}
         <div className="hidden md:flex items-center gap-4">
           {session ? (
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-black hover:bg-gray-200 transition-all text-sm font-semibold shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Dashboard
-            </Link>
+            isAdmin ? (
+              <Link
+                href="/admin"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-black hover:bg-gray-200 transition-all text-sm font-semibold shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]"
+              >
+                <Shield className="w-4 h-4" />
+                Admin Panel
+              </Link>
+            ) : (
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-black hover:bg-gray-200 transition-all text-sm font-semibold shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </Link>
+            )
           ) : (
             <>
               <Link
@@ -152,14 +165,25 @@ export default function PublicNavbar() {
 
                 <div className="flex flex-col gap-3">
                   {session ? (
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-black hover:bg-gray-200 transition-all text-sm font-semibold shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]"
-                    >
-                      <LayoutDashboard className="w-5 h-5" />
-                      Dashboard
-                    </Link>
+                    isAdmin ? (
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-black hover:bg-gray-200 transition-all text-sm font-semibold shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]"
+                      >
+                        <Shield className="w-5 h-5" />
+                        Admin Panel
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-black hover:bg-gray-200 transition-all text-sm font-semibold shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)]"
+                      >
+                        <LayoutDashboard className="w-5 h-5" />
+                        Dashboard
+                      </Link>
+                    )
                   ) : (
                     <>
                       <Link
