@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Globe, Lock, Loader2, ArrowRight, Sparkles } from "lucide-react";
+import { Building2, Globe, Lock, Loader2, ArrowRight, Sparkles, ShieldAlert } from "lucide-react";
 
 export default function CreateWorkspacePage() {
   const router = useRouter();
@@ -100,10 +100,9 @@ export default function CreateWorkspacePage() {
                   type="button"
                   onClick={() => setIsPrivate(true)}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all
-                    ${
-                      isPrivate
-                        ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 shadow-lg shadow-indigo-500/10"
-                        : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/30"
+                    ${isPrivate
+                      ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 shadow-lg shadow-indigo-500/10"
+                      : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/30"
                     }`}
                 >
                   <Lock className="w-4 h-4" />
@@ -113,10 +112,9 @@ export default function CreateWorkspacePage() {
                   type="button"
                   onClick={() => setIsPrivate(false)}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all
-                    ${
-                      !isPrivate
-                        ? "bg-amber-600/20 text-amber-300 border border-amber-500/30 shadow-lg shadow-amber-500/10"
-                        : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/30"
+                    ${!isPrivate
+                      ? "bg-amber-600/20 text-amber-300 border border-amber-500/30 shadow-lg shadow-amber-500/10"
+                      : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/30"
                     }`}
                 >
                   <Globe className="w-4 h-4" />
@@ -145,9 +143,57 @@ export default function CreateWorkspacePage() {
 
             {/* Error message */}
             {error && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <p className="text-sm text-red-400 text-center">{error}</p>
+
+              <div
+                className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 backdrop-blur-sm"
+              >
+
+                <div
+                  className="flex items-start gap-3"
+                >
+
+                  <div
+                    className="w-9 h-9 rounded-lg bg-red-500/15 border border-red-500/20 flex items-center justify-center flex-shrink-0"
+                  >
+
+                    <ShieldAlert
+                      className="w-5 h-5 text-red-400"
+                    />
+
+                  </div>
+
+                  <div>
+
+                    <h3
+                      className="text-sm font-semibold text-red-300"
+                    >
+
+                      Workspace Name Blocked
+
+                    </h3>
+
+                    <p
+                      className="text-sm text-red-400/90 mt-1 leading-relaxed"
+                    >
+
+                      {error}
+
+                    </p>
+
+                    <p
+                      className="text-xs text-red-400/60 mt-2"
+                    >
+
+                      Please choose a professional and community-safe workspace name.
+
+                    </p>
+
+                  </div>
+
+                </div>
+
               </div>
+
             )}
 
             {/* Submit Button */}
