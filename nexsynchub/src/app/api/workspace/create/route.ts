@@ -6,6 +6,7 @@ import { createWorkspaceSchema } from "@/lib/validators/workspace";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { createAuditLog } from "@/lib/audit";
+import { moderateWorkspaceName } from "@/lib/workspace-moderation";
 
 export async function POST(req: Request) {
   try {
@@ -34,6 +35,34 @@ export async function POST(req: Request) {
     }
 
     const { name, isPrivate } = parsed.data;
+
+    // 🔥 Moderate workspace name
+    const moderation =
+
+      await moderateWorkspaceName(
+        name
+      );
+
+    if (!moderation.safe) {
+
+      return NextResponse.json(
+
+        {
+
+          error:
+
+            "This workspace name violates community guidelines.",
+
+        },
+
+        {
+
+          status: 400,
+
+        }
+      );
+
+    }
 
     // 🏢 Create workspace
     const workspace = await Workspace.create({
