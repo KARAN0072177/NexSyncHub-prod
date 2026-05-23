@@ -12,17 +12,31 @@ const openai =
 // 🔥 Suspicious keywords
 const suspiciousKeywords = [
 
+  // Sexual
   "porn",
   "nude",
   "sex",
-  "cartel",
+  "pussy",
+  "boobs",
+  "xxx",
+  "onlyfans",
+  "nsfw",
+  "fetish",
+
+  // Drugs
+  "drug",
   "drugs",
-  "terror",
-  "isis",
+  "heroin",
   "cocaine",
   "meth",
+  "cartel",
+
+  // Crime
   "fraud",
   "scam",
+  "hacking",
+  "terror",
+  "isis",
 
 ];
 

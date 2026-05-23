@@ -60,6 +60,8 @@ export async function GET() {
 
             "unsafe_avatar_upload",
 
+            "unsafe_workspace_name",
+
           ],
 
         },

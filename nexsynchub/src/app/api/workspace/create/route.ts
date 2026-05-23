@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { createAuditLog } from "@/lib/audit";
 import { moderateWorkspaceName } from "@/lib/workspace-moderation";
+import { createSecurityLog } from "@/lib/security";
 
 export async function POST(req: Request) {
   try {
@@ -44,6 +45,76 @@ export async function POST(req: Request) {
       );
 
     if (!moderation.safe) {
+
+      // 🔥 Request info
+      const ip =
+        req.headers.get(
+          "x-forwarded-for"
+        ) || "Unknown IP";
+
+      const userAgent =
+        req.headers.get(
+          "user-agent"
+        ) || "Unknown Device";
+
+      // 🔥 Create moderation log
+      const securityLog =
+        await createSecurityLog({
+
+          userId:
+            session.user.id,
+
+          action:
+            "unsafe_workspace_name",
+
+          metadata: {
+
+            workspaceName:
+              name,
+
+            moderationReason:
+              "Unsafe workspace name blocked",
+
+            aiTriggered:
+              true,
+
+            ip,
+            userAgent,
+
+          },
+
+        });
+
+      // 🔥 Emit realtime moderation event
+      await fetch(
+        "http://localhost:4000/emit",
+        {
+
+          method: "POST",
+
+          headers: {
+
+            "Content-Type":
+              "application/json",
+
+          },
+
+          body:
+            JSON.stringify({
+
+              channelId:
+                "admin_global",
+
+              event:
+                "admin_security_log_created",
+
+              data:
+                securityLog,
+
+            }),
+
+        }
+      );
 
       return NextResponse.json(
 
