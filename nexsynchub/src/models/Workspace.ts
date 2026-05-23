@@ -8,6 +8,8 @@ export interface IWorkspace {
 
   name: string;
 
+  avatar?: string;
+
   description?: string;
 
   owner: mongoose.Types.ObjectId;
@@ -28,6 +30,11 @@ const WorkspaceSchema =
         type: String,
         required: true,
         trim: true,
+      },
+
+      avatar: {
+        type: String,
+        default: "",
       },
 
       description: {
