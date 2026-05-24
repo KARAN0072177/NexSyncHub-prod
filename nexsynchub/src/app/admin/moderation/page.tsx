@@ -182,9 +182,11 @@ export default function ModerationPage() {
         &&
         newLog.action !== "unsafe_workspace_name"
         &&
-
         newLog.action !==
         "unsafe_workspace_avatar_upload"
+        &&
+        newLog.action !==
+        "unsafe_support_attachment"
       ) return;
 
       setLogs(prev => [newLog, ...prev]);
@@ -634,7 +636,12 @@ export default function ModerationPage() {
 
                                   ? "Unsafe workspace avatar blocked"
 
-                                  : "Unsafe profile avatar blocked"
+                                  : log.action ===
+                                    "unsafe_support_attachment"
+
+                                    ? "Unsafe support attachment blocked"
+
+                                    : "Unsafe profile avatar blocked"
                             }
                           </p>
                         </div>

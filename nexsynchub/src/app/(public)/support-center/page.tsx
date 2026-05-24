@@ -55,6 +55,7 @@ export default function SupportPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuccessPulse, setAiSuccessPulse] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [moderationError, setModerationError] = useState("");
 
   const enhanceWithAI =
     async () => {
@@ -173,8 +174,28 @@ export default function SupportPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error);
+
+        // 🔥 Moderation popup
+        if (
+          data.error?.includes(
+            "relevant screenshots"
+          )
+        ) {
+
+          setModerationError(
+            data.error
+          );
+
+          return;
+
+        }
+
+        alert(
+          data.error
+        );
+
         return;
+
       }
 
       setSuccess(true);
@@ -305,7 +326,7 @@ export default function SupportPage() {
           {/* AI Enhance */}
           <div className="mb-10 p-5 sm:p-6 rounded-[1.5rem] relative overflow-hidden transition-all duration-300" style={{ background: "rgba(139,92,246,0.03)", border: `1px solid rgba(139,92,246,0.15)` }}>
             <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
-            
+
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
               <div>
                 <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-1.5" style={{ fontFamily: "'Sora',sans-serif" }}>
@@ -414,6 +435,185 @@ export default function SupportPage() {
           </button>
         </motion.div>
       </div>
+
+      {/* Moderation Modal */}
+      <AnimatePresence>
+
+        {moderationError && (
+
+          <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
+
+            {/* Backdrop */}
+            <motion.div
+
+              initial={{
+                opacity: 0,
+              }}
+
+              animate={{
+                opacity: 1,
+              }}
+
+              exit={{
+                opacity: 0,
+              }}
+
+              className="absolute inset-0"
+
+              style={{
+
+                background:
+                  "rgba(5,5,8,0.85)",
+
+                backdropFilter:
+                  "blur(14px)",
+
+              }}
+            />
+
+            {/* Modal */}
+            <motion.div
+
+              initial={{
+                opacity: 0,
+                scale: 0.92,
+                y: 24,
+              }}
+
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+              }}
+
+              exit={{
+                opacity: 0,
+                scale: 0.92,
+                y: 18,
+              }}
+
+              transition={{
+                duration: 0.25,
+              }}
+
+              className="relative w-full max-w-md rounded-[2rem] p-8 overflow-hidden shadow-2xl"
+
+              style={{
+
+                background:
+                  T.surfaceHi,
+
+                border:
+                  `1px solid rgba(239,68,68,0.18)`,
+
+                backdropFilter:
+                  "blur(40px)",
+
+              }}
+            >
+
+              {/* Top glow */}
+              <div
+
+                className="absolute top-0 left-0 right-0 h-1"
+
+                style={{
+
+                  background:
+                    "linear-gradient(90deg,#ef4444,#f97316)",
+
+                }}
+              />
+
+              {/* Icon */}
+              <div
+
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+
+                style={{
+
+                  background:
+                    "rgba(239,68,68,0.12)",
+
+                  border:
+                    "1px solid rgba(239,68,68,0.2)",
+
+                }}
+              >
+
+                <ShieldAlert
+                  size={30}
+                  color="#ef4444"
+                />
+
+              </div>
+
+              {/* Title */}
+              <h3
+
+                className="text-2xl font-bold text-center text-white mb-4"
+
+                style={{
+                  fontFamily:
+                    "'Sora',sans-serif",
+                }}
+              >
+
+                Upload Blocked
+
+              </h3>
+
+              {/* Description */}
+              <p
+
+                className="text-sm leading-relaxed text-center mb-8"
+
+                style={{
+                  color:
+                    T.muted,
+                }}
+              >
+
+                One or more attachments violate NexSyncHub support upload guidelines.
+
+                <br />
+                <br />
+
+                Please upload only relevant screenshots or documents.
+
+              </p>
+
+              {/* Button */}
+              <button
+
+                onClick={() =>
+                  setModerationError("")
+                }
+
+                className="w-full py-4 rounded-2xl font-bold text-white transition-all active:scale-[0.98]"
+
+                style={{
+
+                  background:
+                    "linear-gradient(135deg,#ef4444,#f97316)",
+
+                  boxShadow:
+                    "0 8px 24px rgba(239,68,68,0.25)",
+
+                }}
+              >
+
+                Understood
+
+              </button>
+
+            </motion.div>
+
+          </div>
+
+        )}
+
+      </AnimatePresence>
 
       {/* Success Modal */}
       <AnimatePresence>

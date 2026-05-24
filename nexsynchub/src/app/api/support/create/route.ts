@@ -28,6 +28,14 @@ import { resend }
 import SupportTicket
     from "@/models/SupportTicket";
 
+import {
+    moderateImage,
+} from "@/lib/moderation";
+
+import {
+    createSecurityLog,
+} from "@/lib/security";
+
 export async function POST(
     req: Request
 ) {
@@ -210,6 +218,138 @@ export async function POST(
 
             const buffer =
                 Buffer.from(bytes);
+
+            // 🔥 Moderate support images
+            if (
+                file.type.startsWith(
+                    "image/"
+                )
+            ) {
+
+                const moderation =
+                    await moderateImage(
+                        buffer
+                    );
+
+                // ❌ Unsafe image
+                if (!moderation.safe) {
+
+                    // 🔥 Request info
+                    const ip =
+                        req.headers.get(
+                            "x-forwarded-for"
+                        ) || "Unknown IP";
+
+                    const userAgent =
+                        req.headers.get(
+                            "user-agent"
+                        ) || "Unknown Device";
+
+                    // 🔥 Create security log
+                    const securityLog =
+                        await createSecurityLog({
+
+                            userId:
+                                session.user.id,
+
+                            action:
+                                "unsafe_support_attachment",
+
+                            metadata: {
+
+                                filename:
+                                    file.name,
+
+                                size:
+                                    file.size,
+
+                                contentType:
+                                    file.type,
+
+                                moderationLabels:
+
+                                    moderation.labels
+
+                                        .filter(
+                                            (label: any) =>
+
+                                                label.Confidence >= 70
+                                        )
+
+                                        .map(
+                                            (label: any) => ({
+
+                                                name:
+                                                    label.Name,
+
+                                                confidence:
+                                                    label.Confidence,
+
+                                                parentName:
+                                                    label.ParentName,
+
+                                            })
+                                        ),
+
+                                ip,
+                                userAgent,
+
+                            },
+
+                        });
+
+                    // 🔥 Emit realtime event
+                    await fetch(
+                        "http://localhost:4000/emit",
+                        {
+
+                            method: "POST",
+
+                            headers: {
+
+                                "Content-Type":
+                                    "application/json",
+
+                            },
+
+                            body:
+                                JSON.stringify({
+
+                                    channelId:
+                                        "admin_global",
+
+                                    event:
+                                        "admin_security_log_created",
+
+                                    data:
+                                        securityLog,
+
+                                }),
+
+                        }
+                    );
+
+                    return NextResponse.json(
+
+                        {
+
+                            error:
+
+                                "Support attachments must only contain relevant screenshots or documents.",
+
+                        },
+
+                        {
+
+                            status: 400,
+
+                        }
+
+                    );
+
+                }
+
+            }
 
             // 🔥 Generate key
             const extension =
