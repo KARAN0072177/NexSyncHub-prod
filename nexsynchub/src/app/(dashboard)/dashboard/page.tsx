@@ -188,8 +188,16 @@ function WorkspaceCard({ ws, onOpen, onInvite, copying }: {
         <div className="flex items-start gap-3.5 mb-auto">
           {/* avatar */}
           {ws.avatar ? (
-            <img src={ws.avatar} alt={name} className="w-12 h-12 rounded-2xl object-cover shrink-0"
-              style={{ border: `1px solid ${T.borderHi}` }} />
+            <img 
+              src={ws.avatar} 
+              alt={name} 
+              className="w-12 h-12 rounded-2xl object-cover shrink-0"
+              style={{ border: `1px solid ${T.borderHi}` }} 
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3D7BFF&color=fff&rounded=true&bold=true`;
+              }}
+            />
           ) : (
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0"
               style={{ background: `hsla(${hue},65%,45%,0.15)`, border: `1px solid hsla(${hue},65%,45%,0.28)`, color: `hsl(${hue},70%,68%)`, fontFamily: "'Sora',sans-serif" }}>
@@ -755,9 +763,10 @@ export default function DashboardPage() {
                                 src={ws.avatar}
                                 alt={ws.name}
                                 className="w-14 h-14 rounded-2xl object-cover shrink-0 shadow-lg"
-                                style={{
-                                  border:
-                                    `1px solid ${T.borderHi}`,
+                                style={{ border: `1px solid ${T.borderHi}` }}
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ws.name || "W")}&background=3D7BFF&color=fff&rounded=true&bold=true`;
                                 }}
                               />
                             ) : (

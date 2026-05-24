@@ -30,6 +30,14 @@ export interface IUser {
 
   emailVerificationExpires?: Date;
 
+  isBanned: boolean;
+
+  banReason?: string;
+
+  banExpiresAt?: Date | null;
+
+  bannedBy?: mongoose.Types.ObjectId;
+
   createdAt: Date;
 
   updatedAt: Date;
@@ -120,6 +128,26 @@ const UserSchema =
 
       emailVerificationExpires: {
         type: Date,
+      },
+
+      isBanned: {
+        type: Boolean,
+        default: false,
+      },
+
+      banReason: {
+        type: String,
+        default: "",
+      },
+
+      banExpiresAt: {
+        type: Date,
+        default: null,
+      },
+
+      bannedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
       },
     },
     {

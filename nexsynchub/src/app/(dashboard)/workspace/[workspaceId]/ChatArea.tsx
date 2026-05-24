@@ -20,8 +20,32 @@ import {
     Smile,
     ChevronDown,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import WorkspacePresence from "@/components/chat/WorkspacePresence";
+
+/* ─── tokens ─────────────────────────────────────────────────────────────── */
+const T = {
+    bg: "#03060F",
+    surface: "rgba(8,16,40,0.70)",
+    surfaceHi: "rgba(10,22,52,0.85)",
+    border: "rgba(99,140,255,0.10)",
+    borderHi: "rgba(99,140,255,0.22)",
+    accent: "#3D7BFF",
+    accentLo: "rgba(61,123,255,0.12)",
+    accentMd: "rgba(61,123,255,0.25)",
+    violet: "#7C3AED",
+    violetLo: "rgba(124,58,237,0.12)",
+    violetMd: "rgba(124,58,237,0.25)",
+    emerald: "#10B981",
+    emeraldLo: "rgba(16,185,129,0.12)",
+    emeraldMd: "rgba(16,185,129,0.25)",
+    rose: "#FF4D6D",
+    roseLo: "rgba(255,77,109,0.12)",
+    roseMd: "rgba(255,77,109,0.25)",
+    text: "#E2E8F8",
+    muted: "#4A5578",
+};
 
 type Attachment = {
     key: string;
@@ -652,10 +676,12 @@ export default function ChatArea({ channel }: { channel: any }) {
 
     if (!username) {
         return (
-            <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
-                <div className="text-center p-8 rounded-2xl bg-gray-900/50 border border-gray-800 backdrop-blur-sm">
-                    <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400">Please set your username to start chatting.</p>
+            <div className="flex items-center justify-center h-full" style={{ background: T.bg }}>
+                <div className="text-center p-10 rounded-[2rem] backdrop-blur-xl shadow-2xl" style={{ background: T.surfaceHi, border: `1px solid ${T.borderHi}` }}>
+                    <div className="w-16 h-16 rounded-3xl mx-auto flex items-center justify-center mb-5" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
+                        <Users className="w-8 h-8" style={{ color: T.muted }} />
+                    </div>
+                    <p className="text-sm font-semibold" style={{ color: T.muted, fontFamily: "'DM Sans',sans-serif" }}>Please set your username to start chatting.</p>
                 </div>
             </div>
         );
@@ -663,21 +689,24 @@ export default function ChatArea({ channel }: { channel: any }) {
 
     if (!channel || !channel._id) {
         return (
-            <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
-                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            <div className="flex items-center justify-center h-full" style={{ background: T.bg }}>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl" style={{ background: T.surfaceHi, border: `1px solid ${T.borderHi}` }}>
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: T.accent }} />
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col h-full bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+        <div className="flex flex-col h-full" style={{ background: T.bg }}>
             {/* Header */}
-            <div className="relative z-50 flex-shrink-0 px-5 py-4 border-b border-gray-800/50 backdrop-blur-sm bg-gray-900/30">
+            <div className="relative z-50 flex-shrink-0 px-5 py-4 backdrop-blur-xl shadow-sm"
+                 style={{ background: T.surfaceHi, borderBottom: `1px solid ${T.borderHi}` }}>
                 <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                        <span className="text-indigo-400 font-bold text-lg">#</span>
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
+                        <span className="font-bold text-lg leading-none" style={{ color: T.accent, fontFamily: "'Sora',sans-serif" }}>#</span>
                     </div>
-                    <h2 className="font-semibold text-gray-200 tracking-tight">{channel.name}</h2>
+                    <h2 className="font-bold text-white tracking-tight text-lg" style={{ fontFamily: "'Sora',sans-serif" }}>{channel.name}</h2>
                     <div className="ml-auto">
                         <WorkspacePresence
                             socket={socketRef.current}
@@ -693,14 +722,15 @@ export default function ChatArea({ channel }: { channel: any }) {
             <div className="flex-1 relative min-h-0">
                 <div
                     ref={messagesContainerRef}
-                    className="h-full overflow-y-auto overflow-x-hidden px-5 py-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+                    className="h-full overflow-y-auto overflow-x-hidden px-5 py-6 space-y-6 scrollbar-thin"
+                    style={{ background: T.bg }}
                 >
 
                 {/* Loading more indicator */}
 
                 {loadingMore && (
                     <div className="flex justify-center mb-2">
-                        <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin" style={{ color: T.accent }} />
                     </div>
                 )}
 
@@ -712,12 +742,13 @@ export default function ChatArea({ channel }: { channel: any }) {
                     // System message
                     if (msg.type === "system") {
                         return (
-                            <div key={msg._id} className="flex items-center gap-3 my-2">
-                                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-900/50 px-3 py-1 rounded-full border border-gray-800">
+                            <div key={msg._id} className="flex items-center gap-3 my-4">
+                                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${T.borderHi}, transparent)` }} />
+                                <div className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full"
+                                     style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}`, color: T.muted }}>
                                     {msg.content}
                                 </div>
-                                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
+                                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${T.borderHi}, transparent)` }} />
                             </div>
                         );
                     }
@@ -725,12 +756,13 @@ export default function ChatArea({ channel }: { channel: any }) {
                     return (
                         <Fragment key={msg._id}>
                             {showUnreadBanner && (
-                                <div className="flex items-center gap-3 my-2">
-                                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent" />
-                                    <div className="text-xs font-medium text-red-400 uppercase tracking-wider bg-red-900/50 px-3 py-1 rounded-full border border-red-800">
+                                <div className="flex items-center gap-3 my-4">
+                                    <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${T.roseMd}, transparent)` }} />
+                                    <div className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg"
+                                         style={{ background: T.roseLo, border: `1px solid ${T.roseMd}`, color: T.rose }}>
                                         New Messages
                                     </div>
-                                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent" />
+                                    <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${T.roseMd}, transparent)` }} />
                                 </div>
                             )}
                             <div
@@ -739,24 +771,27 @@ export default function ChatArea({ channel }: { channel: any }) {
                                     }`}
                             >
                                 <div
-                                    className={`group relative w-fit max-w-[85%] md:max-w-[75%] transition-all duration-300 ${activeHighlight === msg._id
-                                        ? "ring-2 ring-yellow-500/50 shadow-lg shadow-yellow-500/10 scale-[1.02]"
+                                    className={`group relative w-fit max-w-[85%] md:max-w-[70%] transition-all duration-300 ${activeHighlight === msg._id
+                                    ? "scale-[1.02]"
                                         : ""
                                         }`}
+                                style={activeHighlight === msg._id ? { boxShadow: `0 0 0 2px ${T.violet}, 0 0 40px ${T.violetLo}` } : {}}
                                 >
                                     {/* Message bubble */}
                                     <div
-                                        className={`rounded-2xl px-4 py-2.5 ${isOwnMessage
-                                            ? "bg-indigo-600/20 border border-indigo-500/30 text-gray-200"
-                                            : "bg-gray-800/80 border border-gray-700 text-gray-200"
-                                            }`}
+                                        className={`px-5 py-3.5 shadow-sm backdrop-blur-sm ${isOwnMessage ? "rounded-[1.5rem] rounded-br-sm" : "rounded-[1.5rem] rounded-bl-sm"}`}
+                                        style={{
+                                            background: isOwnMessage ? T.accentLo : T.surface,
+                                            border: `1px solid ${isOwnMessage ? T.accentMd : T.border}`,
+                                            color: T.text,
+                                        }}
                                     >
                                         {!isOwnMessage && (
-                                            <p className="text-xs font-medium text-indigo-400 mb-1">
+                                            <p className="text-[11px] font-bold uppercase tracking-wide mb-1.5" style={{ color: T.accent }}>
                                                 {msg.sender?.username ?? "Unknown"}
                                             </p>
                                         )}
-                                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                        <p className="text-[15px] leading-[1.6] whitespace-pre-wrap break-words" style={{ fontFamily: "'DM Sans',sans-serif" }}>{msg.content}</p>
 
                                         {/* Reactions */}
                                         {msg.reactions?.length > 0 && (
@@ -779,21 +814,26 @@ export default function ChatArea({ channel }: { channel: any }) {
                                                                         reaction.emoji
                                                                     )
                                                                 }
-                                                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-all ${reacted
-                                                                        ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
-                                                                        : "bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500"
-                                                                    }`}
+                                                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all shadow-sm`}
+                                                                style={{
+                                                                    background: reacted ? T.accentLo : "rgba(255,255,255,0.03)",
+                                                                    border: `1px solid ${reacted ? T.accentMd : T.border}`,
+                                                                    color: reacted ? T.accent : T.muted
+                                                                }}
+                                                                onMouseEnter={(e) => { if (!reacted) { e.currentTarget.style.borderColor = T.borderHi; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; } }}
+                                                                onMouseLeave={(e) => { if (!reacted) { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; } }}
                                                             >
                                                                 <span>{reaction.emoji}</span>
-                                                                {reaction.users?.length > 1 && <span>{reaction.users.length}</span>}
+                                                                {reaction.users?.length > 0 && <span>{reaction.users.length}</span>}
                                                             </button>
                                                             
-                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-3 py-2 bg-gray-800/95 text-gray-200 text-[11px] rounded-md shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover/reaction:opacity-100 transition-all duration-200 z-[100] border border-gray-700/50 backdrop-blur-sm flex flex-col gap-1">
+                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-[11px] rounded-xl shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover/reaction:opacity-100 transition-all duration-200 z-[100] backdrop-blur-md flex flex-col gap-1.5"
+                                                                 style={{ background: T.surfaceHi, border: `1px solid ${T.borderHi}` }}>
                                                                 {getReactionUsernames(reaction.users).map((uname: string, idx: number) => (
                                                                     <div key={idx} className="flex items-center justify-between gap-3">
-                                                                        <span className="font-medium text-gray-300">{uname}</span>
+                                                                        <span className="font-bold text-white">{uname}</span>
                                                                         <div className="flex items-center gap-1.5">
-                                                                            <span className="text-gray-500">:</span>
+                                                                            <span style={{ color: T.muted }}>:</span>
                                                                             <span>{reaction.emoji}</span>
                                                                         </div>
                                                                     </div>
@@ -817,13 +857,14 @@ export default function ChatArea({ channel }: { channel: any }) {
                                                                 key={i}
                                                                 src={att.url}
                                                                 alt="attachment"
-                                                                className="max-w-full rounded-lg border border-gray-700"
+                                                                    className="max-w-full rounded-xl"
+                                                                    style={{ border: `1px solid ${T.borderHi}` }}
                                                             />
                                                         );
                                                     }
                                                     if (att.type?.startsWith("video")) {
                                                         return (
-                                                            <video key={i} controls className="max-w-full rounded-lg border border-gray-700">
+                                                                <video key={i} controls className="max-w-full rounded-xl" style={{ border: `1px solid ${T.borderHi}` }}>
                                                                 <source src={att.url} />
                                                             </video>
                                                         );
@@ -834,10 +875,11 @@ export default function ChatArea({ channel }: { channel: any }) {
                                                             href={att.url}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="flex items-center gap-2 p-2 bg-gray-900/50 rounded-lg border border-gray-700 text-indigo-400 hover:text-indigo-300 transition-colors"
+                                                                className="flex items-center gap-2.5 p-3 rounded-xl transition-all"
+                                                                style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}
                                                         >
-                                                            <File size={14} />
-                                                            <span className="text-sm truncate">{att.name}</span>
+                                                                <File size={16} style={{ color: T.accent }} />
+                                                                <span className="text-sm font-semibold truncate" style={{ color: T.text }}>{att.name}</span>
                                                         </a>
                                                     );
                                                 })}
@@ -847,35 +889,36 @@ export default function ChatArea({ channel }: { channel: any }) {
 
                                     {/* Seen indicator */}
                                     {showSeen && (
-                                        <div className="flex items-center justify-end gap-1 mt-1 text-xs text-gray-500">
-                                            <CheckCheck size={12} className="text-green-500" />
+                                        <div className="flex items-center justify-end gap-1 mt-1.5 text-[11px]" style={{ color: T.muted }}>
+                                            <CheckCheck size={12} style={{ color: T.emerald }} />
                                             <span>Seen by {seenUsers.size}</span>
                                         </div>
                                     )}
 
                                     {/* Hover Actions Toolbar */}
-                                    <div className={`absolute -top-4 ${isOwnMessage ? "right-2" : "left-2"} opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center z-10 translate-y-2 group-hover:translate-y-0`}>
-                                        <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden">
+                                    <div className={`absolute -top-6 ${isOwnMessage ? "right-0" : "left-0"} opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center z-10 translate-y-2 group-hover:translate-y-0`}>
+                                        <div className="flex items-center rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl" style={{ background: T.surfaceHi, border: `1px solid ${T.borderHi}` }}>
                                             {/* Quick reactions */}
-                                            <div className="flex items-center px-1">
+                                            <div className="flex items-center px-1.5 py-1">
                                                 {["👍", "❤️", "🔥", "😂"].map((emoji) => (
                                                     <button
                                                         key={emoji}
                                                         onClick={() => handleReaction(msg._id, emoji)}
-                                                        className="w-7 h-7 rounded hover:bg-gray-700 flex items-center justify-center text-sm transition-colors"
+                                                        className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-[15px] transition-colors"
                                                     >
                                                         {emoji}
                                                     </button>
                                                 ))}
                                             </div>
                                             
-                                            <div className="w-px h-4 bg-gray-700 mx-1" />
+                                            <div className="w-px h-5 mx-1" style={{ background: T.borderHi }} />
                                             
                                             {/* Convert to Task button */}
                                             <button
                                                 onClick={() => openTaskModal(msg)}
-                                                className="text-gray-300 hover:text-white hover:bg-gray-700 px-3 h-8 text-xs flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                                                className="px-3.5 h-10 text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap hover:bg-white/5"
                                                 title="Convert to Task"
+                                                style={{ color: T.muted }}
                                             >
                                                 <Flag size={12} />
                                                 Task
@@ -894,7 +937,8 @@ export default function ChatArea({ channel }: { channel: any }) {
                 {showScrollBottom && (
                     <button
                         onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
-                        className="absolute bottom-4 right-6 p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg shadow-black/50 transition-all z-20 group"
+                        className="absolute bottom-6 right-6 p-3 rounded-full shadow-2xl transition-all z-20 group backdrop-blur-xl"
+                        style={{ background: T.surfaceHi, border: `1px solid ${T.borderHi}`, color: T.text }}
                     >
                         <ChevronDown size={20} className="group-hover:translate-y-0.5 transition-transform" />
                     </button>
@@ -902,13 +946,13 @@ export default function ChatArea({ channel }: { channel: any }) {
             </div>
 
             {/* Input Area */}
-            <div className="flex-shrink-0 p-4 border-t border-gray-800/50 bg-gray-900/30 backdrop-blur-sm">
+            <div className="flex-shrink-0 p-5 backdrop-blur-xl z-10" style={{ background: T.surfaceHi, borderTop: `1px solid ${T.borderHi}` }}>
                 {/* Typing indicator */}
                 {typingUsers.length > 0 && (
                     <div className="mb-2 px-1">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800/50 rounded-full border border-gray-700/50">
-                            <Loader2 size={12} className="text-indigo-400 animate-spin" />
-                            <span className="text-xs text-gray-400">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
+                            <Loader2 size={12} className="animate-spin" style={{ color: T.accent }} />
+                            <span className="text-[11px] font-bold tracking-wide" style={{ color: T.muted }}>
                                 {typingUsers.length === 1
                                     ? `${typingUsers[0].username} is typing...`
                                     : `${typingUsers.map((u) => u.username).join(", ")} are typing...`}
@@ -923,29 +967,29 @@ export default function ChatArea({ channel }: { channel: any }) {
                         {attachments.map((att, idx) => (
                             <div
                                 key={idx}
-                                className="relative group bg-gray-800/80 border border-gray-700 rounded-lg p-2 flex items-center gap-2"
+                                className="relative group rounded-xl p-2.5 flex items-center gap-2.5 backdrop-blur-md shadow-sm"
+                                style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}
                             >
                                 {att.type === "image" ? (
-                                    <ImageIcon size={16} className="text-indigo-400" />
+                                    <ImageIcon size={16} style={{ color: T.accent }} />
                                 ) : att.type === "video" ? (
-                                    <File size={16} className="text-indigo-400" />
+                                    <File size={16} style={{ color: T.accent }} />
                                 ) : (
-                                    <File size={16} className="text-gray-400" />
+                                    <File size={16} style={{ color: T.muted }} />
                                 )}
-                                <span className="text-xs text-gray-300 max-w-[150px] truncate">{att.name}</span>
-                                <span className="text-xs text-gray-500">{formatFileSize(att.size)}</span>
+                                <span className="text-xs font-semibold max-w-[150px] truncate" style={{ color: T.text }}>{att.name}</span>
+                                <span className="text-[10px] font-bold" style={{ color: T.muted }}>{formatFileSize(att.size)}</span>
                                 <button
                                     onClick={() => removeAttachment(idx)}
-                                    className="ml-1 p-0.5 hover:bg-red-500/20 rounded transition-colors"
+                                    className="ml-1 p-1 hover:bg-white/10 rounded-md transition-colors"
                                 >
-                                    <X size={12} className="text-gray-400 hover:text-red-400" />
+                                    <X size={12} style={{ color: T.muted }} className="hover:text-red-400" />
                                 </button>
                             </div>
                         ))}
                     </div>
                 )}
 
-                {/* Input row */}
                 {/* Input row */}
                 <div className="flex items-end gap-2">
                     <div className="flex-1 relative">
@@ -960,15 +1004,24 @@ export default function ChatArea({ channel }: { channel: any }) {
                             }}
                             placeholder="Type a message..."
                             rows={1}
-                            className="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 pr-12
-        text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 
-        focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all resize-none"
+                            className="w-full rounded-2xl px-5 py-4 pr-12 text-[15px] focus:outline-none transition-all resize-none shadow-inner"
+                            style={{
+                                background: "rgba(0,0,0,0.25)",
+                                border: `1px solid ${T.borderHi}`,
+                                color: T.text,
+                                fontFamily: "'DM Sans',sans-serif"
+                            }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${T.accentLo}`; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = T.borderHi; e.currentTarget.style.boxShadow = "none"; }}
                         />
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="absolute right-3 top-3 text-gray-400 hover:text-indigo-400 transition-colors"
+                            className="absolute right-3 top-3.5 p-1.5 rounded-xl transition-colors"
+                            style={{ color: T.muted }}
+                            onMouseEnter={e => { e.currentTarget.style.color = T.accent; e.currentTarget.style.background = T.accentLo; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.background = "transparent"; }}
                         >
-                            <Paperclip size={18} />
+                            <Paperclip size={18} strokeWidth={2.5} />
                         </button>
                     </div>
                     <input
@@ -978,12 +1031,13 @@ export default function ChatArea({ channel }: { channel: any }) {
                         onChange={handleFileUpload}
                         className="hidden"
                     />
-                    <button
+                    <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                         disabled={loading || uploading}
                         onClick={handleSend}
-                        className="flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 
-      disabled:cursor-not-allowed text-white rounded-xl px-5 py-3 transition-colors
-      flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+                        className="flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl px-6 py-4 transition-all flex items-center gap-2 shadow-xl font-bold"
+                        style={{ background: `linear-gradient(135deg, ${T.accent}, ${T.violet})`, boxShadow: `0 8px 24px ${T.accentLo}` }}
                     >
                         {uploading ? (
                             <>
@@ -998,7 +1052,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                                 Send
                             </>
                         )}
-                    </button>
+                    </motion.button>
                 </div>
             </div>
 

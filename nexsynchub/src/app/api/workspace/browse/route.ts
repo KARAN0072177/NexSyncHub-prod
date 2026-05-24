@@ -8,7 +8,7 @@ export async function GET() {
 
     const workspaces = await Workspace.find({
       isPrivate: false, // ✅ ONLY PUBLIC
-    }).select("name createdAt");
+    }).select("name avatar description createdAt");
 
     return NextResponse.json({ workspaces });
   } catch (error) {

@@ -5,6 +5,8 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
+
+
 import { createSecurityLog } from "@/lib/security";
 
 export const authOptions: NextAuthOptions = {
@@ -70,6 +72,78 @@ export const authOptions: NextAuthOptions = {
 
         if (!user.isEmailVerified) {
           throw new Error("Please verify your email first");
+        }
+
+        // 🔥 Banned user check
+        if (
+          user.isBanned
+        ) {
+
+          // 🔥 Temp suspension expired
+          if (
+            user.banExpiresAt
+            &&
+            new Date() >
+            new Date(
+              user.banExpiresAt
+            )
+          ) {
+
+            user.isBanned = false;
+
+            user.banReason = "";
+
+            user.banExpiresAt = null;
+
+            user.bannedBy = null;
+
+            await user.save();
+
+          } else {
+
+            // 🔥 Security log
+            await createSecurityLog({
+
+              userId:
+                user._id.toString(),
+
+              action:
+                "auth_login_blocked_banned",
+
+              ip,
+
+              userAgent,
+
+              metadata: {
+
+                reason:
+                  user.banReason ||
+
+                  "Banned account",
+
+                expiresAt:
+                  user.banExpiresAt ||
+
+                  null,
+
+              },
+
+            });
+
+            throw new Error(
+
+              user.banExpiresAt
+
+                ? `Your account is suspended until ${new Date(
+                  user.banExpiresAt
+                ).toLocaleString()}.`
+
+                : "Your account has been permanently banned."
+
+            );
+
+          }
+
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
