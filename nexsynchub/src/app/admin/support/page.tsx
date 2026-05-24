@@ -1,3 +1,5 @@
+// src/app/admin/support/page.tsx
+
 "use client";
 
 import {
@@ -13,6 +15,9 @@ import {
     motion,
 
 } from "framer-motion";
+
+import { socket }
+    from "@/lib/socket";
 
 import {
 
@@ -163,6 +168,49 @@ export default function AdminSupportPage() {
     useEffect(() => {
 
         fetchTickets();
+
+        // 🔥 Join admin realtime room
+        socket.emit(
+            "join_admin_global"
+        );
+
+        // 🔥 New support ticket
+        socket.on(
+
+            "support_ticket_created",
+
+            () => {
+
+                fetchTickets();
+
+            }
+
+        );
+
+        // 🔥 Ticket updated
+        socket.on(
+
+            "support_ticket_updated",
+
+            () => {
+
+                fetchTickets();
+
+            }
+
+        );
+
+        return () => {
+
+            socket.off(
+                "support_ticket_created"
+            );
+
+            socket.off(
+                "support_ticket_updated"
+            );
+
+        };
 
     }, []);
 

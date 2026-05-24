@@ -1,3 +1,5 @@
+// src/app/api/support/create/route.ts
+
 import { NextResponse }
     from "next/server";
 
@@ -258,39 +260,39 @@ export async function POST(
         }
 
         // 🔥 Create ticket
-            const ticket =
-                await SupportTicket.create({
+        const ticket =
+            await SupportTicket.create({
 
-                    user:
-                        session.user.id,
+                user:
+                    session.user.id,
 
-                    category,
-
-                    subject:
-                        subject.trim(),
-
-                    message:
-                        message.trim(),
-
-                    attachments:
-                        uploadedAttachments,
-
-                });
-
-            // 🔥 Send admin email
-            await resend.emails.send({
-
-                from:
-                    "NexSyncHub Support <support@karanart.com>",
-
-                to:
-                    process.env
-                        .SUPPORT_EMAIL!,
+                category,
 
                 subject:
-                    `New Support Ticket - ${subject}`,
+                    subject.trim(),
 
-                html: `
+                message:
+                    message.trim(),
+
+                attachments:
+                    uploadedAttachments,
+
+            });
+
+        // 🔥 Send admin email
+        await resend.emails.send({
+
+            from:
+                "NexSyncHub Support <support@karanart.com>",
+
+            to:
+                process.env
+                    .SUPPORT_EMAIL!,
+
+            subject:
+                `New Support Ticket - ${subject}`,
+
+            html: `
 
         <div style="font-family: Arial, sans-serif; padding: 24px;">
 
@@ -320,21 +322,21 @@ export async function POST(
 
       `,
 
-            });
+        });
 
-            // 🔥 Confirmation email
-            await resend.emails.send({
+        // 🔥 Confirmation email
+        await resend.emails.send({
 
-                from:
-                    "NexSyncHub <noreply@karanart.com>",
+            from:
+                "NexSyncHub <noreply@karanart.com>",
 
-                to:
-                    session.user.email!,
+            to:
+                session.user.email!,
 
-                subject:
-                    "We received your support request",
+            subject:
+                "We received your support request",
 
-                html: `
+            html: `
 
         <div style="font-family: Arial, sans-serif; padding: 24px;">
 
@@ -359,34 +361,65 @@ export async function POST(
 
       `,
 
-            });
+        });
 
-            return NextResponse.json({
+        // 🔥 Emit realtime support ticket
+        await fetch(
+            "http://localhost:4000/emit",
+            {
 
-                success: true,
+                method: "POST",
 
-                ticketId:
-                    ticket._id,
+                headers: {
 
-            });
+                    "Content-Type":
+                        "application/json",
 
-        } catch (error) {
-
-            console.error(
-                "SUPPORT CREATE ERROR:",
-                error
-            );
-
-            return NextResponse.json(
-                {
-                    error:
-                        "Something went wrong",
                 },
-                {
-                    status: 500,
-                }
-            );
 
-        }
+                body:
+                    JSON.stringify({
+
+                        channelId:
+                            "admin_global",
+
+                        event:
+                            "support_ticket_created",
+
+                        data:
+                            ticket,
+
+                    }),
+
+            }
+        );
+
+        return NextResponse.json({
+
+            success: true,
+
+            ticketId:
+                ticket._id,
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "SUPPORT CREATE ERROR:",
+            error
+        );
+
+        return NextResponse.json(
+            {
+                error:
+                    "Something went wrong",
+            },
+            {
+                status: 500,
+            }
+        );
 
     }
+
+}
