@@ -181,6 +181,10 @@ export default function ModerationPage() {
         newLog.action !== "unsafe_avatar_upload"
         &&
         newLog.action !== "unsafe_workspace_name"
+        &&
+
+        newLog.action !==
+        "unsafe_workspace_avatar_upload"
       ) return;
 
       setLogs(prev => [newLog, ...prev]);
@@ -226,7 +230,11 @@ export default function ModerationPage() {
         escapeCSV(l.action),
         escapeCSV(l.user?.username || "Unknown"),
         escapeCSV(l.user?.email || "N/A"),
-        escapeCSV(l.metadata?.filename || "Unknown"),
+        escapeCSV(l.metadata?.filename
+          ||
+          l.metadata?.workspaceName
+          ||
+          "Unknown"),
         escapeCSV(l.metadata?.mimeType || "N/A"),
         escapeCSV(fmtSize(l.metadata?.size)),
         escapeCSV(labelsStr || "None"),
@@ -287,7 +295,19 @@ export default function ModerationPage() {
             <tbody>
               ${filtered.map(l => {
       const name = l.user?.username || l.user?.email || "Unknown User";
-      const fileInfo = l.metadata?.filename ? `${l.metadata.filename} (${fmtSize(l.metadata.size)})` : "—";
+      const fileInfo =
+
+        l.metadata?.workspaceName
+
+        ||
+
+        (
+          l.metadata?.filename
+
+            ? `${l.metadata.filename} (${fmtSize(l.metadata.size)})`
+
+            : "—"
+        );
       const labelsHtml = (l.metadata?.moderationLabels || []).map(lb => {
         const sev = severityColor(lb.confidence);
         return `<span class="tag tag-${sev.label}">${lb.name} (${Math.round(lb.confidence)}%)</span>`;
@@ -447,7 +467,7 @@ export default function ModerationPage() {
           <div className="relative">
             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: T.muted }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search by user, email or filename…"
+              placeholder="Search by user, email, filename or workspace name…"
               className="w-full pl-10 pr-10 py-3 rounded-2xl text-sm outline-none transition-all duration-300"
               style={{ background: T.surface, border: `1px solid ${search ? T.roseMd : T.border}`, color: T.text, backdropFilter: "blur(20px)", boxShadow: search ? `0 0 0 3px ${T.roseLo}` : "none", fontFamily: "'DM Sans',sans-serif" }} />
             {search && (
@@ -504,7 +524,17 @@ export default function ModerationPage() {
               <Shield size={22} style={{ color: T.rose }} />
             </div>
             <p className="text-base font-semibold text-white" style={{ fontFamily: "'Sora',sans-serif" }}>All clear</p>
-            <p className="text-sm" style={{ color: T.muted }}>No moderation events recorded. Unsafe uploads will appear here.</p>
+            <p
+              className="text-sm"
+              style={{
+                color: T.muted,
+              }}
+            >
+
+              No moderation events recorded.
+              Unsafe uploads and blocked workspace names will appear here.
+
+            </p>
           </motion.div>
         )}
 
@@ -599,7 +629,12 @@ export default function ModerationPage() {
 
                                 ? "Unsafe workspace name blocked"
 
-                                : "Unsafe avatar upload blocked"
+                                : log.action ===
+                                  "unsafe_workspace_avatar_upload"
+
+                                  ? "Unsafe workspace avatar blocked"
+
+                                  : "Unsafe profile avatar blocked"
                             }
                           </p>
                         </div>
