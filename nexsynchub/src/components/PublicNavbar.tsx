@@ -22,7 +22,7 @@ const navLinks = [
   { name: "Home", href: "/", icon: Home },
   { name: "Features", href: "/features", icon: Layers },
   { name: "About", href: "/about", icon: Info },
-  { name: "Contact", href: "/contact", icon: Mail },
+  { name: "Help and Support", href: "/support-center", icon: Mail },
 ];
 
 export default function PublicNavbar() {
