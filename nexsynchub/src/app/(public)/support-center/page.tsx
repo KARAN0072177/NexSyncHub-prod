@@ -16,6 +16,7 @@ import {
   CreditCard,
   UserCog,
   MessageSquare,
+  Sparkles,
 } from "lucide-react";
 
 const categories = [
@@ -30,18 +31,18 @@ const categories = [
 ];
 
 const T = {
-  bg:       "#050508",
-  surface:  "rgba(255,255,255,0.02)",
-  surfaceHi:"rgba(14,14,20,0.85)",
-  border:   "rgba(255,255,255,0.06)",
+  bg: "#050508",
+  surface: "rgba(255,255,255,0.02)",
+  surfaceHi: "rgba(14,14,20,0.85)",
+  border: "rgba(255,255,255,0.06)",
   borderHi: "rgba(255,255,255,0.12)",
-  accent:   "#6C63FF",
+  accent: "#6C63FF",
   accentLo: "rgba(108,99,255,0.12)",
   accentMd: "rgba(108,99,255,0.25)",
-  violet:   "#8B5CF6",
-  text:     "#F8FAFC",
-  muted:    "#8A8F9E",
-  emerald:  "#10B981",
+  violet: "#8B5CF6",
+  text: "#F8FAFC",
+  muted: "#8A8F9E",
+  emerald: "#10B981",
 };
 
 export default function SupportPage() {
@@ -51,6 +52,105 @@ export default function SupportPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuccessPulse, setAiSuccessPulse] = useState(false);
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+  const enhanceWithAI =
+    async () => {
+
+      try {
+
+        // ❌ Validate
+        if (
+          !subject.trim()
+          ||
+          !message.trim()
+        ) {
+
+          alert(
+            "Please enter subject and message first."
+          );
+
+          return;
+
+        }
+
+        setAiLoading(true);
+
+        const res =
+          await fetch(
+
+            "/api/support/enhance",
+
+            {
+
+              method:
+                "POST",
+
+              headers: {
+
+                "Content-Type":
+                  "application/json",
+
+              },
+
+              body:
+                JSON.stringify({
+
+                  category,
+
+                  subject,
+
+                  message,
+
+                }),
+
+            }
+
+          );
+
+        const data =
+          await res.json();
+
+        if (!res.ok) {
+
+          alert(
+            data.error ||
+            "AI enhancement failed"
+          );
+
+          return;
+
+        }
+
+        // 🔥 Autofill enhanced content
+        setSubject(
+          data.enhancedSubject
+        );
+
+        setMessage(
+          data.enhancedMessage
+        );
+
+        setAiSuccessPulse(true);
+        setTimeout(() => setAiSuccessPulse(false), 2000);
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert(
+          "Failed to enhance support request"
+        );
+
+      } finally {
+
+        setAiLoading(false);
+
+      }
+
+    };
 
   const removeFile = (nameToRemove: string) => {
     setFiles((prev) => prev.filter((f) => f.name !== nameToRemove));
@@ -98,7 +198,7 @@ export default function SupportPage() {
         ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:4px; }
       `}</style>
-      
+
       {/* Ambient Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <div style={{ position: "absolute", top: -160, left: -120, width: 600, height: 600, borderRadius: "50%", background: "rgba(108,99,255,0.06)", filter: "blur(120px)" }} />
@@ -107,7 +207,7 @@ export default function SupportPage() {
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 py-20 md:py-28">
-        
+
         {/* Hero */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 text-sm font-semibold" style={{ background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` }}>
@@ -147,7 +247,7 @@ export default function SupportPage() {
                     }}
                   >
                     <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-colors"
-                         style={{ background: active ? T.accent : "rgba(255,255,255,0.04)" }}>
+                      style={{ background: active ? T.accent : "rgba(255,255,255,0.04)" }}>
                       <Icon size={18} color={active ? "#fff" : T.muted} className={active ? "" : "group-hover:text-white transition-colors"} />
                     </div>
                     <p className="text-sm font-semibold transition-colors" style={{ color: active ? T.text : T.muted }}>
@@ -164,14 +264,19 @@ export default function SupportPage() {
             <label className="block text-xs font-bold uppercase tracking-widest mb-3" style={{ color: T.muted }}>
               Subject
             </label>
-            <input
+            <motion.input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Briefly describe your request..."
-              className="w-full px-6 py-4 rounded-2xl outline-none text-sm transition-all duration-300"
-              style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, color: T.text }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = T.accentMd; e.currentTarget.style.boxShadow = `0 0 0 3px ${T.accentLo}`; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+              className="w-full px-6 py-4 rounded-2xl outline-none text-sm text-white"
+              onFocus={() => setFocusedInput("subject")}
+              onBlur={() => setFocusedInput(null)}
+              animate={{
+                backgroundColor: aiSuccessPulse ? "rgba(139,92,246,0.12)" : focusedInput === "subject" ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)",
+                borderColor: aiSuccessPulse ? T.violet : focusedInput === "subject" ? T.accentMd : T.border,
+                boxShadow: aiSuccessPulse ? `0 2px 20px ${T.violet}, 0 0 0 1px ${T.violet}` : focusedInput === "subject" ? `0 0 0 3px ${T.accentLo}` : "none",
+              }}
+              transition={{ duration: 0.4 }}
             />
           </div>
 
@@ -180,16 +285,61 @@ export default function SupportPage() {
             <label className="block text-xs font-bold uppercase tracking-widest mb-3" style={{ color: T.muted }}>
               Message
             </label>
-            <textarea
+            <motion.textarea
               rows={6}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Provide any details, steps to reproduce, or feedback..."
-              className="w-full px-6 py-5 rounded-2xl outline-none resize-none text-sm transition-all duration-300"
-              style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}`, color: T.text }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = T.accentMd; e.currentTarget.style.boxShadow = `0 0 0 3px ${T.accentLo}`; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
+              className="w-full px-6 py-5 rounded-2xl outline-none resize-none text-sm text-white"
+              onFocus={() => setFocusedInput("message")}
+              onBlur={() => setFocusedInput(null)}
+              animate={{
+                backgroundColor: aiSuccessPulse ? "rgba(139,92,246,0.12)" : focusedInput === "message" ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)",
+                borderColor: aiSuccessPulse ? T.violet : focusedInput === "message" ? T.accentMd : T.border,
+                boxShadow: aiSuccessPulse ? `0 2px 20px ${T.violet}, 0 0 0 1px ${T.violet}` : focusedInput === "message" ? `0 0 0 3px ${T.accentLo}` : "none",
+              }}
+              transition={{ duration: 0.4 }}
             />
+          </div>
+
+          {/* AI Enhance */}
+          <div className="mb-10 p-5 sm:p-6 rounded-[1.5rem] relative overflow-hidden transition-all duration-300" style={{ background: "rgba(139,92,246,0.03)", border: `1px solid rgba(139,92,246,0.15)` }}>
+            <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+            
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-1.5" style={{ fontFamily: "'Sora',sans-serif" }}>
+                  <Sparkles size={16} style={{ color: T.violet }} />
+                  AI Writing Assistant
+                </h4>
+                <p className="text-xs leading-relaxed" style={{ color: T.muted }}>
+                  Improve clarity, tone, and professionalism instantly without altering your original meaning.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={enhanceWithAI}
+                disabled={aiLoading || aiSuccessPulse || !subject.trim() || !message.trim()}
+                className="shrink-0 relative flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all duration-300 active:scale-[0.96] disabled:opacity-50 disabled:active:scale-100 group overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${T.accent}, ${T.violet})`,
+                  color: "#fff",
+                  boxShadow: `0 8px 24px ${T.violet}`,
+                }}
+              >
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `linear-gradient(135deg, ${T.violet}, ${T.accent})` }} />
+                <span className="relative z-10 flex items-center gap-2">
+                  {aiLoading ? (
+                    <><Loader2 size={16} className="animate-spin" /> Enhancing...</>
+                  ) : aiSuccessPulse ? (
+                    <><CheckCircle2 size={16} /> Enhanced!</>
+                  ) : (
+                    <><Sparkles size={16} /> Enhance text</>
+                  )}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Attachments */}
@@ -197,7 +347,7 @@ export default function SupportPage() {
             <label className="block text-xs font-bold uppercase tracking-widest mb-3" style={{ color: T.muted }}>
               Attachments
             </label>
-            
+
             <label className="flex flex-col sm:flex-row items-center justify-center gap-4 px-6 py-8 rounded-3xl cursor-pointer transition-all hover:bg-white/[0.03] group text-center sm:text-left" style={{ background: "rgba(255,255,255,0.01)", border: `1px dashed ${T.border}` }}>
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
                 <Paperclip size={20} style={{ color: T.accent }} />
@@ -224,8 +374,8 @@ export default function SupportPage() {
               <div className="mt-4 space-y-2">
                 {files.map((file, i) => (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                    key={`${file.name}-${i}`} 
-                    className="flex items-center justify-between px-5 py-3.5 rounded-2xl" 
+                    key={`${file.name}-${i}`}
+                    className="flex items-center justify-between px-5 py-3.5 rounded-2xl"
                     style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}
                   >
                     <div className="flex items-center gap-4 min-w-0">
@@ -270,23 +420,23 @@ export default function SupportPage() {
         {success && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0" style={{ background: "rgba(5,5,8,0.85)", backdropFilter: "blur(12px)" }} />
-            
+
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 16 }}
               className="relative w-full max-w-md rounded-[2rem] p-8 text-center overflow-hidden shadow-2xl"
               style={{ background: T.surfaceHi, border: `1px solid ${T.borderHi}`, backdropFilter: "blur(40px)" }}
             >
               <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, ${T.accent}, ${T.emerald})` }} />
-              
+
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(16,185,129,0.12)", border: `1px solid rgba(16,185,129,0.25)` }}>
                 <CheckCircle2 size={32} style={{ color: T.emerald }} />
               </div>
-              
+
               <h3 className="text-2xl font-bold mb-3 text-white" style={{ fontFamily: "'Sora',sans-serif" }}>Request Received</h3>
-              
+
               <p className="text-sm leading-relaxed mb-8" style={{ color: T.muted }}>
                 Thanks for reaching out! Our team has received your support request and will get back to you shortly.
               </p>
-              
+
               <button onClick={() => setSuccess(false)} className="w-full py-4 rounded-2xl font-bold text-white transition-all active:scale-[0.98]" style={{ background: `linear-gradient(135deg, ${T.accent}, ${T.violet})`, boxShadow: `0 8px 24px ${T.accentLo}` }}>
                 Done
               </button>
