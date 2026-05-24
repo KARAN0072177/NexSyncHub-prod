@@ -62,6 +62,9 @@ export default function WorkspaceSidebar({
     const [isCreating, setIsCreating] =
         useState(false);
 
+    const [workspace, setWorkspace] =
+        useState<any>(null);
+
     const pathname = usePathname();
 
     const router = useRouter();
@@ -101,6 +104,15 @@ export default function WorkspaceSidebar({
                     setUnreadCounts(
                         unreadData.unreadCounts
                     );
+                }
+
+                // 🔥 Fetch workspace details
+                const wsRes = await fetch(
+                    `/api/workspace/${workspaceId}`
+                );
+                if (wsRes.ok) {
+                    const wsData = await wsRes.json();
+                    setWorkspace(wsData.workspace);
                 }
 
             };
@@ -248,15 +260,34 @@ export default function WorkspaceSidebar({
                 {/* Header */}
                 <div className="p-5" style={{ borderBottom: `1px solid ${T.borderHi}` }}>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-1 gap-2">
 
-                        <h1
-                            className="font-bold text-white truncate text-xl tracking-tight" style={{ fontFamily: "'Sora', sans-serif" }}
-                        >
-                            Workspace
-                        </h1>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            {workspace?.avatar ? (
+                                <img 
+                                    src={workspace.avatar} 
+                                    alt="Workspace" 
+                                    className="w-8 h-8 rounded-xl object-cover shrink-0 shadow-sm" 
+                                    style={{ border: `1px solid ${T.borderHi}` }} 
+                                />
+                            ) : (
+                                <div 
+                                    className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm" 
+                                    style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}
+                                >
+                                    <span className="text-sm font-bold" style={{ color: T.accent }}>
+                                        {workspace?.name?.charAt(0)?.toUpperCase() || "W"}
+                                    </span>
+                                </div>
+                            )}
+                            <h1
+                                className="font-bold text-white truncate text-lg tracking-tight" style={{ fontFamily: "'Sora', sans-serif" }}
+                            >
+                                {workspace?.name || "Workspace"}
+                            </h1>
+                        </div>
 
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1 shrink-0">
 
                             <button
                                 onClick={() =>

@@ -25,7 +25,7 @@ export async function GET() {
     })
       .populate({
         path: "workspace",
-        select: "name owner isPrivate createdAt",
+        select: "name avatar owner isPrivate createdAt",
       })
       .lean();
 
@@ -33,6 +33,7 @@ export async function GET() {
     const workspaces = memberships.map((m: any) => ({
       _id: m.workspace._id,
       name: m.workspace.name,
+      avatar: m.workspace.avatar,
       owner: m.workspace.owner,
       isPrivate: m.workspace.isPrivate,
       role: m.role,

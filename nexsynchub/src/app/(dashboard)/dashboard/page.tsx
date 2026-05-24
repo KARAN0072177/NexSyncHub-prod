@@ -215,9 +215,17 @@ export default function DashboardPage() {
                   <div className="flex items-start justify-between relative z-10">
                     <div className="flex items-center gap-3">
                       {/* Workspace Avatar */}
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 flex items-center justify-center text-white font-bold text-xl shadow-inner group-hover:from-indigo-600 group-hover:to-violet-600 group-hover:border-indigo-500/50 transition-all duration-300">
-                        {ws.name?.charAt(0)?.toUpperCase() || "W"}
-                      </div>
+                      {ws.avatar ? (
+                        <img
+                          src={ws.avatar}
+                          alt={ws.name}
+                          className="w-12 h-12 rounded-xl object-cover border border-gray-700/50 shadow-inner group-hover:border-indigo-500/50 transition-all duration-300 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 flex items-center justify-center text-white font-bold text-xl shadow-inner group-hover:from-indigo-600 group-hover:to-violet-600 group-hover:border-indigo-500/50 transition-all duration-300 shrink-0">
+                          {ws.name?.charAt(0)?.toUpperCase() || "W"}
+                        </div>
+                      )}
                       <div>
                         <h3 className="font-semibold text-gray-100 text-lg group-hover:text-white transition-colors line-clamp-1">
                           {ws.name}
