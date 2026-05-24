@@ -1,298 +1,296 @@
 import { NextResponse }
-  from "next/server";
+    from "next/server";
 
 import { getServerSession }
-  from "next-auth";
+    from "next-auth";
 
 import {
-  PutObjectCommand,
+    PutObjectCommand,
 } from "@aws-sdk/client-s3";
 
 import {
-  authOptions,
+    authOptions,
 } from "@/lib/auth-options";
 
 import {
-  connectDB,
+    connectDB,
 } from "@/lib/db";
 
 import {
-  s3,
+    s3,
 } from "@/lib/s3";
 
 import { resend }
-  from "@/lib/resend";
+    from "@/lib/resend";
 
 import SupportTicket
-  from "@/models/SupportTicket";
+    from "@/models/SupportTicket";
 
 export async function POST(
-  req: Request
+    req: Request
 ) {
 
-  try {
+    try {
 
-    await connectDB();
+        await connectDB();
 
-    // 🔐 Session
-    const session =
-      await getServerSession(
-        authOptions
-      );
+        // 🔐 Session
+        const session =
+            await getServerSession(
+                authOptions
+            );
 
-    if (!session?.user?.id) {
+        if (!session?.user?.id) {
 
-      return NextResponse.json(
-        {
-          error:
-            "Unauthorized",
-        },
-        {
-          status: 401,
+            return NextResponse.json(
+                {
+                    error:
+                        "Unauthorized",
+                },
+                {
+                    status: 401,
+                }
+            );
+
         }
-      );
 
-    }
+        // 🔥 Parse form data
+        const formData =
+            await req.formData();
 
-    // 🔥 Parse form data
-    const formData =
-      await req.formData();
+        const category =
+            formData.get(
+                "category"
+            ) as string;
 
-    const category =
-      formData.get(
-        "category"
-      ) as string;
+        const subject =
+            formData.get(
+                "subject"
+            ) as string;
 
-    const subject =
-      formData.get(
-        "subject"
-      ) as string;
+        const message =
+            formData.get(
+                "message"
+            ) as string;
 
-    const message =
-      formData.get(
-        "message"
-      ) as string;
+        const files =
+            formData.getAll(
+                "attachments"
+            ) as File[];
 
-    const files =
-      formData.getAll(
-        "attachments"
-      ) as File[];
+        // 🔥 Validate
+        if (
+            !category ||
+            !subject?.trim() ||
+            !message?.trim()
+        ) {
 
-    // 🔥 Validate
-    if (
-      !category ||
-      !subject?.trim() ||
-      !message?.trim()
-    ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "All fields are required",
+                },
+                {
+                    status: 400,
+                }
+            );
 
-      return NextResponse.json(
-        {
-          error:
-            "All fields are required",
-        },
-        {
-          status: 400,
         }
-      );
 
-    }
+        // 🔥 Allowed categories
+        const allowedCategories = [
 
-    // 🔥 Allowed categories
-    const allowedCategories = [
+            "general",
 
-      "general",
+            "bug_report",
 
-      "bug_report",
+            "feedback",
 
-      "feedback",
+            "feature_request",
 
-      "feature_request",
+            "workspace_report",
 
-      "workspace_report",
+            "account_support",
 
-      "account_support",
+            "billing",
 
-      "billing",
+            "other",
 
-      "other",
+        ];
 
-    ];
+        if (
+            !allowedCategories.includes(
+                category
+            )
+        ) {
 
-    if (
-      !allowedCategories.includes(
-        category
-      )
-    ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Invalid category",
+                },
+                {
+                    status: 400,
+                }
+            );
 
-      return NextResponse.json(
-        {
-          error:
-            "Invalid category",
-        },
-        {
-          status: 400,
         }
-      );
 
-    }
+        // 🔥 Validate attachment types
+        const allowedTypes = [
 
-    // 🔥 Validate attachment types
-    const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
 
-      "image/jpeg",
-      "image/png",
-      "image/webp",
+            "application/pdf",
 
-      "application/pdf",
+            "text/plain",
 
-      "text/plain",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ];
 
-    ];
+        // 🔥 Upload attachments
+        const uploadedAttachments =
+            [];
 
-    // 🔥 Upload attachments
-    const uploadedAttachments =
-      [];
+        for (
+            const file of files
+        ) {
 
-    for (
-      const file of files
-    ) {
+            if (
+                !(file instanceof File)
+            ) continue;
 
-      if (
-        !(file instanceof File)
-      ) continue;
+            // ❌ Type check
+            if (
+                !allowedTypes.includes(
+                    file.type
+                )
+            ) {
 
-      // ❌ Type check
-      if (
-        !allowedTypes.includes(
-          file.type
-        )
-      ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            `Unsupported file type: ${file.name}`,
+                    },
+                    {
+                        status: 400,
+                    }
+                );
 
-        return NextResponse.json(
-          {
-            error:
-              `Unsupported file type: ${file.name}`,
-          },
-          {
-            status: 400,
-          }
-        );
+            }
 
-      }
+            // ❌ Size limit
+            const MAX_SIZE =
+                10 * 1024 * 1024;
 
-      // ❌ Size limit
-      const MAX_SIZE =
-        10 * 1024 * 1024;
+            if (
+                file.size > MAX_SIZE
+            ) {
 
-      if (
-        file.size > MAX_SIZE
-      ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            `${file.name} exceeds 10MB limit`,
+                    },
+                    {
+                        status: 400,
+                    }
+                );
 
-        return NextResponse.json(
-          {
-            error:
-              `${file.name} exceeds 10MB limit`,
-          },
-          {
-            status: 400,
-          }
-        );
+            }
 
-      }
+            // 🔥 Convert buffer
+            const bytes =
+                await file.arrayBuffer();
 
-      // 🔥 Convert buffer
-      const bytes =
-        await file.arrayBuffer();
+            const buffer =
+                Buffer.from(bytes);
 
-      const buffer =
-        Buffer.from(bytes);
+            // 🔥 Generate key
+            const extension =
+                file.name
+                    .split(".")
+                    .pop();
 
-      // 🔥 Generate key
-      const extension =
-        file.name
-          .split(".")
-          .pop();
+            const key =
+                `support-attachments/${session.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
 
-      const key =
-        `support-attachments/${session.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+            // 🔥 Upload to S3
+            await s3.send(
+                new PutObjectCommand({
 
-      // 🔥 Upload to S3
-      await s3.send(
-        new PutObjectCommand({
+                    Bucket:
+                        process.env
+                            .AWS_BUCKET_NAME!,
 
-          Bucket:
-            process.env
-              .AWS_BUCKET_NAME!,
+                    Key:
+                        key,
 
-          Key:
-            key,
+                    Body:
+                        buffer,
 
-          Body:
-            buffer,
+                    ContentType:
+                        file.type,
 
-          ContentType:
-            file.type,
+                })
+            );
 
-        })
-      );
+            // Private URL (can be used to generate presigned URLs later)
 
-      // 🔥 Public URL
-      const url =
-        `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+            uploadedAttachments.push({
 
-      uploadedAttachments.push({
+                filename:
+                    file.name,
 
-        filename:
-          file.name,
+                key,
 
-        url,
+                size:
+                    file.size,
 
-        size:
-          file.size,
+                mimeType:
+                    file.type,
 
-        mimeType:
-          file.type,
+            });
 
-      });
+        }
 
-    }
+        // 🔥 Create ticket
+            const ticket =
+                await SupportTicket.create({
 
-    // 🔥 Create ticket
-    const ticket =
-      await SupportTicket.create({
+                    user:
+                        session.user.id,
 
-        user:
-          session.user.id,
+                    category,
 
-        category,
+                    subject:
+                        subject.trim(),
 
-        subject:
-          subject.trim(),
+                    message:
+                        message.trim(),
 
-        message:
-          message.trim(),
+                    attachments:
+                        uploadedAttachments,
 
-        attachments:
-          uploadedAttachments,
+                });
 
-      });
+            // 🔥 Send admin email
+            await resend.emails.send({
 
-    // 🔥 Send admin email
-    await resend.emails.send({
+                from:
+                    "NexSyncHub Support <support@karanart.com>",
 
-      from:
-        "NexSyncHub Support <support@karanart.com>",
+                to:
+                    process.env
+                        .SUPPORT_EMAIL!,
 
-      to:
-        process.env
-          .SUPPORT_EMAIL!,
+                subject:
+                    `New Support Ticket - ${subject}`,
 
-      subject:
-        `New Support Ticket - ${subject}`,
-
-      html: `
+                html: `
 
         <div style="font-family: Arial, sans-serif; padding: 24px;">
 
@@ -322,21 +320,21 @@ export async function POST(
 
       `,
 
-    });
+            });
 
-    // 🔥 Confirmation email
-    await resend.emails.send({
+            // 🔥 Confirmation email
+            await resend.emails.send({
 
-      from:
-        "NexSyncHub <noreply@karanart.com>",
+                from:
+                    "NexSyncHub <noreply@karanart.com>",
 
-      to:
-        session.user.email!,
+                to:
+                    session.user.email!,
 
-      subject:
-        "We received your support request",
+                subject:
+                    "We received your support request",
 
-      html: `
+                html: `
 
         <div style="font-family: Arial, sans-serif; padding: 24px;">
 
@@ -361,34 +359,34 @@ export async function POST(
 
       `,
 
-    });
+            });
 
-    return NextResponse.json({
+            return NextResponse.json({
 
-      success: true,
+                success: true,
 
-      ticketId:
-        ticket._id,
+                ticketId:
+                    ticket._id,
 
-    });
+            });
 
-  } catch (error) {
+        } catch (error) {
 
-    console.error(
-      "SUPPORT CREATE ERROR:",
-      error
-    );
+            console.error(
+                "SUPPORT CREATE ERROR:",
+                error
+            );
 
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
-    );
+            return NextResponse.json(
+                {
+                    error:
+                        "Something went wrong",
+                },
+                {
+                    status: 500,
+                }
+            );
 
-  }
+        }
 
-}
+    }

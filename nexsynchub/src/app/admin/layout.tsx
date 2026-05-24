@@ -18,6 +18,7 @@ import {
     Settings,
     Key,
     Brain,
+    LifeBuoy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -175,6 +176,11 @@ export default function AdminLayout({
             label: "Workspaces",
             href: "/admin/workspaces",
             icon: Building2,
+        },
+        {
+            label: "Support",
+            href: "/admin/support",
+            icon: LifeBuoy,
         },
         {
             label: "Profile",
