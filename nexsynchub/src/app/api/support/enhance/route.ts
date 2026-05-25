@@ -1,3 +1,4 @@
+import { handleApiError } from "@/lib/api-error";
 import { NextResponse }
   from "next/server";
 
@@ -130,8 +131,8 @@ IMPORTANT RULES:
 
 CATEGORY CONTEXT:
 ${categoryInstructions[
-  category as keyof typeof categoryInstructions
-] || ""}
+      category as keyof typeof categoryInstructions
+      ] || ""}
 
 ORIGINAL SUBJECT:
 ${subject}
@@ -225,16 +226,9 @@ Return ONLY valid JSON:
       error
     );
 
-    return NextResponse.json(
-      {
-        error:
-          "Failed to enhance message",
-      },
-      {
-        status: 500,
-      }
+    return handleApiError(
+      error
     );
-
   }
 
 }
