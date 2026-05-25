@@ -25,6 +25,7 @@ import SupportTicket
 
 import { resend }
     from "@/lib/resend";
+import { handleApiError } from "@/lib/api-error";
 
 export async function PATCH(
     req: Request
@@ -410,16 +411,9 @@ export async function PATCH(
             error
         );
 
-        return NextResponse.json(
-            {
-                error:
-                    "Something went wrong",
-            },
-            {
-                status: 500,
-            }
+        return handleApiError(
+            error
         );
-
     }
 
 }

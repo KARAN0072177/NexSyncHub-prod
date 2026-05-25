@@ -16,6 +16,7 @@ import {
 } from "@/lib/permissions";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 const openai =
     new OpenAI({
@@ -312,16 +313,9 @@ ${attachmentAnalysis}
             error
         );
 
-        return NextResponse.json(
-            {
-                error:
-                    "Failed to generate AI summary",
-            },
-            {
-                status: 500,
-            }
+        return handleApiError(
+            error
         );
-
     }
 
 }

@@ -16,6 +16,7 @@ import {
 } from "@/lib/permissions";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 const openai =
   new OpenAI({
@@ -156,16 +157,9 @@ ${text}
       error
     );
 
-    return NextResponse.json(
-      {
-        error:
-          "Failed to enhance text",
-      },
-      {
-        status: 500,
-      }
+    return handleApiError(
+      error
     );
-
   }
 
 }

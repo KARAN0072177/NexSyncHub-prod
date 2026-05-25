@@ -21,6 +21,7 @@ import {
 import {
   createSecurityLog,
 } from "@/lib/security";
+import { handleApiError } from "@/lib/api-error";
 
 export async function PATCH(
 
@@ -262,16 +263,9 @@ export async function PATCH(
       error
     );
 
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
+    return handleApiError(
+      error
     );
-
   }
 
 }
