@@ -12,6 +12,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 // 🔥 S3 Client
 const s3 = new S3Client({
@@ -148,9 +149,8 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("GET MESSAGES ERROR:", error);
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      error
     );
   }
 }

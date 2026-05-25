@@ -13,6 +13,7 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 const s3 = new S3Client({
     region: process.env.AWS_REGION,
@@ -129,9 +130,8 @@ export async function POST(req: Request) {
     } catch (error) {
         console.error("SEND MESSAGE ERROR:", error);
 
-        return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+        return handleApiError(
+            error
         );
     }
 }

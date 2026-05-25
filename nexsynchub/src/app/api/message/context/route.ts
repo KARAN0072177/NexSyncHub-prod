@@ -5,6 +5,7 @@ import Channel from "@/models/Channel";
 import Membership from "@/models/Membership";
 import { requireAuth } from "@/lib/auth-guard";
 import "@/models/User";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(req: Request) {
   try {
@@ -93,9 +94,8 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("GET CONTEXT ERROR:", error);
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      error
     );
   }
 }
