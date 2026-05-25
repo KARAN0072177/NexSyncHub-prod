@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Notification from "@/models/Notification";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function PATCH(req: Request) {
   try {
@@ -32,9 +33,8 @@ export async function PATCH(req: Request) {
   } catch (err) {
     console.error("MARK READ ERROR:", err);
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      err
     );
   }
 }

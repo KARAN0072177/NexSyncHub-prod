@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Notification from "@/models/Notification";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function PATCH() {
   try {
@@ -24,6 +25,10 @@ export async function PATCH() {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("READ ALL ERROR:", err);
+
+    return handleApiError(
+      err
+    );
 
     return NextResponse.json(
       { error: "Something went wrong" },

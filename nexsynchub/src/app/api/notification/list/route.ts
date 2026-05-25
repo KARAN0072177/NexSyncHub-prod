@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Notification from "@/models/Notification";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET() {
   try {
@@ -29,9 +30,8 @@ export async function GET() {
   } catch (err) {
     console.error("NOTIFICATION ERROR:", err);
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      err
     );
   }
 }
