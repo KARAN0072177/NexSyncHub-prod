@@ -36,6 +36,8 @@ import {
     createSecurityLog,
 } from "@/lib/security";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export async function POST(
     req: Request
 ) {
@@ -46,23 +48,7 @@ export async function POST(
 
         // 🔐 Session
         const session =
-            await getServerSession(
-                authOptions
-            );
-
-        if (!session?.user?.id) {
-
-            return NextResponse.json(
-                {
-                    error:
-                        "Unauthorized",
-                },
-                {
-                    status: 401,
-                }
-            );
-
-        }
+            await requireAuth();
 
         // 🔥 Parse form data
         const formData =
