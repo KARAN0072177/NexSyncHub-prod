@@ -1,3 +1,5 @@
+// src/app/admin/layout.tsx
+
 "use client";
 
 import Link from "next/link";
@@ -18,29 +20,32 @@ import {
     Settings,
     Key,
     Brain,
+    Crown,
     LifeBuoy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ─── design tokens ──────────────────────────────────────────────────────── */
 const T = {
-    accent:   "#3B82F6",
+    accent: "#3B82F6",
     accentLo: "rgba(59,130,246,0.12)",
     accentMd: "rgba(59,130,246,0.25)",
-    surface:  "rgba(15,23,42,0.60)",
-    border:   "rgba(255,255,255,0.06)",
+    surface: "rgba(15,23,42,0.60)",
+    border: "rgba(255,255,255,0.06)",
     borderHi: "rgba(255,255,255,0.12)",
-    text:     "#F8FAFC",
-    muted:    "#94A3B8",
-    red:      "#EF4444",
-    redLo:    "rgba(239,68,68,0.10)",
+    text: "#F8FAFC",
+    muted: "#94A3B8",
+    red: "#EF4444",
+    redLo: "rgba(239,68,68,0.10)",
 };
 
 function AdminUserMenu() {
     const { data: session, status } = useSession();
     const router = useRouter();
+
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -77,7 +82,7 @@ function AdminUserMenu() {
                     {/* Online dot */}
                     <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#030712]" />
                 </div>
-                
+
                 <div className="flex-1 min-w-0 text-left">
                     <p className="text-sm font-medium text-gray-200 truncate">{username}</p>
                     <p className="text-xs font-medium truncate" style={{ color: T.accent }}>{role}</p>
@@ -95,52 +100,52 @@ function AdminUserMenu() {
                         className="absolute bottom-full left-0 right-0 mb-3 rounded-2xl shadow-2xl overflow-hidden z-50"
                         style={{ background: "rgba(15,23,42,0.95)", border: `1px solid ${T.borderHi}`, backdropFilter: "blur(40px)" }}
                     >
-                    {/* Header */}
-                    <div className="p-4" style={{ borderBottom: `1px solid ${T.border}` }}>
-                        <div className="flex items-center gap-3">
-                            {avatarUrl ? (
-                                <img src={avatarUrl} alt={username} className="w-11 h-11 rounded-full object-cover border border-blue-500/30 shrink-0" />
-                            ) : (
-                                <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-semibold text-blue-400 shrink-0">
-                                    {initials}
+                        {/* Header */}
+                        <div className="p-4" style={{ borderBottom: `1px solid ${T.border}` }}>
+                            <div className="flex items-center gap-3">
+                                {avatarUrl ? (
+                                    <img src={avatarUrl} alt={username} className="w-11 h-11 rounded-full object-cover border border-blue-500/30 shrink-0" />
+                                ) : (
+                                    <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-semibold text-blue-400 shrink-0">
+                                        {initials}
+                                    </div>
+                                )}
+                                <div className="min-w-0 text-left">
+                                    <p className="text-sm font-semibold text-white truncate">
+                                        {username}
+                                    </p>
+                                    <p className="text-xs truncate" style={{ color: T.muted }} title={email}>
+                                        {email}
+                                    </p>
                                 </div>
-                            )}
-                            <div className="min-w-0 text-left">
-                                <p className="text-sm font-semibold text-white truncate">
-                                    {username}
-                                </p>
-                                <p className="text-xs truncate" style={{ color: T.muted }} title={email}>
-                                    {email}
-                                </p>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Menu */}
-                    <div className="p-2">
-                        <button
-                            onClick={() => { router.push("/dashboard"); setOpen(false); }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
-                            style={{ color: T.text }}
-                        >
-                            <Home size={16} />
-                            <span className="text-sm font-medium">Home</span>
-                        </button>
-                        
-                        <div className="my-1 border-t" style={{ borderColor: T.border }} />
-                        
-                        <button
-                            onClick={() => logout()}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
-                            style={{ color: T.red }}
-                            onMouseEnter={e => e.currentTarget.style.background = T.redLo}
-                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                        >
-                            <LogOut size={16} />
-                            <span className="text-sm font-medium">Logout</span>
-                        </button>
-                    </div>
-                </motion.div>
+                        {/* Menu */}
+                        <div className="p-2">
+                            <button
+                                onClick={() => { router.push("/dashboard"); setOpen(false); }}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+                                style={{ color: T.text }}
+                            >
+                                <Home size={16} />
+                                <span className="text-sm font-medium">Home</span>
+                            </button>
+
+                            <div className="my-1 border-t" style={{ borderColor: T.border }} />
+
+                            <button
+                                onClick={() => logout()}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
+                                style={{ color: T.red }}
+                                onMouseEnter={e => e.currentTarget.style.background = T.redLo}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                            >
+                                <LogOut size={16} />
+                                <span className="text-sm font-medium">Logout</span>
+                            </button>
+                        </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
@@ -155,6 +160,16 @@ export default function AdminLayout({
 
     const pathname = usePathname();
     const router = useRouter();
+
+    const {
+        data: session,
+    } = useSession();
+
+    const isSuperAdmin =
+
+        (session?.user as any)
+            ?.role ===
+        "super_admin";
 
     const links = [
         {
@@ -210,6 +225,32 @@ export default function AdminLayout({
         },
     ];
 
+    const superAdminLinks = [
+
+        {
+            label:
+                "Admin Management",
+
+            href:
+                "/admin/admin-management",
+
+            icon:
+                Crown,
+        },
+
+        {
+            label:
+                "Platform Settings",
+
+            href:
+                "/admin/platform-settings",
+
+            icon:
+                Settings,
+        },
+
+    ];
+
     const renderLink = (link: { label: string; href: string; icon: React.ElementType }) => {
         const Icon = link.icon;
         const active = pathname === link.href;
@@ -250,12 +291,12 @@ export default function AdminLayout({
 
             {/* ambient orbs */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
-                <div style={{ position:"absolute", top:-100, left:-80, width:420, height:420, borderRadius:"50%", background:"rgba(59,130,246,0.12)", filter:"blur(100px)" }} />
-                <div style={{ position:"absolute", bottom:-60, right:-40, width:320, height:320, borderRadius:"50%", background:"rgba(14,165,233,0.08)", filter:"blur(100px)" }} />
+                <div style={{ position: "absolute", top: -100, left: -80, width: 420, height: 420, borderRadius: "50%", background: "rgba(59,130,246,0.12)", filter: "blur(100px)" }} />
+                <div style={{ position: "absolute", bottom: -60, right: -40, width: 320, height: 320, borderRadius: "50%", background: "rgba(14,165,233,0.08)", filter: "blur(100px)" }} />
             </div>
 
             {/* Sidebar */}
-            <aside 
+            <aside
                 className="w-[280px] flex-shrink-0 flex flex-col relative z-20"
                 style={{
                     background: "rgba(3,7,18,0.65)",
@@ -270,23 +311,23 @@ export default function AdminLayout({
 
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-    
+
                             <div className="p-2.5 rounded-2xl flex items-center justify-center shrink-0 shadow-inner" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
                                 <Shield size={20} style={{ color: T.accent }} />
                             </div>
-    
+
                             <div>
                                 <h1 className="font-bold text-lg tracking-tight" style={{ fontFamily: "'Sora', sans-serif" }}>
                                     NexSyncHub
                                 </h1>
-    
+
                                 <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: T.muted }}>
                                     Admin Panel
                                 </p>
                             </div>
-    
+
                         </div>
-                        
+
                         <Link href="/admin/settings" className="p-2 -mr-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer text-gray-400 hover:text-white" title="Admin Settings">
                             <Settings size={18} />
                         </Link>
@@ -314,6 +355,35 @@ export default function AdminLayout({
                     </div>
 
                     {aiLinks.map(renderLink)}
+
+                    {
+
+                        isSuperAdmin && (
+
+                            <>
+
+                                <div className="pt-6 pb-2 px-3">
+
+                                    <span
+                                        className="text-[10px] font-bold uppercase tracking-wider"
+                                        style={{
+                                            color: T.muted
+                                        }}
+                                    >
+                                        Super Admin
+                                    </span>
+
+                                </div>
+
+                                {superAdminLinks.map(
+                                    renderLink
+                                )}
+
+                            </>
+
+                        )
+
+                    }
 
                     <div className="mt-6 pt-4 border-t" style={{ borderColor: T.borderHi }}>
                         <button

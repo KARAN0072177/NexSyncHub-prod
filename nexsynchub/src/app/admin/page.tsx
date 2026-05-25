@@ -1,3 +1,5 @@
+// src/app/admin/page.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,23 +9,24 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
+import SuperAdminDashboard from "@/components/super-admin/SuperAdminDashboard";
 
 /* ─── design tokens ──────────────────────────────────────────────────────── */
 const T = {
-  bg:       "#03060F",
-  surface:  "rgba(8,16,40,0.70)",
-  border:   "rgba(99,140,255,0.10)",
+  bg: "#03060F",
+  surface: "rgba(8,16,40,0.70)",
+  border: "rgba(99,140,255,0.10)",
   borderHi: "rgba(99,140,255,0.22)",
-  accent:   "#3D7BFF",
+  accent: "#3D7BFF",
   accentLo: "rgba(61,123,255,0.12)",
   accentMd: "rgba(61,123,255,0.25)",
-  cyan:     "#22D3EE",
-  violet:   "#7C3AED",
-  emerald:  "#10B981",
-  gold:     "#F59E0B",
-  rose:     "#FB7185",
-  text:     "#E2E8F8",
-  muted:    "#4A5578",
+  cyan: "#22D3EE",
+  violet: "#7C3AED",
+  emerald: "#10B981",
+  gold: "#F59E0B",
+  rose: "#FB7185",
+  text: "#E2E8F8",
+  muted: "#4A5578",
 };
 
 interface AdminStats {
@@ -105,28 +108,6 @@ const CARD_CFG = [
     color: "#F59E0B",
     desc: "Email-verified accounts",
   },
-  {
-    title: "Admins",
-    key: "admins" as keyof AdminStats,
-    icon: Shield,
-    gradient: "linear-gradient(135deg,#6366F1,#4F46E5)",
-    glow: "rgba(99,102,241,0.18)",
-    lo: "rgba(99,102,241,0.10)",
-    md: "rgba(99,102,241,0.22)",
-    color: "#6366F1",
-    desc: "Workspace admins",
-  },
-  {
-    title: "Super Admins",
-    key: "superAdmins" as keyof AdminStats,
-    icon: Crown,
-    gradient: "linear-gradient(135deg,#F97316,#EA580C)",
-    glow: "rgba(249,115,22,0.18)",
-    lo: "rgba(249,115,22,0.10)",
-    md: "rgba(249,115,22,0.22)",
-    color: "#F97316",
-    desc: "Platform super admins",
-  },
 ];
 
 /* ─── animated counter ───────────────────────────────────────────────────── */
@@ -135,10 +116,10 @@ function Counter({ value }: { value: number }) {
 
   useEffect(() => {
     const duration = 900;
-    const steps    = 40;
-    const inc      = value / steps;
-    let   current  = 0;
-    const timer    = setInterval(() => {
+    const steps = 40;
+    const inc = value / steps;
+    let current = 0;
+    const timer = setInterval(() => {
       current += inc;
       if (current >= value) { setDisplay(value); clearInterval(timer); }
       else setDisplay(Math.floor(current));
@@ -163,12 +144,12 @@ function StatCard({ cfg, value, index }: { cfg: typeof CARD_CFG[0]; value: numbe
       onMouseLeave={() => setHov(false)}
       className="relative overflow-hidden rounded-2xl cursor-default transition-all duration-300"
       style={{
-        background:   T.surface,
-        border:       `1px solid ${hov ? cfg.md : T.border}`,
+        background: T.surface,
+        border: `1px solid ${hov ? cfg.md : T.border}`,
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        boxShadow:    hov ? `0 8px 40px ${cfg.glow}, 0 0 0 1px ${cfg.md}` : "none",
-        transform:    hov ? "translateY(-3px)" : "translateY(0)",
+        boxShadow: hov ? `0 8px 40px ${cfg.glow}, 0 0 0 1px ${cfg.md}` : "none",
+        transform: hov ? "translateY(-3px)" : "translateY(0)",
       }}
     >
       {/* background glow blob */}
@@ -200,8 +181,8 @@ function StatCard({ cfg, value, index }: { cfg: typeof CARD_CFG[0]; value: numbe
             className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300"
             style={{
               background: hov ? cfg.gradient : cfg.lo,
-              border:     `1px solid ${cfg.md}`,
-              boxShadow:  hov ? `0 4px 16px ${cfg.glow}` : "none",
+              border: `1px solid ${cfg.md}`,
+              boxShadow: hov ? `0 4px 16px ${cfg.glow}` : "none",
             }}
           >
             <Icon size={19} style={{ color: hov ? "#fff" : cfg.color }} />
@@ -252,13 +233,18 @@ function StatCard({ cfg, value, index }: { cfg: typeof CARD_CFG[0]; value: numbe
 /* ─── MAIN ───────────────────────────────────────────────────────────────── */
 export default function AdminPage() {
   const { data: session } = useSession();
-  const [stats, setStats]   = useState<AdminStats | null>(null);
+  const isSuperAdmin =
+
+    (session?.user as any)
+      ?.role ===
+    "super_admin";
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res  = await fetch("/api/admin/stats");
+        const res = await fetch("/api/admin/stats");
         const data = await res.json();
         if (res.ok) setStats(data.stats);
       } catch (error) {
@@ -384,7 +370,7 @@ export default function AdminPage() {
   }
 
   const totalActivity = (stats?.totalMessages || 0) + (stats?.totalTasks || 0);
-  const verifiedPct   = stats?.totalUsers
+  const verifiedPct = stats?.totalUsers
     ? Math.round(((stats.verifiedUsers || 0) / stats.totalUsers) * 100)
     : 0;
 
@@ -400,9 +386,9 @@ export default function AdminPage() {
 
       {/* ── ambient background ── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
-        <div style={{ position:"absolute", top:-160, left:-120, width:600, height:600, borderRadius:"50%", background:"rgba(61,123,255,0.07)", filter:"blur(120px)" }} />
-        <div style={{ position:"absolute", top:200, right:-80, width:400, height:400, borderRadius:"50%", background:"rgba(124,58,237,0.06)", filter:"blur(100px)" }} />
-        <div style={{ position:"absolute", bottom:-100, left:"30%", width:500, height:400, borderRadius:"50%", background:"rgba(34,211,238,0.04)", filter:"blur(120px)" }} />
+        <div style={{ position: "absolute", top: -160, left: -120, width: 600, height: 600, borderRadius: "50%", background: "rgba(61,123,255,0.07)", filter: "blur(120px)" }} />
+        <div style={{ position: "absolute", top: 200, right: -80, width: 400, height: 400, borderRadius: "50%", background: "rgba(124,58,237,0.06)", filter: "blur(100px)" }} />
+        <div style={{ position: "absolute", bottom: -100, left: "30%", width: 500, height: 400, borderRadius: "50%", background: "rgba(34,211,238,0.04)", filter: "blur(120px)" }} />
 
         {/* subtle grid */}
         <div style={{
@@ -444,9 +430,15 @@ export default function AdminPage() {
                   </h1>
                   <span
                     className="text-xs font-bold px-2 py-0.5 rounded-lg"
-                    style={{ background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}`, letterSpacing:"0.05em" }}
+                    style={{ background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}`, letterSpacing: "0.05em" }}
                   >
-                    ADMIN
+                    {
+                      isSuperAdmin
+
+                        ? "SUPER ADMIN"
+
+                        : "ADMIN"
+                    }
                   </span>
                 </div>
                 <p className="text-sm" style={{ color: T.muted }}>Platform overview dashboard</p>
@@ -457,7 +449,7 @@ export default function AdminPage() {
               {/* export button */}
               <button onClick={exportToPDF} disabled={!stats || loading}
                 className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
-                style={{ background:T.surface, border:`1px solid ${T.border}`, backdropFilter:"blur(20px)", color:T.text }}>
+                style={{ background: T.surface, border: `1px solid ${T.border}`, backdropFilter: "blur(20px)", color: T.text }}>
                 <Download size={14} />
                 <span className="font-semibold hidden sm:block">Export PDF</span>
               </button>
@@ -465,7 +457,7 @@ export default function AdminPage() {
               {/* live indicator */}
               <div
                 className="flex items-center gap-2.5 px-4 py-2 rounded-2xl text-sm"
-                style={{ background: T.surface, border: `1px solid ${T.border}`, backdropFilter:"blur(20px)" }}
+                style={{ background: T.surface, border: `1px solid ${T.border}`, backdropFilter: "blur(20px)" }}
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: T.emerald }} />
@@ -479,7 +471,7 @@ export default function AdminPage() {
           {/* summary strip */}
           <div
             className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5 rounded-2xl"
-            style={{ background: T.surface, border: `1px solid ${T.border}`, backdropFilter:"blur(20px)" }}
+            style={{ background: T.surface, border: `1px solid ${T.border}`, backdropFilter: "blur(20px)" }}
           >
             {[
               {
@@ -515,7 +507,7 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <p className="text-xs" style={{ color: T.muted }}>{s.label}</p>
-                    <p className="text-lg font-bold text-white" style={{ fontFamily:"'Sora',sans-serif" }}>{s.value}</p>
+                    <p className="text-lg font-bold text-white" style={{ fontFamily: "'Sora',sans-serif" }}>{s.value}</p>
                     <p className="text-xs" style={{ color: T.muted }}>{s.sub}</p>
                   </div>
                   {i < 2 && (
@@ -545,7 +537,7 @@ export default function AdminPage() {
         </motion.div>
 
         {/* ── STATS GRID ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {CARD_CFG.map((cfg, i) => (
             <StatCard
               key={cfg.key}
@@ -555,6 +547,16 @@ export default function AdminPage() {
             />
           ))}
         </div>
+
+        {
+
+          isSuperAdmin && (
+
+            <SuperAdminDashboard />
+
+          )
+
+        }
 
         {/* ── FOOTER NOTE ── */}
         <motion.p
