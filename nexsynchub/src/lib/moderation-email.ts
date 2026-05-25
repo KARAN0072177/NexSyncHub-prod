@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/send-email";
+import { resend } from "./resend";
 
 export async function sendBanEmail({
 
@@ -83,6 +84,70 @@ export async function sendUnbanEmail({
         <p style="color: #111827; font-size: 15px; font-weight: bold; margin: 4px 0 0 0;">The NexSyncHub Team</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0 24px 0;" />
         <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">This is an automated message from NexSyncHub. Please do not reply directly to this email.</p>
+      </div>
+    `,
+
+  });
+
+}
+
+export async function
+sendRoleUpdateEmail({
+
+  email,
+  username,
+  role,
+  reason,
+
+}: {
+
+  email: string;
+
+  username?: string;
+
+  role: string;
+
+  reason: string;
+
+}) {
+
+  await resend.emails.send({
+
+    from:
+      process.env.RESEND_FROM_EMAIL!,
+
+    to:
+      email,
+
+    subject:
+      role === "admin"
+        ? "Account Update: Promoted to Platform Administrator"
+        : "Account Update: Administrative Access Revoked",
+
+    html: `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #111827; margin: 0; font-size: 24px;">Role Update Notice</h2>
+        </div>
+        <p style="color: #374151; font-size: 16px; margin-bottom: 16px;">Dear ${username || "User"},</p>
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">This email is to formally inform you that your administrative privileges on NexSyncHub have been updated by the platform management team.</p>
+        
+        <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+          <p style="margin: 0 0 8px 0; color: #374151; font-size: 15px;">
+            <strong>New Role Status:</strong> 
+            ${role === "admin" ? "Platform Administrator" : "Standard User"}
+          </p>
+          <p style="margin: 0; color: #4b5563; font-size: 15px;">
+            <strong>Reason for update:</strong> ${reason}
+          </p>
+        </div>
+        
+        <p style="color: #374151; font-size: 15px; line-height: 1.6; margin-bottom: 32px;">If you have any questions regarding this change in your access level, please reach out to our platform support team.</p>
+        
+        <p style="color: #374151; font-size: 15px; margin: 0;">Sincerely,</p>
+        <p style="color: #111827; font-size: 15px; font-weight: bold; margin: 4px 0 0 0;">The NexSyncHub Management Team</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0 24px 0;" />
+        <p style="color: #6b7280; font-size: 12px; text-align: center; margin: 0;">This is an automated administrative message from NexSyncHub. Please do not reply directly to this email.</p>
       </div>
     `,
 
