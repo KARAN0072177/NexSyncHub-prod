@@ -54,13 +54,23 @@ export async function checkBan(
   // 🔥 Active ban
   throw new Error(
 
-    user.banExpiresAt
+    JSON.stringify({
 
-      ? `Your account is suspended until ${new Date(
-          user.banExpiresAt
-        ).toLocaleString()}.`
+      code:
+        "ACCOUNT_BANNED",
 
-      : "Your account has been permanently banned."
+      reason:
+
+        user.banReason ||
+
+        "Your account violated platform guidelines.",
+
+      expiresAt:
+        user.banExpiresAt ||
+
+        null,
+
+    })
 
   );
 
