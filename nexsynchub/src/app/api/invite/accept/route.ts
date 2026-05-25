@@ -6,12 +6,37 @@ import Membership from "@/models/Membership";
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
 
+import { canUseWorkspaceInvites } from "@/lib/platform-feature";
+
 export async function POST(req: Request) {
   try {
     await connectDB();
 
     const session =
       await requireAuth();
+
+    // 🔥 Platform invite control
+    const canInvite =
+
+      await canUseWorkspaceInvites();
+
+    // ❌ Invites disabled
+    if (!canInvite) {
+
+      return NextResponse.json(
+
+        {
+          error:
+            "Workspace invites are currently disabled",
+        },
+
+        {
+          status: 403,
+        }
+
+      );
+
+    }
 
     const { token } = await req.json();
 

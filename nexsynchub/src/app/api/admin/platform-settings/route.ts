@@ -95,6 +95,8 @@ export async function PATCH(
 
             announcementEndAt,
 
+            allowWorkspaceInvites,
+
         } = body;
 
         const settings =
@@ -134,6 +136,14 @@ export async function PATCH(
             settings.announcementType = announcementType;
             settings.announcementStartAt = announcementStartAt;
             settings.announcementEndAt = announcementEndAt;
+        }
+
+        if (allowWorkspaceInvites !== undefined) {
+            settings.allowWorkspaceInvites = allowWorkspaceInvites;
+            await redis.set(
+                "allow_workspace_invites",
+                allowWorkspaceInvites
+            );
         }
 
         await settings.save();

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Invite from "@/models/Invite";
 import Membership from "@/models/Membership";
 import { generateInviteToken } from "@/lib/invite-token";
+import { canUseWorkspaceInvites } from "@/lib/platform-feature";
 
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
@@ -13,6 +14,29 @@ export async function POST(req: Request) {
 
     const session =
       await requireAuth();
+
+    // 🔥 Platform invite control
+    const canInvite =
+
+      await canUseWorkspaceInvites();
+
+    // ❌ Invites disabled
+    if (!canInvite) {
+
+      return NextResponse.json(
+
+        {
+          error:
+            "Workspace invites are currently disabled",
+        },
+
+        {
+          status: 403,
+        }
+
+      );
+
+    }
 
     const { workspaceId } = await req.json();
 

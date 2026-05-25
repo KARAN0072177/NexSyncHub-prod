@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import {
   Building2, Plus, Users, Copy, Loader2, ArrowRight,
   Sparkles, Hash, CheckCircle2, XCircle, Bell,
-  Activity, Zap, ChevronRight, RefreshCw, Crown,
+  Activity, Zap, ChevronRight, RefreshCw, Crown, ShieldAlert,
   Shield, User, TrendingUp,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -283,6 +283,7 @@ export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" | null }>({ show: false, message: "", type: null });
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteDisabledError, setInviteDisabledError] = useState(false);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ show: true, message, type });
@@ -329,7 +330,14 @@ export default function DashboardPage() {
         );
 
       }
-      else showToast(data.error || "Failed to generate invite", "error");
+      else {
+        if (data.error === "Workspace invites are currently disabled") {
+          setInviteModalOpen(false);
+          setInviteDisabledError(true);
+        } else {
+          showToast(data.error || "Failed to generate invite", "error");
+        }
+      }
     } catch { showToast("Something went wrong.", "error"); }
     finally { setCopyingId(null); }
   };
@@ -884,6 +892,55 @@ export default function DashboardPage() {
 
         )}
 
+      </AnimatePresence>
+
+      {/* Invite Disabled Error Modal */}
+      <AnimatePresence>
+        {inviteDisabledError && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setInviteDisabledError(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="relative w-full max-w-md rounded-[2rem] p-8 shadow-2xl overflow-hidden"
+              style={{
+                background: T.surfaceHi,
+                border: `1px solid ${T.borderHi}`,
+                backdropFilter: "blur(40px)"
+              }}
+            >
+              {/* ambient glow inside modal */}
+              <div aria-hidden style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: T.rose, filter: "blur(60px)", pointerEvents: "none", zIndex: 0 }} />
+
+              <div className="flex flex-col items-center text-center relative z-10">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 shadow-inner" style={{ background: T.rose, border: `1px solid ${T.rose}` }}>
+                  <ShieldAlert size={32} style={{ color: T.rose }} />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Sora',sans-serif", letterSpacing: "-0.02em" }}>
+                  Invites Disabled
+                </h3>
+                <p className="text-sm mb-8 leading-relaxed" style={{ color: T.muted }}>
+                  Workspace invites have been temporarily disabled by the platform administrator. You cannot generate new invite links at this time.
+                </p>
+                <button onClick={() => setInviteDisabledError(false)} className="w-full py-3.5 rounded-2xl font-bold text-white transition-all shadow-xl active:scale-95 outline-none" style={{ background: T.surface, border: `1px solid ${T.border}`, fontFamily: "'DM Sans',sans-serif" }}>
+                  Understood
+                </button>
+              </div>
+              
+              <button onClick={() => setInviteDisabledError(false)} className="absolute top-4 right-4 p-2 rounded-full transition-colors z-10 hover:bg-white/5" style={{ color: T.muted }}>
+                <XCircle size={20} />
+              </button>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
       <Toast show={toast.show} message={toast.message} type={toast.type} onClose={() => setToast(p => ({ ...p, show: false }))} />

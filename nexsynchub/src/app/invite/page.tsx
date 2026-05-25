@@ -16,7 +16,14 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowRight,
+  ShieldAlert,
+  X,
 } from "lucide-react";
+
+import {
+  motion,
+  AnimatePresence,
+} from "framer-motion";
 
 function InviteContent() {
   const router = useRouter();
@@ -30,6 +37,8 @@ function InviteContent() {
   const [message, setMessage] = useState("");
 
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const [inviteDisabledError, setInviteDisabledError] = useState(false);
 
   const handleJoin = async () => {
     setLoading(true);
@@ -54,7 +63,11 @@ function InviteContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.error);
+        if (data.error === "Workspace invites are currently disabled") {
+          setInviteDisabledError(true);
+        } else {
+          setMessage(data.error);
+        }
       } else {
         setMessage(
           "Joined successfully! Redirecting to dashboard..."
@@ -77,6 +90,47 @@ function InviteContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      
+      {/* Modal for disabled invites */}
+      <AnimatePresence>
+        {inviteDisabledError && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setInviteDisabledError(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl overflow-hidden"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-5 shadow-inner">
+                  <ShieldAlert className="w-8 h-8 text-red-500" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Invites Disabled</h3>
+                <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+                  Workspace invites have been temporarily disabled by the platform administrator. You cannot join new workspaces at this time.
+                </p>
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="w-full py-3.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-medium transition-colors shadow-lg"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+              <button onClick={() => setInviteDisabledError(false)} className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-300 bg-gray-800/50 hover:bg-gray-800 rounded-full transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl" />

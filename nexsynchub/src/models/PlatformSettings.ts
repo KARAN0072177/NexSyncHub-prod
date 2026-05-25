@@ -74,6 +74,14 @@ const PlatformSettingsSchema =
 
             },
 
+            allowWorkspaceInvites: {
+
+                type: Boolean,
+
+                default: true,
+
+            },
+
         },
 
         {
