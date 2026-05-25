@@ -1,7 +1,6 @@
 import PlatformSettings
   from "@/models/PlatformSettings";
 
-// 🔥 Get platform settings
 export async function
 getPlatformSettings() {
 
@@ -9,18 +8,51 @@ getPlatformSettings() {
 
     await PlatformSettings.findOne();
 
-  // 🔥 Auto create
+  // 🔥 Create singleton
   if (!settings) {
 
     settings =
-
       await PlatformSettings.create({
 
-        allowRegistrations: true,
+        allowRegistrations:
+          true,
+
+        maintenanceMode:
+          false,
+
+        allowWorkspaceInvites:
+          true,
+
+        announcementEnabled:
+          false,
+
+        announcementText:
+          "",
+
+        announcementType:
+          "info",
+
+        announcementStartAt:
+          null,
+
+        announcementEndAt:
+          null,
 
       });
 
   }
+
+  // 🔥 Backfill missing fields
+  if (
+    settings.allowWorkspaceInvites ===
+    undefined
+  ) {
+
+    settings.allowWorkspaceInvites =
+      true;
+  }
+
+  await settings.save();
 
   return settings;
 

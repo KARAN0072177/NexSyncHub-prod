@@ -1,3 +1,5 @@
+// src/app/api/invite/create/route.ts
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Invite from "@/models/Invite";

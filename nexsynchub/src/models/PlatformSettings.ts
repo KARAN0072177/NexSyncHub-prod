@@ -1,3 +1,5 @@
+// /src/models/PlatformSettings.ts
+
 import mongoose, {
     Schema,
     models,

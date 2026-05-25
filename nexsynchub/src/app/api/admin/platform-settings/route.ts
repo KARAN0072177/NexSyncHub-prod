@@ -1,3 +1,5 @@
+// /src/app/api/admin/platform-settings/route.ts
+
 import {
     NextRequest,
     NextResponse,

@@ -1,3 +1,5 @@
+// RegistrationControl.tsx
+
 "use client";
 
 import {
