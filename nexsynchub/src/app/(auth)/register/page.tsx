@@ -28,6 +28,7 @@ export default function RegisterPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registrationDisabled, setRegistrationDisabled] = useState(false);
 
   const passwordMatch = form.password === form.confirmPassword;
   const passwordStrength =
@@ -58,7 +59,11 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.error || "Something went wrong");
+        if (res.status === 403) {
+          setRegistrationDisabled(true);
+        } else {
+          setMessage(data.error || "Something went wrong");
+        }
       } else {
         setIsSubmitted(true);
       }
@@ -68,6 +73,40 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  if (registrationDisabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-red-600/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-600/10 rounded-full blur-3xl" />
+        </div>
+
+        <div className="relative w-full max-w-md">
+          <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-2xl blur-xl opacity-50" />
+
+          <div className="relative bg-gray-900/80 backdrop-blur-xl border border-gray-800 rounded-2xl p-8 shadow-2xl text-center">
+            <div className="inline-flex p-4 bg-red-500/10 rounded-full border border-red-500/20 mb-4">
+              <Lock className="w-8 h-8 text-red-400" />
+            </div>
+            <h1 className="text-2xl font-semibold text-white tracking-tight mb-2">
+              Registrations Closed
+            </h1>
+            <p className="text-gray-300 mb-6 text-sm leading-relaxed">
+              We are currently not accepting new accounts. Please check back later or contact your platform administrator.
+            </p>
+
+            <button
+              onClick={() => router.push("/login")}
+              className="w-full bg-gray-800 hover:bg-gray-700 text-white rounded-xl py-3 px-4 font-medium transition-all flex items-center justify-center gap-2 border border-gray-700 shadow-lg"
+            >
+              Return to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (

@@ -2,6 +2,8 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { registerSchema } from "@/lib/validators/auth";
 import { generateVerificationToken } from "@/lib/tokens";
+import PlatformSettings from "@/models/PlatformSettings";
+import { getPlatformSettings } from "@/lib/platform-settings";
 
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
@@ -12,6 +14,30 @@ import { createSecurityLog } from "@/lib/security";
 export async function POST(req: Request) {
   try {
     await connectDB();
+
+    // 🔥 Platform settings
+    const settings =
+      await getPlatformSettings();
+
+    // ❌ Registrations disabled
+    if (
+      !settings.allowRegistrations
+    ) {
+
+      return NextResponse.json(
+
+        {
+          error:
+            "Registrations are currently disabled",
+        },
+
+        {
+          status: 403,
+        }
+
+      );
+
+    }
 
     const ip =
 
