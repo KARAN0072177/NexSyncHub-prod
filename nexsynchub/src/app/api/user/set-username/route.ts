@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { usernameSchema } from "@/lib/validators/user";
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function POST(req: Request) {
   try {
@@ -46,9 +47,8 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("SET USERNAME ERROR:", error);
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      error
     );
   }
 }
