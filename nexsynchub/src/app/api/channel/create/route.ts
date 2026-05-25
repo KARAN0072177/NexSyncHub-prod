@@ -9,6 +9,7 @@ import { createChannelSchema } from "@/lib/validators/channel";
 import { requireAuth } from "@/lib/auth-guard";
 
 import { createAuditLog } from "@/lib/audit";
+import { handleApiError } from "@/lib/api-error";
 
 export async function POST(req: Request) {
     try {
@@ -92,9 +93,8 @@ export async function POST(req: Request) {
             );
         }
 
-        return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+        return handleApiError(
+            error
         );
     }
 }

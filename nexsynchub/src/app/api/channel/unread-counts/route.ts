@@ -10,6 +10,7 @@ import Message from "@/models/Message";
 import ChannelRead from "@/models/ChannelRead";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(req: Request) {
   try {
@@ -115,15 +116,8 @@ export async function GET(req: Request) {
       error
     );
 
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
+    return handleApiError(
+      error
     );
-
   }
 }
