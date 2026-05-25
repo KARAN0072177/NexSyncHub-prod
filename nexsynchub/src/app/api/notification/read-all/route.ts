@@ -2,18 +2,14 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Notification from "@/models/Notification";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function PATCH() {
   try {
     await connectDB();
 
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session =
+      await requireAuth();
 
     await Notification.updateMany(
       {
