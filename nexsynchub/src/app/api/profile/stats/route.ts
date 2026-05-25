@@ -7,6 +7,7 @@ import Task from "@/models/Task";
 import Message from "@/models/Message";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET() {
 
@@ -68,11 +69,9 @@ export async function GET() {
       error
     );
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      error
     );
-
   }
 
 }

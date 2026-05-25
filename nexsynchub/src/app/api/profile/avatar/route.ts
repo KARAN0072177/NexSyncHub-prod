@@ -18,6 +18,7 @@ import User from "@/models/User";
 import {
   createSecurityLog,
 } from "@/lib/security";
+import { handleApiError } from "@/lib/api-error";
 
 export async function POST(
   req: Request
@@ -230,11 +231,9 @@ export async function POST(
       error
     );
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      error
     );
-
   }
 
 }
