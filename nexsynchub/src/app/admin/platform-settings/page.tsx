@@ -1,6 +1,7 @@
 "use client";
 
 import RegistrationControl from "@/components/super-admin/platform-settings/RegistrationControl";
+import MaintenanceControl from "@/components/super-admin/platform-settings/MaintenanceControl";
 import { Settings } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -43,6 +44,7 @@ PlatformSettingsPage() {
 
         <div className="space-y-6">
           <RegistrationControl />
+          <MaintenanceControl />
         </div>
       </div>
     </div>

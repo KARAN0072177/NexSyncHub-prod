@@ -17,6 +17,7 @@
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.0.7",
     "@tailwindcss/typography": "^0.5.19",
+    "@upstash/redis": "^1.38.0",
     "axios": "^1.15.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",

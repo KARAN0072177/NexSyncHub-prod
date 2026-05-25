@@ -1,104 +1,126 @@
 import {
-  NextRequest,
-  NextResponse,
+    NextRequest,
+    NextResponse,
 } from "next/server";
 
 import {
-  connectDB,
+    connectDB,
 } from "@/lib/db";
 
 import {
-  requireAuth,
+    requireAuth,
 } from "@/lib/auth-guard";
 
 import {
-  requireSuperAdmin,
+    requireSuperAdmin,
 } from "@/lib/super-admin";
 
 import {
-  handleApiError,
+    handleApiError,
 } from "@/lib/api-error";
 
 import {
-  getPlatformSettings,
+    getPlatformSettings,
 } from "@/lib/platform-settings";
+
+import {
+    redis,
+} from "@/lib/redis";
 
 export async function GET() {
 
-  try {
+    try {
 
-    await connectDB();
+        await connectDB();
 
-    const session =
-      await requireAuth();
+        const session =
+            await requireAuth();
 
-    await requireSuperAdmin(
-      session.user.id
-    );
+        await requireSuperAdmin(
+            session.user.id
+        );
 
-    const settings =
-      await getPlatformSettings();
+        const settings =
+            await getPlatformSettings();
 
-    return NextResponse.json({
+        return NextResponse.json({
 
-      success: true,
+            success: true,
 
-      settings,
+            settings,
 
-    });
+        });
 
-  } catch (error) {
+    } catch (error) {
 
-    return handleApiError(
-      error
-    );
+        return handleApiError(
+            error
+        );
 
-  }
+    }
 
 }
 
 export async function PATCH(
-  req: NextRequest
+    req: NextRequest
 ) {
 
-  try {
+    try {
 
-    await connectDB();
+        await connectDB();
 
-    const session =
-      await requireAuth();
+        const session =
+            await requireAuth();
 
-    await requireSuperAdmin(
-      session.user.id
-    );
+        await requireSuperAdmin(
+            session.user.id
+        );
 
-    const body =
-      await req.json();
+        const body =
+            await req.json();
 
-    const {
-      allowRegistrations,
-    } = body;
+        const {
 
-    const settings =
-      await getPlatformSettings();
+            allowRegistrations,
 
-    settings.allowRegistrations =
-      allowRegistrations;
+            maintenanceMode,
 
-    await settings.save();
+        } = body;
 
-    return NextResponse.json({
+        const settings =
+            await getPlatformSettings();
 
-      success: true,
+        // 🔥 Update only provided fields
+        if (allowRegistrations !== undefined) {
+            settings.allowRegistrations = allowRegistrations;
+            await redis.set(
+                "allow_registrations",
+                allowRegistrations
+            );
+        }
 
-    });
+        if (maintenanceMode !== undefined) {
+            settings.maintenanceMode = maintenanceMode;
+            await redis.set(
+                "maintenance_mode",
+                maintenanceMode
+            );
+        }
 
-  } catch (error) {
+        await settings.save();
 
-    return handleApiError(
-      error
-    );
+        return NextResponse.json({
 
-  }
+            success: true,
+
+        });
+
+    } catch (error) {
+
+        return handleApiError(
+            error
+        );
+
+    }
 
 }

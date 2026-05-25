@@ -17,6 +17,14 @@ const PlatformSettingsSchema =
 
       },
 
+      maintenanceMode: {
+
+        type: Boolean,
+
+        default: false,
+
+      },
+
     },
 
     {
