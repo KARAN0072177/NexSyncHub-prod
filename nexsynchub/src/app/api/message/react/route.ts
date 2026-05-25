@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-
-import { authOptions } from "@/lib/auth-options";
 import { connectDB } from "@/lib/db";
 
 import Message from "@/models/Message";
 import Membership from "@/models/Membership";
+
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function PATCH(
     req: Request
@@ -16,22 +15,7 @@ export async function PATCH(
         await connectDB();
 
         const session =
-            await getServerSession(
-                authOptions
-            );
-
-        if (!session?.user?.id) {
-
-            return NextResponse.json(
-                {
-                    error: "Unauthorized",
-                },
-                {
-                    status: 401,
-                }
-            );
-
-        }
+            await requireAuth();
 
         const body =
             await req.json();

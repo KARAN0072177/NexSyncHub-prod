@@ -3,20 +3,15 @@ import { connectDB } from "@/lib/db";
 import Message from "@/models/Message";
 import Channel from "@/models/Channel";
 import Membership from "@/models/Membership";
+import { requireAuth } from "@/lib/auth-guard";
 import "@/models/User";
-
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
 
 export async function GET(req: Request) {
   try {
     await connectDB();
 
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session =
+      await requireAuth();
 
     const { searchParams } = new URL(req.url);
     const messageId = searchParams.get("messageId");
