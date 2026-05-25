@@ -16,6 +16,8 @@ import Channel
 import Membership
     from "@/models/Membership";
 
+import {requireAuth} from "@/lib/auth-guard";
+
 import { createAuditLog } from "@/lib/audit";
 
 export async function PATCH(

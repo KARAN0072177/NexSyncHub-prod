@@ -21,6 +21,8 @@ import Membership
 import Message
     from "@/models/Message";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 import { createAuditLog } from "@/lib/audit";
 
 export async function DELETE(
@@ -33,22 +35,7 @@ export async function DELETE(
 
         // 🔐 Session
         const session =
-            await getServerSession(
-                authOptions
-            );
-
-        if (!session?.user?.id) {
-
-            return NextResponse.json(
-                {
-                    error: "Unauthorized",
-                },
-                {
-                    status: 401,
-                }
-            );
-
-        }
+            await requireAuth();
 
         // 🔥 Body
         const body =

@@ -9,22 +9,15 @@ import Channel from "@/models/Channel";
 import Message from "@/models/Message";
 import ChannelRead from "@/models/ChannelRead";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export async function GET(req: Request) {
   try {
 
     await connectDB();
 
     const session =
-      await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-
-    }
+      await requireAuth();
 
     const { searchParams } =
       new URL(req.url);

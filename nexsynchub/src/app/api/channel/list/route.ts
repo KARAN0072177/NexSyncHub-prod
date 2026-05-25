@@ -6,15 +6,14 @@ import Membership from "@/models/Membership";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export async function GET(req: Request) {
   try {
     await connectDB();
 
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session =
+      await requireAuth();
 
     const { searchParams } = new URL(req.url);
     const workspaceId = searchParams.get("workspaceId");

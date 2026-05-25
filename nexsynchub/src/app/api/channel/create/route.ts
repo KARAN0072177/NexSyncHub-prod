@@ -4,9 +4,9 @@ import Channel from "@/models/Channel";
 import Membership from "@/models/Membership";
 import "@/models/Workspace";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
 import { createChannelSchema } from "@/lib/validators/channel";
+
+import { requireAuth } from "@/lib/auth-guard";
 
 import { createAuditLog } from "@/lib/audit";
 
@@ -14,14 +14,8 @@ export async function POST(req: Request) {
     try {
         await connectDB();
 
-        const session = await getServerSession(authOptions);
-
-        if (!session || !session.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
-        }
+        const session =
+            await requireAuth();
 
         const body = await req.json();
 
