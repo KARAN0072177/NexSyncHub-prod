@@ -2,22 +2,14 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { usernameSchema } from "@/lib/validators/user";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import { use } from "react";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function POST(req: Request) {
   try {
     await connectDB();
 
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const session =
+      await requireAuth();
 
     const body = await req.json();
 
