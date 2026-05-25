@@ -5,23 +5,16 @@ import { connectDB } from "@/lib/db";
 import Membership from "@/models/Membership";
 import Workspace from "@/models/Workspace";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-
 import { createAuditLog } from "@/lib/audit";
+
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function POST(req: Request) {
   try {
     await connectDB();
 
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const session =
+      await requireAuth();
 
     const { workspaceId } = await req.json();
 

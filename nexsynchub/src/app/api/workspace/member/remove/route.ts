@@ -8,18 +8,14 @@ import Channel from "@/models/Channel";
 
 import { createAuditLog } from "@/lib/audit";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function DELETE(req: Request) {
   try {
     await connectDB();
 
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session =
+      await requireAuth();
 
     const { workspaceId, targetUserId } = await req.json();
 

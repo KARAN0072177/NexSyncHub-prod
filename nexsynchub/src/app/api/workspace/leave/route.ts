@@ -2,12 +2,6 @@
 
 import { NextResponse } from "next/server";
 
-import { getServerSession }
-    from "next-auth";
-
-import { authOptions }
-    from "@/lib/auth-options";
-
 import { connectDB }
     from "@/lib/db";
 
@@ -15,6 +9,8 @@ import Membership
     from "@/models/Membership";
 
 import { createAuditLog } from "@/lib/audit";
+
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function DELETE(
     req: Request
@@ -26,22 +22,7 @@ export async function DELETE(
 
         // 🔐 Session
         const session =
-            await getServerSession(
-                authOptions
-            );
-
-        if (!session?.user?.id) {
-
-            return NextResponse.json(
-                {
-                    error: "Unauthorized",
-                },
-                {
-                    status: 401,
-                }
-            );
-
-        }
+            await requireAuth();
 
         // 🔥 Body
         const body =
