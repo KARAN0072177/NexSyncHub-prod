@@ -13,13 +13,7 @@ import {
   createSecurityLog,
 } from "@/lib/security";
 
-import {
-  getServerSession,
-} from "next-auth";
-
-import {
-  authOptions,
-} from "@/lib/auth-options";
+import { requireAuth } from "@/lib/auth-guard";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
@@ -29,9 +23,7 @@ export async function POST(req: Request) {
 
   // 🔐 Session
   const session =
-    await getServerSession(
-      authOptions
-    );
+    await requireAuth();
 
   const formData = await req.formData();
   const file = formData.get("file") as File;
