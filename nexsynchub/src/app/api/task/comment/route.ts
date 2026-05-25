@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import TaskComment from "@/models/TaskComment";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { handleApiError } from "@/lib/api-error";
 
 export async function POST(req: Request) {
     try {
@@ -54,9 +55,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ comment: populated });
 
     } catch (err) {
-        return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+        return handleApiError(
+            err
         );
     }
 }

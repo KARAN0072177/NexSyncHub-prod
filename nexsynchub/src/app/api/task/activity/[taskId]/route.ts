@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Message from "@/models/Message";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(
   req: Request,
@@ -21,9 +22,9 @@ export async function GET(
 
     return NextResponse.json({ activities });
   } catch (err) {
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+
+    return handleApiError(
+      err
     );
   }
 }

@@ -11,6 +11,7 @@ import { authOptions } from "@/lib/auth-options";
 import { createNotification } from "@/lib/notification";
 
 import { createAuditLog } from "@/lib/audit";
+import { handleApiError } from "@/lib/api-error";
 
 export async function PATCH(req: Request) {
     try {
@@ -385,9 +386,8 @@ export async function PATCH(req: Request) {
     } catch (error) {
         console.error("UPDATE TASK STATUS ERROR:", error);
 
-        return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+        return handleApiError(
+            error
         );
     }
 }

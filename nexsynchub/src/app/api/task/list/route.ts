@@ -5,6 +5,7 @@ import Membership from "@/models/Membership";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(req: Request) {
     try {
@@ -59,9 +60,8 @@ export async function GET(req: Request) {
     } catch (error) {
         console.error("GET TASKS ERROR:", error);
 
-        return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+        return handleApiError(
+            error
         );
     }
 }

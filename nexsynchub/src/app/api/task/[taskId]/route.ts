@@ -4,6 +4,7 @@ import Task from "@/models/Task";
 import TaskComment from "@/models/TaskComment";
 import mongoose from "mongoose";
 import "@/models/Channel";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(
     req: Request,
@@ -47,9 +48,8 @@ export async function GET(
     } catch (err) {
         console.error("TASK DETAIL ERROR:", err); // 🔥 ADD THIS
 
-        return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+        return handleApiError(
+            err
         );
     }
 }
