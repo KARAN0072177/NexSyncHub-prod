@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getServerSession } from "next-auth";
-
-import { authOptions } from "@/lib/auth-options";
 import { connectDB } from "@/lib/db";
 
 import User from "@/models/User";
+
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function PATCH(
   req: NextRequest
@@ -16,16 +15,8 @@ export async function PATCH(
     await connectDB();
 
     // 🔐 Session check
-    const session = await getServerSession(
-      authOptions
-    );
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const session =
+      await requireAuth();
 
     const body = await req.json();
 
