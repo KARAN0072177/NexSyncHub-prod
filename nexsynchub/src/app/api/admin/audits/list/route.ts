@@ -17,6 +17,8 @@ import {
   requireAdmin,
 } from "@/lib/permissions";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export async function GET(
   req: Request
 ) {
@@ -27,25 +29,11 @@ export async function GET(
 
     // 🔐 Session
     const session =
-      await getServerSession(
-        authOptions
-      );
+      await requireAuth();
 
-    if (
-      !session?.user?.id
-    ) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Unauthorized",
-        },
-        {
-          status: 401,
-        }
-      );
-
-    }
+    await requireAdmin(
+      session.user.id
+    );
 
     // 🔐 Admin check
     await requireAdmin(

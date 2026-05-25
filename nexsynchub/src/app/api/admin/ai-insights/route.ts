@@ -26,6 +26,8 @@ import {
 import AIInsightCache
     from "@/models/AIInsightCache";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export async function GET(req: Request) {
 
     const {
@@ -44,25 +46,11 @@ export async function GET(req: Request) {
 
         // 🔐 Session
         const session =
-            await getServerSession(
-                authOptions
-            );
+            await requireAuth();
 
-        if (
-            !session?.user?.id
-        ) {
-
-            return NextResponse.json(
-                {
-                    error:
-                        "Unauthorized",
-                },
-                {
-                    status: 401,
-                }
-            );
-
-        }
+        await requireAdmin(
+            session.user.id
+        );
 
         // 🔐 Admin check
         await requireAdmin(

@@ -15,6 +15,8 @@ import {
     requireAdmin,
 } from "@/lib/permissions";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 const openai =
     new OpenAI({
 
@@ -31,25 +33,7 @@ export async function POST(
 
         // 🔐 Session
         const session =
-            await getServerSession(
-                authOptions
-            );
-
-        if (
-            !session?.user?.id
-        ) {
-
-            return NextResponse.json(
-                {
-                    error:
-                        "Unauthorized",
-                },
-                {
-                    status: 401,
-                }
-            );
-
-        }
+            await requireAuth();
 
         // 🔐 Admin check
         await requireAdmin(

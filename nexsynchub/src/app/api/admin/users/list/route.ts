@@ -17,6 +17,8 @@ import {
   requireAdmin,
 } from "@/lib/permissions";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export async function GET(
   req: Request
 ) {
@@ -27,25 +29,7 @@ export async function GET(
 
     // 🔐 Session
     const session =
-      await getServerSession(
-        authOptions
-      );
-
-    if (
-      !session?.user?.id
-    ) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Unauthorized",
-        },
-        {
-          status: 401,
-        }
-      );
-
-    }
+      await requireAuth();
 
     // 🔐 Admin check
     await requireAdmin(
@@ -78,24 +62,24 @@ export async function GET(
     const filter =
       search
         ? {
-            $or: [
+          $or: [
 
-              {
-                username: {
-                  $regex: search,
-                  $options: "i",
-                },
+            {
+              username: {
+                $regex: search,
+                $options: "i",
               },
+            },
 
-              {
-                email: {
-                  $regex: search,
-                  $options: "i",
-                },
+            {
+              email: {
+                $regex: search,
+                $options: "i",
               },
+            },
 
-            ],
-          }
+          ],
+        }
         : {};
 
     // 🔥 Users

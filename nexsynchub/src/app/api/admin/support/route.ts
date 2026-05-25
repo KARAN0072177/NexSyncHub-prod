@@ -1,13 +1,6 @@
 import { NextResponse }
   from "next/server";
 
-import { getServerSession }
-  from "next-auth";
-
-import {
-  authOptions,
-} from "@/lib/auth-options";
-
 import {
   connectDB,
 } from "@/lib/db";
@@ -31,6 +24,8 @@ import {
   s3,
 } from "@/lib/s3";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export async function GET() {
 
   try {
@@ -39,25 +34,7 @@ export async function GET() {
 
     // 🔐 Session
     const session =
-      await getServerSession(
-        authOptions
-      );
-
-    if (
-      !session?.user?.id
-    ) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Unauthorized",
-        },
-        {
-          status: 401,
-        }
-      );
-
-    }
+      await requireAuth();
 
     // 🔐 Admin check
     await requireAdmin(
