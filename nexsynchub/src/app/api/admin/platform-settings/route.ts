@@ -85,6 +85,16 @@ export async function PATCH(
 
             maintenanceMode,
 
+            announcementEnabled,
+
+            announcementText,
+
+            announcementType,
+
+            announcementStartAt,
+
+            announcementEndAt,
+
         } = body;
 
         const settings =
@@ -105,6 +115,25 @@ export async function PATCH(
                 "maintenance_mode",
                 maintenanceMode
             );
+        }
+
+        if (announcementEnabled !== undefined) {
+            await redis.set(
+                "global_announcement",
+                JSON.stringify({
+                    enabled: announcementEnabled,
+                    text: announcementText,
+                    type: announcementType,
+                    startAt: announcementStartAt,
+                    endAt: announcementEndAt,
+                })
+            );
+
+            settings.announcementEnabled = announcementEnabled;
+            settings.announcementText = announcementText;
+            settings.announcementType = announcementType;
+            settings.announcementStartAt = announcementStartAt;
+            settings.announcementEndAt = announcementEndAt;
         }
 
         await settings.save();

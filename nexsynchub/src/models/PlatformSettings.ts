@@ -1,43 +1,92 @@
 import mongoose, {
-  Schema,
-  models,
-  model,
+    Schema,
+    models,
+    model,
 } from "mongoose";
 
 const PlatformSettingsSchema =
-  new Schema(
+    new Schema(
 
-    {
+        {
 
-      allowRegistrations: {
+            allowRegistrations: {
 
-        type: Boolean,
+                type: Boolean,
 
-        default: true,
+                default: true,
 
-      },
+            },
 
-      maintenanceMode: {
+            maintenanceMode: {
 
-        type: Boolean,
+                type: Boolean,
 
-        default: false,
+                default: false,
 
-      },
+            },
 
-    },
+            announcementEnabled: {
 
-    {
-      timestamps: true,
-    }
+                type: Boolean,
 
-  );
+                default: false,
+
+            },
+
+            announcementText: {
+
+                type: String,
+
+                default: "",
+
+            },
+
+            announcementType: {
+
+                type: String,
+
+                enum: [
+
+                    "info",
+                    "warning",
+                    "danger",
+                    "success",
+
+                ],
+
+                default: "info",
+
+            },
+
+            announcementStartAt: {
+
+                type: Date,
+
+                default: null,
+
+            },
+
+            announcementEndAt: {
+
+                type: Date,
+
+                default: null,
+
+            },
+
+        },
+
+        {
+            timestamps: true,
+        }
+
+    );
 
 export default
 
-  models.PlatformSettings ||
+    models.PlatformSettings ||
 
-  model(
-    "PlatformSettings",
-    PlatformSettingsSchema
-  );
+    model(
+        "PlatformSettings",
+        PlatformSettingsSchema
+    );

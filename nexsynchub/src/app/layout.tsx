@@ -14,6 +14,9 @@ import AuthProvider
 import GlobalBanProvider
   from "@/components/providers/GlobalBanProvider";
 
+import GlobalAnnouncement
+  from "@/components/global/GlobalAnnouncement";
+
 const geistSans = Geist({
 
   variable:
@@ -62,6 +65,8 @@ export default function RootLayout({
         <AuthProvider>
 
           <GlobalBanProvider>
+
+            <GlobalAnnouncement />
 
             {/* 🔥 MAIN CONTENT */}
             <main className="flex-1">

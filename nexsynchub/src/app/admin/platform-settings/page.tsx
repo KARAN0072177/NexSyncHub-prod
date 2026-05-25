@@ -4,6 +4,7 @@ import RegistrationControl from "@/components/super-admin/platform-settings/Regi
 import MaintenanceControl from "@/components/super-admin/platform-settings/MaintenanceControl";
 import { Settings } from "lucide-react";
 import { motion } from "framer-motion";
+import AnnouncementSettings from "@/components/super-admin/platform-settings/AnnouncementSettings";
 
 const T = {
   bg: "#03060F",
@@ -45,6 +46,7 @@ PlatformSettingsPage() {
         <div className="space-y-6">
           <RegistrationControl />
           <MaintenanceControl />
+          <AnnouncementSettings />
         </div>
       </div>
     </div>
