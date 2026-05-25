@@ -1,3 +1,4 @@
+import { handleApiError } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
@@ -48,6 +49,10 @@ Resolve critical login issues and update UI to align with new branding.
 
   } catch (error) {
     console.error('AI ENHANCE API ERROR:', error);
+
+    return handleApiError(
+      error
+    );
     return NextResponse.json({ error: 'Failed to enhance description with AI.' }, { status: 500 });
   }
 }
