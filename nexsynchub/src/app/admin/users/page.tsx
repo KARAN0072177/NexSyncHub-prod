@@ -459,90 +459,17 @@ export default function AdminUsersPage() {
 
         }
 
-        // ✅ Update local user state
-        setUsers((prev) =>
+        // ✅ Refresh users from database
+        const refresh =
+          await fetch(
+            "/api/admin/users/list"
+          );
 
-          prev.map((u) => {
+        const refreshedData =
+          await refresh.json();
 
-            if (
-              u._id !==
-              selectedUser._id
-            ) {
-              return u;
-            }
-
-            // 🔥 Unban
-            if (
-              moderationType ===
-              "unban"
-            ) {
-
-              return {
-
-                ...u,
-
-                isBanned:
-                  false,
-
-                banReason:
-                  "",
-
-                banExpiresAt:
-                  null,
-
-              };
-
-            }
-
-            // 🔥 Temporary
-            if (
-              moderationType ===
-              "temporary"
-            ) {
-
-              const expires =
-                new Date();
-
-              expires.setDate(
-                expires.getDate() +
-                7
-              );
-
-              return {
-
-                ...u,
-
-                isBanned:
-                  true,
-
-                banReason:
-                  reason,
-
-                banExpiresAt:
-                  expires.toISOString(),
-
-              };
-
-            }
-
-            // 🔥 Permanent
-            return {
-
-              ...u,
-
-              isBanned:
-                true,
-
-              banReason:
-                reason,
-
-              banExpiresAt:
-                null,
-
-            };
-
-          })
-
+        setUsers(
+          refreshedData.users
         );
 
         // ✅ Reset modal
