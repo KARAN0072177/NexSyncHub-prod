@@ -20,6 +20,7 @@ import SecurityLog
 import {
   requireAdmin,
 } from "@/lib/permissions";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET() {
 
@@ -92,16 +93,9 @@ export async function GET() {
       error
     );
 
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
+    return handleApiError(
+      error
     );
-
   }
 
 }
