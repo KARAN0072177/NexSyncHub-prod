@@ -21,7 +21,17 @@ import {
 import {
   createSecurityLog,
 } from "@/lib/security";
-import { handleApiError } from "@/lib/api-error";
+
+import {
+  handleApiError,
+} from "@/lib/api-error";
+
+import {
+
+  sendBanEmail,
+  sendUnbanEmail,
+
+} from "@/lib/moderation-email";
 
 export async function PATCH(
 
@@ -163,6 +173,25 @@ export async function PATCH(
       user.bannedBy =
         session.user.id;
 
+      // 🔥 Save user
+      await user.save();
+
+      // 🔥 Send suspension email
+      await sendBanEmail({
+
+        email:
+          user.email,
+
+        username:
+          user.username,
+
+        reason,
+
+        expiresAt:
+          user.banExpiresAt,
+
+      });
+
     }
 
     // 🔥 Permanent ban
@@ -181,6 +210,22 @@ export async function PATCH(
       user.bannedBy =
         session.user.id;
 
+      // 🔥 Save user
+      await user.save();
+
+      // 🔥 Send permanent ban email
+      await sendBanEmail({
+
+        email:
+          user.email,
+
+        username:
+          user.username,
+
+        reason,
+
+      });
+
     }
 
     // 🔥 Unban
@@ -198,6 +243,20 @@ export async function PATCH(
       user.bannedBy =
         null;
 
+      // 🔥 Save user
+      await user.save();
+
+      // 🔥 Send unban email
+      await sendUnbanEmail({
+
+        email:
+          user.email,
+
+        username:
+          user.username,
+
+      });
+
     }
 
     // ❌ Invalid type
@@ -214,9 +273,6 @@ export async function PATCH(
       );
 
     }
-
-    // 🔥 Save user
-    await user.save();
 
     // 🔥 Security log
     await createSecurityLog({
@@ -266,6 +322,7 @@ export async function PATCH(
     return handleApiError(
       error
     );
+
   }
 
 }

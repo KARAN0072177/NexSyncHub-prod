@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Loader2, Shield, Crown, BadgeCheck, Users, Search, X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Loader2, Shield, Crown, BadgeCheck, Users, Search, X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Download, Sparkles, CheckCircle2, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ─── design tokens (matches AdminPage) ─────────────────────────────────── */
@@ -222,6 +222,7 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortAsc, setSortAsc] = useState(false);
+  const [enhancingReason, setEnhancingReason] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -245,6 +246,94 @@ export default function AdminUsersPage() {
     reason,
     setReason,
   ] = useState("");
+
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" | null }>({ show: false, message: "", type: null });
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(p => ({ ...p, show: false })), 4000);
+  };
+
+  const handleEnhanceReason =
+    async () => {
+
+      if (!reason.trim())
+        return;
+
+      try {
+
+        setEnhancingReason(
+          true
+        );
+
+        const res =
+          await fetch(
+
+            "/api/admin/ai-enhance-moderation",
+
+            {
+
+              method: "POST",
+
+              headers: {
+
+                "Content-Type":
+                  "application/json",
+
+              },
+
+              body:
+                JSON.stringify({
+
+                  reason,
+
+                  type:
+                    moderationType,
+
+                }),
+
+            }
+
+          );
+
+        const data =
+          await res.json();
+
+        if (
+          res.ok &&
+          data.reason
+        ) {
+
+          setReason(
+            data.reason
+          );
+
+            showToast("AI successfully polished the reason!", "success");
+
+          } else {
+
+            showToast(data.error || "Failed to enhance reason", "error");
+
+        }
+
+      } catch (error) {
+
+        console.error(
+          "AI ENHANCE ERROR:",
+          error
+        );
+
+          showToast("Something went wrong", "error");
+
+      } finally {
+
+        setEnhancingReason(
+          false
+        );
+
+      }
+
+    };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -450,14 +539,13 @@ export default function AdminUsersPage() {
 
         if (!res.ok) {
 
-          alert(
-            data.error ||
-            "Moderation failed"
-          );
+          showToast(data.error || "Moderation failed", "error");
 
           return;
 
         }
+
+        showToast("Moderation action successful!", "success");
 
         // ✅ Refresh users from database
         const refresh =
@@ -1034,36 +1122,65 @@ export default function AdminUsersPage() {
               {
                 moderationType !==
                 "unban" && (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <textarea
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        placeholder="Reason..."
+                        disabled={enhancingReason}
+                        className="w-full h-28 rounded-2xl p-4 text-sm outline-none resize-none transition-all"
+                        style={{
+                          background: "rgba(255,255,255,0.03)",
+                          border: `1px solid ${enhancingReason ? T.accentMd : T.border}`,
+                          color: T.text,
+                          opacity: enhancingReason ? 0.5 : 1,
+                        }}
+                      />
+                      
+                      <AnimatePresence>
+                        {enhancingReason && (
+                          <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 flex items-center justify-center rounded-2xl overflow-hidden z-10"
+                            style={{ background: "rgba(3, 6, 15, 0.4)", backdropFilter: "blur(4px)" }}
+                          >
+                            <motion.div
+                              initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 10, opacity: 0 }}
+                              className="flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl"
+                              style={{ background: T.surface, border: `1px solid ${T.accentMd}` }}
+                            >
+                              <Sparkles size={14} style={{ color: T.accent }} className="animate-pulse" />
+                              <span className="text-xs font-semibold tracking-wide" style={{ color: T.accent, fontFamily: "'DM Sans', sans-serif" }}>
+                                AI is polishing...
+                              </span>
+                            </motion.div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
 
-                  <textarea
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs" style={{ color: T.muted }}>
+                        AI can improve moderation wording
+                      </span>
 
-                    value={reason}
-
-                    onChange={(e) =>
-                      setReason(
-                        e.target.value
-                      )
-                    }
-
-                    placeholder="Reason..."
-
-                    className="w-full h-28 rounded-2xl p-4 text-sm outline-none resize-none"
-
-                    style={{
-
-                      background:
-                        "rgba(255,255,255,0.03)",
-
-                      border:
-                        `1px solid ${T.border}`,
-
-                      color:
-                        T.text,
-
-                    }}
-
-                  />
-
+                      <button
+                        type="button"
+                        onClick={handleEnhanceReason}
+                        disabled={enhancingReason || !reason.trim()}
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          background: enhancingReason ? T.accentLo : `linear-gradient(135deg, ${T.accentLo}, rgba(124,58,237,0.15))`,
+                          color: T.accent,
+                          border: `1px solid ${T.accentMd}`,
+                        }}
+                      >
+                        {enhancingReason ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                        {enhancingReason ? "Enhancing..." : "Enhance with AI"}
+                      </button>
+                    </div>
+                  </div>
                 )
               }
 
@@ -1143,6 +1260,26 @@ export default function AdminUsersPage() {
 
         )
       }
+
+      {/* Custom Toast Notification */}
+      <AnimatePresence>
+        {toast.show && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className={`fixed bottom-6 right-6 z-[1000] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border ${toast.type === "success" ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'} backdrop-blur-md`}
+          >
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${toast.type === "success" ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+              {toast.type === "success" ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+            </div>
+            <span className="text-sm font-medium text-gray-200">{toast.message}</span>
+            <button onClick={() => setToast(p => ({ ...p, show: false }))} className="ml-2 text-gray-500 hover:text-gray-300 transition-colors">
+              <XCircle size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
