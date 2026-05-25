@@ -2,18 +2,15 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Invite from "@/models/Invite";
 import Membership from "@/models/Membership";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+
+import { requireAuth } from "@/lib/auth-guard";
 
 export async function POST(req: Request) {
   try {
     await connectDB();
 
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session =
+      await requireAuth();
 
     const { token } = await req.json();
 
@@ -41,7 +38,7 @@ export async function POST(req: Request) {
 
     if (existing) {
       return NextResponse.json(
-        { 
+        {
           error: "You are already a member of this workspace",
           workspaceId: invite.workspace
         },
