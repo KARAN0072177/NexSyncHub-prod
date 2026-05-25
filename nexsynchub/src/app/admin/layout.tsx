@@ -22,6 +22,7 @@ import {
     Brain,
     Crown,
     LifeBuoy,
+    Activity,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -247,6 +248,17 @@ export default function AdminLayout({
 
             icon:
                 Settings,
+        },
+
+        {
+            label:
+                "Governance Logs",
+
+            href:
+                "/admin/governance-logs",
+
+            icon:
+                Activity,
         },
 
     ];
