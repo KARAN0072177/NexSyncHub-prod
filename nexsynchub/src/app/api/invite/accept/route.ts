@@ -4,6 +4,7 @@ import Invite from "@/models/Invite";
 import Membership from "@/models/Membership";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function POST(req: Request) {
   try {
@@ -60,9 +61,8 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("ACCEPT INVITE ERROR:", error);
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      error
     );
   }
 }
