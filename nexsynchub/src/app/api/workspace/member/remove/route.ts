@@ -9,6 +9,7 @@ import Channel from "@/models/Channel";
 import { createAuditLog } from "@/lib/audit";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function DELETE(req: Request) {
   try {
@@ -194,9 +195,9 @@ export async function DELETE(req: Request) {
     );
   } catch (error) {
     console.error("REMOVE MEMBER ERROR:", error);
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+
+    return handleApiError(
+      error
     );
   }
 }

@@ -5,6 +5,7 @@ import Workspace from "@/models/Workspace";
 import "@/models/User";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(req: Request) {
   try {
@@ -44,9 +45,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ members });
   } catch (error) {
     console.error("GET MEMBERS ERROR:", error);
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      error
     );
   }
 }

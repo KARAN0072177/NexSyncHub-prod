@@ -7,6 +7,7 @@ import Workspace from "@/models/Workspace";
 import Membership from "@/models/Membership";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(
   req: Request,
@@ -75,15 +76,8 @@ export async function GET(
       error
     );
 
-    return NextResponse.json(
-      {
-        error:
-          "Something went wrong",
-      },
-      {
-        status: 500,
-      }
+    return handleApiError(
+      error
     );
-
   }
 }

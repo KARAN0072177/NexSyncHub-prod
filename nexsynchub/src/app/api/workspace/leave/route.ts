@@ -11,6 +11,7 @@ import Membership
 import { createAuditLog } from "@/lib/audit";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function DELETE(
     req: Request
@@ -139,16 +140,9 @@ export async function DELETE(
             error
         );
 
-        return NextResponse.json(
-            {
-                error:
-                    "Something went wrong",
-            },
-            {
-                status: 500,
-            }
+        return handleApiError(
+            error
         );
-
     }
 
 }

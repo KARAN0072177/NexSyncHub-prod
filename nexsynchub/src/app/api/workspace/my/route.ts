@@ -4,6 +4,7 @@ import Membership from "@/models/Membership";
 import "@/models/Workspace";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET() {
   try {
@@ -40,9 +41,8 @@ export async function GET() {
   } catch (error) {
     console.error("GET WORKSPACES ERROR:", error);
 
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+    return handleApiError(
+      error
     );
   }
 }

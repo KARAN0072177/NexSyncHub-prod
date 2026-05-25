@@ -28,6 +28,7 @@ import {
 } from "@/lib/security";
 
 import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 export async function POST(
     req: Request
@@ -406,16 +407,9 @@ export async function POST(
             error
         );
 
-        return NextResponse.json(
-            {
-                error:
-                    "Something went wrong",
-            },
-            {
-                status: 500,
-            }
+        return handleApiError(
+            error
         );
-
     }
 
 }
