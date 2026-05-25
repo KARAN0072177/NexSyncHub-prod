@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { uploadModerationEvidence } from "@/lib/upload-moderation-evidence";
 
 import {
   moderateImage,
@@ -49,6 +50,21 @@ export async function POST(req: Request) {
     // ❌ Unsafe image
     if (!moderation.safe) {
 
+      // 🔥 Upload moderation evidence
+      const evidence =
+
+        await uploadModerationEvidence({
+
+          buffer,
+
+          fileName:
+            file.name,
+
+          contentType:
+            file.type,
+
+        });
+
       // 🔥 Security log
       const securityLog =
         await createSecurityLog({
@@ -92,7 +108,16 @@ export async function POST(req: Request) {
                     parentName:
                       label.ParentName,
 
-                  }))
+                  })),
+
+            evidenceUrl:
+              evidence.url,
+
+            evidenceKey:
+              evidence.key,
+
+            evidenceExpiresAt:
+              new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
           },
 
         });

@@ -23,6 +23,7 @@ import {
     Crown,
     LifeBuoy,
     Activity,
+    ShieldAlert,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -259,6 +260,17 @@ export default function AdminLayout({
 
             icon:
                 Activity,
+        },
+
+        {
+            label:
+                "Unsafe Media",
+
+            href:
+                "/admin/unsafe-media",
+
+            icon:
+                ShieldAlert,
         },
 
     ];
