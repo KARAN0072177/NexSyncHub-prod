@@ -1,3 +1,5 @@
+// src/app/api/admin/security/moderation/route.ts
+
 import { NextResponse }
   from "next/server";
 
@@ -65,6 +67,8 @@ export async function GET() {
             "unsafe_workspace_avatar_upload",
 
             "unsafe_support_attachment",
+
+            "unsafe_chat_attachment",
 
           ],
 

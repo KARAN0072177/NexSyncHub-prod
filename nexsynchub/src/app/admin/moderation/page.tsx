@@ -1,3 +1,5 @@
+// src/app/admin/moderation/page.tsx
+
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -187,6 +189,9 @@ export default function ModerationPage() {
         &&
         newLog.action !==
         "unsafe_support_attachment"
+        &&
+        newLog.action !==
+        "unsafe_chat_attachment"
       ) return;
 
       setLogs(prev => [newLog, ...prev]);
@@ -641,7 +646,12 @@ export default function ModerationPage() {
 
                                     ? "Unsafe support attachment blocked"
 
-                                    : "Unsafe profile avatar blocked"
+                                    : log.action ===
+                                      "unsafe_chat_attachment"
+
+                                      ? "Unsafe chat attachment blocked"
+
+                                      : "Unsafe profile avatar blocked"
                             }
                           </p>
                         </div>
