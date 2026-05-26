@@ -11,6 +11,7 @@ import {
   BookOpen,
   Building2,
   Scale,
+  Globe,
 } from "lucide-react";
 
 export default function Footer() {
@@ -21,90 +22,110 @@ export default function Footer() {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.05, delayChildren: 0.05 },
+      transition: { staggerChildren: 0.04, delayChildren: 0.02 },
     },
   };
 
   const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 15 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 25 } },
   };
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) setSubscribed(true);
+    if (email.trim()) {
+      setSubscribed(true);
+      setEmail("");
+    }
   };
 
   return (
-    <footer className="relative border-t border-white/5 bg-[#03060F] text-slate-400 font-sans overflow-hidden selection:bg-indigo-500/30 selection:text-white">
-      {/* Ambient Background Elements */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
-      <div className="absolute -top-24 left-1/4 w-[500px] h-[300px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[300px] bg-violet-500/10 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#03060F]/50 to-[#03060F] pointer-events-none" />
+    <footer className="relative border-t border-white/[0.06] bg-[#03060F] text-slate-400 font-sans overflow-hidden selection:bg-indigo-500/30 selection:text-white">
+      
+      {/* --- Ambient Lighting Layers --- */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-px bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent" />
+      <div className="absolute -top-40 left-1/3 w-[600px] h-[350px] bg-gradient-to-tr from-indigo-500/10 to-violet-500/5 blur-[140px] rounded-full pointer-events-none animate-pulse duration-[8s]" />
+      <div className="absolute -bottom-20 right-1/4 w-[400px] h-[300px] bg-sky-500/10 blur-[100px] rounded-full pointer-events-none" />
+      
+      {/* Fine-line Tech Grid Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none mix-blend-overlay" />
+
+      {/* --- Massive Edge Title Effect (The Uniqueness Factor) --- */}
+      <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none z-0 opacity-[0.02] transition-opacity duration-700 w-full flex justify-center">
+        <h2 className="text-[14vw] font-bold text-white tracking-tighter whitespace-nowrap text-center leading-none" style={{ fontFamily: "'Sora', sans-serif" }}>
+          NexSyncHub
+        </h2>
+      </div>
 
       <motion.div
         variants={containerVariants}
         initial="hidden"
         whileInView="show"
-        viewport={{ once: true, margin: "-20px" }}
-        className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 pt-20 pb-12"
+        viewport={{ once: true, margin: "-40px" }}
+        className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 pt-24 pb-12"
       >
-        {/* Main Grid split into Top Info/Newsletter and Links */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-16 pb-16 border-b border-white/5">
+        {/* --- Top Hub Structure --- */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-16 xl:gap-8 pb-20 border-b border-white/[0.06]">
           
-          {/* Brand & Newsletter Section */}
-          <div className="xl:col-span-1 flex flex-col justify-between space-y-10">
-            <motion.div variants={itemVariants} className="space-y-5">
+          {/* Brand Pillar */}
+          <div className="xl:col-span-1 flex flex-col justify-between space-y-12">
+            <motion.div variants={itemVariants} className="space-y-6">
               <Link href="/" className="flex items-center gap-3 w-max group">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500/20 group-hover:border-indigo-500/40 transition-all duration-300 shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)]">
-                  <Zap className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform duration-300" />
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/30 flex items-center justify-center group-hover:border-indigo-400/60 transition-all duration-300 shadow-[0_0_25px_-5px_rgba(99,102,241,0.3)] group-hover:shadow-[0_0_30px_-2px_rgba(99,102,241,0.5)]">
+                  <Zap className="w-5 h-5 text-indigo-400 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300" />
                 </div>
-                <span className="text-xl font-bold tracking-tight text-white" style={{ fontFamily: "'Sora', sans-serif" }}>NexSyncHub</span>
+                <span className="text-2xl font-bold tracking-tight text-white transition-colors duration-300 group-hover:text-indigo-200" style={{ fontFamily: "'Sora', sans-serif" }}>
+                  NexSyncHub
+                </span>
               </Link>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-                The modern layer for team collaboration. Securely centralizing asynchronous engineering workspaces with AI-driven insights.
+              <p className="text-sm text-slate-400 leading-relaxed max-w-sm font-light">
+                The high-performance workspace layer for engineering ecosystems. Standardizing async alignment with AI-assisted clarity modules.
               </p>
             </motion.div>
 
-            {/* Serious SaaS Newsletter Section */}
+            {/* Premium Interactive Newsletter Input */}
             <motion.div variants={itemVariants} className="space-y-4 max-w-sm">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-300 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-                Subscribe to updates
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
+                Newsletter Sign up
               </p>
+              
               {!subscribed ? (
                 <form onSubmit={handleSubscribe} className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500" />
-                  <div className="relative flex items-center bg-[#0A0E1A]/80 backdrop-blur-xl border border-white/10 rounded-xl p-1 shadow-inner">
+                  <div className="absolute -inset-px bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-xl opacity-20 blur-sm group-hover:opacity-50 transition duration-500 group-focus-within:opacity-60" />
+                  <div className="relative flex items-center bg-[#070b19]/90 backdrop-blur-xl border border-white/[0.08] rounded-xl p-1.5 transition-all duration-300 focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/10">
                     <input
                       type="email"
                       required
-                      placeholder="you@company.com"
+                      placeholder="name@ecosystem.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-transparent px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none transition-all"
+                      className="w-full bg-transparent pl-3 pr-2 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none"
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition-all flex items-center justify-center shadow-[0_0_15px_-3px_rgba(99,102,241,0.5)] active:scale-95"
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center shadow-lg active:scale-[0.97] group/btn shrink-0"
                     >
-                      <ArrowRight className="w-4 h-4" />
+                      <span className="hidden sm:inline mr-1.5 text-xs tracking-wide">Join</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-400 backdrop-blur-md shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]">
-                  <CheckCircle2 className="w-5 h-5 shrink-0" />
-                  <span className="font-semibold">Subscribed successfully.</span>
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center gap-3 p-3.5 bg-emerald-500/5 border border-emerald-500/20 rounded-xl text-sm text-emerald-400 backdrop-blur-md"
+                >
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span className="font-medium tracking-wide">Secure link dispatched. Check inbox.</span>
+                </motion.div>
               )}
             </motion.div>
           </div>
 
           {/* Links Grid System */}
-          <div className="xl:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-8 xl:pl-16">
+          <div className="xl:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-10 xl:pl-12">
             {[
               {
                 title: "Product",
@@ -112,9 +133,9 @@ export default function Footer() {
                 links: [
                   { name: "Features", href: "/features" },
                   { name: "Integrations", href: "/integrations" },
-                  { name: "Pricing", href: "/pricing" },
+                  { name: "Pricing Matrix", href: "/pricing" },
                   { name: "Changelog", href: "/changelog" },
-                  { name: "Enterprise Security", href: "/security" },
+                  { name: "Shield Engine", href: "/security", badge: "Core" },
                 ],
               },
               {
@@ -122,9 +143,9 @@ export default function Footer() {
                 icon: BookOpen,
                 links: [
                   { name: "Documentation", href: "/docs" },
-                  { name: "Guides & Playbooks", href: "/guides" },
-                  { name: "API Reference", href: "/api" },
-                  { name: "Open Source", href: "/system-status" },
+                  { name: "System Status", href: "/status" },
+                  { name: "API Blueprint", href: "/api" },
+                  { name: "Open Source", href: "/oss" },
                 ],
               },
               {
@@ -132,43 +153,44 @@ export default function Footer() {
                 icon: Building2,
                 links: [
                   { name: "About Us", href: "/about" },
-                  { name: "Careers", href: "/careers", badge: "Hiring" },
-                  { name: "Blog", href: "/blog" },
-                  { name: "Customers", href: "/customers" },
+                  { name: "Careers", href: "/careers", badge: "Active" },
+                  { name: "Intel/Blog", href: "/blog" },
+                  { name: "Press Kit", href: "/press" },
                 ],
               },
               {
                 title: "Legal",
                 icon: Scale,
                 links: [
-                  { name: "Privacy Policy", href: "/privacy" },
-                  { name: "Terms of Service", href: "/terms" },
-                  { name: "Cookie Policy", href: "/cookies" },
-                  { name: "Data Processing", href: "/dpa" },
+                  { name: "Privacy Protocol", href: "/privacy" },
+                  { name: "Terms of Use", href: "/terms" },
+                  { name: "Cookie Schema", href: "/cookies" },
+                  { name: "DPA Agreement", href: "/dpa" },
                 ],
               },
             ].map((section) => (
-              <motion.div key={section.title} variants={itemVariants} className="space-y-5">
-                <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-200">
-                  <section.icon className="w-4 h-4 text-indigo-400" />
+              <motion.div key={section.title} variants={itemVariants} className="space-y-6">
+                <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-200">
+                  <section.icon className="w-3.5 h-3.5 text-indigo-400/80" />
                   {section.title}
                 </h4>
-                <ul className="space-y-3 text-sm">
+                <ul className="space-y-3.5 text-sm">
                   {section.links.map((link) => (
                     <li key={link.name}>
                       <Link
                         href={link.href}
-                        className="group flex items-center gap-2 text-slate-400 hover:text-indigo-300 transition-colors duration-300"
+                        className="group flex items-center gap-2 text-slate-400 hover:text-white transition-colors duration-200"
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/0 group-hover:bg-indigo-400 transition-colors duration-300" />
-                        <span className="group-hover:translate-x-1 transition-transform duration-300">
+                        <span className="relative py-0.5">
                           {link.name}
-                          {link.badge && (
-                            <span className="ml-2 text-[9px] px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded font-bold uppercase tracking-widest">
-                              {link.badge}
-                            </span>
-                          )}
+                          {/* Premium Center-out underline link micro-animation */}
+                          <span className="absolute left-1/2 bottom-0 w-0 h-px bg-indigo-400 group-hover:w-full group-hover:left-0 transition-all duration-300" />
                         </span>
+                        {link.badge && (
+                          <span className="text-[8px] px-1.5 py-0.5 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded-md font-semibold tracking-wider uppercase scale-90 group-hover:bg-indigo-500/20 transition-colors">
+                            {link.badge}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   ))}
@@ -178,31 +200,41 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom Metadata & System Status */}
+        {/* --- Bottom Row Utilities & Credits --- */}
         <motion.div 
           variants={itemVariants} 
-          className="pt-8 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-slate-500"
+          className="pt-10 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500 font-light"
         >
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
-            <p className="font-medium">© {new Date().getFullYear()} NexSyncHub Inc. All rights reserved.</p>
-            <div className="flex items-center gap-5">
-              <a href="#" className="hover:text-slate-300 transition-colors">Twitter / X</a>
-              <a href="#" className="hover:text-slate-300 transition-colors">GitHub</a>
-              <a href="#" className="hover:text-slate-300 transition-colors">LinkedIn</a>
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8 order-2 md:order-1">
+            <p className="font-normal text-slate-600">© {new Date().getFullYear()} NexSyncHub Inc. System architecture stable.</p>
+            <div className="flex items-center gap-6 text-slate-400">
+              <a href="#" className="hover:text-indigo-400 transition-colors duration-200">X / Twitter</a>
+              <span className="text-slate-800">/</span>
+              <a href="#" className="hover:text-indigo-400 transition-colors duration-200">GitHub</a>
+              <span className="text-slate-800">/</span>
+              <a href="#" className="hover:text-indigo-400 transition-colors duration-200">Discord</a>
             </div>
           </div>
 
-          {/* Infrastructure Health Indicator */}
-          <Link 
-            href="/status" 
-            className="flex items-center gap-3 px-4 py-2 bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 rounded-full transition-all duration-300 backdrop-blur-md hover:border-white/10"
-          >
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-            </span>
-            <span className="text-slate-300 text-xs font-bold tracking-wide uppercase">All Systems Operational</span>
-          </Link>
+          <div className="flex items-center gap-4 order-1 md:order-2 w-full sm:w-auto justify-between sm:justify-end">
+            {/* Geo Location / Language Mock Indicator */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.01] border border-white/[0.04] rounded-full text-slate-400 hover:border-white/[0.08] transition-colors cursor-pointer">
+              <Globe className="w-3 h-3 text-slate-500" />
+              <span>US-EN</span>
+            </div>
+
+            {/* Infrastructure Health Capsule */}
+            <Link 
+              href="/status" 
+              className="flex items-center gap-2.5 px-3.5 py-1.5 bg-emerald-500/[0.02] hover:bg-emerald-500/[0.05] border border-emerald-500/10 hover:border-emerald-500/20 rounded-full transition-all duration-300 backdrop-blur-md"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-emerald-400 font-medium tracking-wider uppercase text-[10px]">Operational</span>
+            </Link>
+          </div>
         </motion.div>
       </motion.div>
     </footer>

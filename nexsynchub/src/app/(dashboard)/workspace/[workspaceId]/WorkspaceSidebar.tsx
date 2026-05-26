@@ -22,6 +22,7 @@ import {
     Loader2,
     Globe,
     Home,
+    Folder,
 } from "lucide-react";
 
 import UserMenu from "@/components/layout/UserMenu";
@@ -445,6 +446,7 @@ export default function WorkspaceSidebar({
                                 const isMembersActive = pathname.includes("/members");
                                 const isActivityActive = pathname.includes("/activity");
                                 const isSettingsActive = pathname.includes("/settings");
+                                const isMediaActive = pathname.includes("/files");
                                 return (
                                     <>
                             {/* Home (Full Page Escape) */}
@@ -541,6 +543,35 @@ export default function WorkspaceSidebar({
                                 />
 
                                 <span className="transition-colors group-hover:text-white" style={isActivityActive ? { color: T.text } : {}}>Activity</span>
+
+                            </button>
+
+                            {/* Media Hub */}
+                            <button
+                                onClick={() =>
+                                    router.push(
+                                        `/workspace/${workspaceId}/files`
+                                    )
+                                }
+
+                                className="relative w-full flex items-center gap-3 pl-3 pr-8 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"
+                                style={isMediaActive ? { background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` } : { background: "transparent", color: T.muted, border: "1px solid transparent" }}
+                            >
+
+                                {isMediaActive && (
+                                    <motion.div
+                                        layoutId="activeSidebarLink"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                                        style={{ background: T.accent, boxShadow: `0 0 10px ${T.accent}` }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    />
+                                )}
+
+                                <Folder
+                                    size={16} className="opacity-70 group-hover:opacity-100 transition-opacity"
+                                />
+
+                                <span className="transition-colors group-hover:text-white" style={isMediaActive ? { color: T.text } : {}}>Media Hub</span>
 
                             </button>
 
