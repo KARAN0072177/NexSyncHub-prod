@@ -18,3 +18,20 @@ canUseWorkspaceInvites() {
   return enabled !== false;
 
 }
+
+// 🔥 Workspace creation feature
+
+export async function
+canCreateWorkspace() {
+
+  const enabled =
+
+    await redis.get<boolean>(
+
+      "allow_workspace_creation"
+
+    );
+
+  return enabled !== false;
+
+}

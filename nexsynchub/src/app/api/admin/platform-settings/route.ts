@@ -99,6 +99,8 @@ export async function PATCH(
 
             allowWorkspaceInvites,
 
+            allowWorkspaceCreation,
+
         } = body;
 
         const settings =
@@ -145,6 +147,18 @@ export async function PATCH(
             await redis.set(
                 "allow_workspace_invites",
                 allowWorkspaceInvites
+            );
+        }
+
+        if (
+            allowWorkspaceCreation !==
+            undefined
+        ) {
+            settings.allowWorkspaceCreation =
+                allowWorkspaceCreation;
+            await redis.set(
+                "allow_workspace_creation",
+                allowWorkspaceCreation
             );
         }
 

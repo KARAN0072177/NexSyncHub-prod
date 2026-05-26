@@ -12,6 +12,7 @@ export default function CreateWorkspacePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isPrivate, setIsPrivate] = useState(true);
+  const [creationDisabledError, setCreationDisabledError] = useState(false);
 
   const handleCreate = async (e: any) => {
     e.preventDefault();
@@ -30,7 +31,11 @@ export default function CreateWorkspacePage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error);
+        if (data.error === "Workspace creation is temporarily disabled") {
+          setCreationDisabledError(true);
+        } else {
+          setError(data.error);
+        }
       } else {
         router.push("/dashboard");
       }
@@ -210,6 +215,54 @@ export default function CreateWorkspacePage() {
                   className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-sm font-semibold text-red-400 transition-all mt-2"
                 >
                   Try Again
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Creation Disabled Modal */}
+      <AnimatePresence>
+        {creationDisabledError && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setCreationDisabledError(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-sm bg-gray-900/90 backdrop-blur-2xl border border-gray-800 rounded-3xl p-6 shadow-2xl"
+            >
+              <button
+                onClick={() => setCreationDisabledError(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex flex-col items-center text-center gap-4 mt-2">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-inner shadow-amber-500/20">
+                  <Lock className="w-8 h-8 text-amber-400" />
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Creation Disabled</h3>
+                  <p className="text-sm text-gray-300 leading-relaxed mb-4">
+                    Workspace creation has been temporarily disabled by the platform administrator. You cannot create new workspaces at this time.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold text-white transition-all mt-2"
+                >
+                  Return to Dashboard
                 </button>
               </div>
             </motion.div>

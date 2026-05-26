@@ -8,6 +8,7 @@ import { moderateWorkspaceName } from "@/lib/workspace-moderation";
 import { createSecurityLog } from "@/lib/security";
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
+import { canCreateWorkspace } from "@/lib/platform-feature";
 
 export async function POST(req: Request) {
   try {
@@ -15,6 +16,21 @@ export async function POST(req: Request) {
 
     const session =
       await requireAuth();
+
+    const canCreate =
+      await canCreateWorkspace();
+
+    if (!canCreate) {
+      return NextResponse.json(
+        {
+          error:
+            "Workspace creation is temporarily disabled",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
 
     // 🧠 Parse body
     const body = await req.json();

@@ -2,7 +2,7 @@ import PlatformSettings
   from "@/models/PlatformSettings";
 
 export async function
-getPlatformSettings() {
+  getPlatformSettings() {
 
   let settings =
 
@@ -21,6 +21,9 @@ getPlatformSettings() {
           false,
 
         allowWorkspaceInvites:
+          true,
+
+        allowWorkspaceCreation:
           true,
 
         announcementEnabled:
@@ -50,6 +53,16 @@ getPlatformSettings() {
 
     settings.allowWorkspaceInvites =
       true;
+  }
+
+  if (
+    settings.allowWorkspaceCreation ===
+    undefined
+  ) {
+
+    settings.allowWorkspaceCreation =
+      true;
+
   }
 
   await settings.save();

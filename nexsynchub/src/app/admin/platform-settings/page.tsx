@@ -3,6 +3,7 @@
 import RegistrationControl from "@/components/super-admin/platform-settings/RegistrationControl";
 import MaintenanceControl from "@/components/super-admin/platform-settings/MaintenanceControl";
 import WorkspaceInviteControl from "@/components/super-admin/platform-settings/WorkspaceInviteControl";
+import WorkspaceCreationControl from "@/components/super-admin/platform-settings/WorkspaceCreationControl";
 import AnnouncementSettings from "@/components/super-admin/platform-settings/AnnouncementSettings";
 import { Settings, ShieldCheck, Activity } from "lucide-react";
 import { motion } from "framer-motion";
@@ -86,6 +87,7 @@ export default function PlatformSettingsPage() {
         <div className="space-y-5">
           <RegistrationControl />
           <MaintenanceControl />
+          <WorkspaceCreationControl />
           <WorkspaceInviteControl />
           <AnnouncementSettings />
         </div>

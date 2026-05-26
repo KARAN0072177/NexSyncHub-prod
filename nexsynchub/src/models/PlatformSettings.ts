@@ -84,6 +84,14 @@ const PlatformSettingsSchema =
 
             },
 
+            allowWorkspaceCreation: {
+
+                type: Boolean,
+
+                default: true,
+
+            },
+
         },
 
         {
