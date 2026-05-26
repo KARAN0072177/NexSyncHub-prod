@@ -115,7 +115,7 @@ export default function GlobalAnnouncement() {
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="relative w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden p-8"
-            style={{ background: "#0A1634", border: `1px solid ${style.border}` }}
+            style={{ background: "rgba(10,22,52,0.70)", border: `1px solid ${style.border}`, backdropFilter: "blur(40px)" }}
           >
             {/* Ambient tint inside popup */}
             <div className="absolute inset-0 pointer-events-none opacity-20" style={{ background: style.bg }} />
