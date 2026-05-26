@@ -21,6 +21,12 @@ import {
 import SecurityLog
   from "@/models/SecurityLog";
 
+import {
+
+  getSignedFileUrl,
+
+} from "@/lib/s3";
+
 export async function GET() {
 
   try {
@@ -72,11 +78,53 @@ export async function GET() {
 
         .lean();
 
+    // 🔥 Attach signed URLs
+    const logsWithSignedUrls =
+
+      await Promise.all(
+
+        logs.map(
+
+          async (log: any) => {
+
+            let signedEvidenceUrl =
+              null;
+
+            // 🔥 Evidence exists
+            if (
+              log.metadata?.evidenceKey
+            ) {
+
+              signedEvidenceUrl =
+
+                await getSignedFileUrl(
+
+                  log.metadata.evidenceKey
+
+                );
+
+            }
+
+            return {
+
+              ...log,
+
+              signedEvidenceUrl,
+
+            };
+
+          }
+
+        )
+
+      );
+
     return NextResponse.json({
 
       success: true,
 
-      logs,
+      logs:
+        logsWithSignedUrls,
 
     });
 
