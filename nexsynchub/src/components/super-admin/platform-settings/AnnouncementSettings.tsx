@@ -472,16 +472,16 @@ export default function AnnouncementSettings() {
                         (e.currentTarget.style.borderColor = T.borderHi)
                       }
                     >
-                      <option value="info" style={{ background: "rgba(10,22,52,0.70)" }}>
+                      <option value="info" style={{ background: "#0A1634" }}>
                         Information (Blue)
                       </option>
-                      <option value="success" style={{ background: "rgba(10,22,52,0.70)" }}>
+                      <option value="success" style={{ background: "#0A1634" }}>
                         Success (Green)
                       </option>
-                      <option value="warning" style={{ background: "rgba(10,22,52,0.70)" }}>
+                      <option value="warning" style={{ background: "#0A1634" }}>
                         Warning (Amber)
                       </option>
-                      <option value="danger" style={{ background: "rgba(10,22,52,0.70)" }}>
+                      <option value="danger" style={{ background: "#0A1634" }}>
                         Danger (Red)
                       </option>
                     </select>

@@ -38,7 +38,6 @@ export default function LandingPage() {
         <Features />
         <WorkspacePreview />
         <TeamCollaboration />
-        <Footer />
       </main>
     </div>
   );
@@ -538,50 +537,5 @@ function TeamCollaboration() {
         </motion.div>
       </div>
     </section>
-  );
-}
-
-function Footer() {
-  return (
-    <motion.footer
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-      className="border-t border-white/5 mt-20 py-10 px-6"
-    >
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-6"
-        >
-          <span>© {new Date().getFullYear()} NexSyncHub</span>
-          <a href="#" className="hover:text-gray-300 transition-colors">
-            Privacy
-          </a>
-          <a href="#" className="hover:text-gray-300 transition-colors">
-            Terms
-          </a>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center gap-4"
-        >
-          <a href="#" className="hover:text-gray-300 transition-colors">
-            <BirdIcon className="w-4 h-4" />
-          </a>
-          <a href="#" className="hover:text-gray-300 transition-colors">
-            <TreesIcon className="w-4 h-4" />
-          </a>
-          <a href="#" className="hover:text-gray-300 transition-colors">
-            <Mail className="w-4 h-4" />
-          </a>
-        </motion.div>
-      </div>
-    </motion.footer>
   );
 }
