@@ -6,7 +6,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from
 import {
   ShieldAlert, Loader2, Trash2, Eye, EyeOff, Maximize,
   Shield, Image as ImageIcon, X, ChevronLeft, ChevronRight,
-  Mail, Tag, Clock, AlertTriangle, Zap, Activity,
+  Mail, Tag, Clock, AlertTriangle, Zap, Activity, Check,
 } from "lucide-react";
 
 /* ─── Design Tokens ───────────────────────────────────────────────────────── */
@@ -77,19 +77,19 @@ function ThreatRing({ score, size = 56 }: { score: number; size?: number }) {
   const color = score > 80 ? T.rose : score > 50 ? T.amber : T.emerald;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={4} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={4} />
       <motion.circle
-        cx={size/2} cy={size/2} r={r} fill="none"
+        cx={size / 2} cy={size / 2} r={r} fill="none"
         stroke={color} strokeWidth={4}
         strokeLinecap="round"
         strokeDasharray={circ}
         initial={{ strokeDashoffset: circ }}
         animate={{ strokeDashoffset: circ * (1 - pct) }}
         transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-        style={{ transformOrigin: `${size/2}px ${size/2}px`, rotate: "-90deg" }}
+        style={{ transformOrigin: `${size / 2}px ${size / 2}px`, rotate: "-90deg" }}
         filter={`drop-shadow(0 0 4px ${color})`}
       />
-      <text x={size/2} y={size/2 + 5} textAnchor="middle" fill={color}
+      <text x={size / 2} y={size / 2 + 5} textAnchor="middle" fill={color}
         style={{ fontSize: size > 48 ? "12px" : "10px", fontWeight: 700, fontFamily: "monospace" }}>
         {Math.round(score)}
       </text>
@@ -199,10 +199,11 @@ function MagneticCard({ children, onClick, className = "", style = {} }: {
 
 /* ─── Media Card ─────────────────────────────────────────────────────────── */
 function MediaCard({
-  log, onOpen, onDelete, isDeleting, visible, onToggleVisible
+  log, onOpen, onDelete, isDeleting, visible, onToggleVisible, isSelected, onToggleSelect
 }: {
   log: UnsafeLog; onOpen: () => void; onDelete: () => void;
   isDeleting: boolean; visible: boolean; onToggleVisible: (e: React.MouseEvent) => void;
+  isSelected: boolean; onToggleSelect: (e: React.MouseEvent) => void;
 }) {
   const src = getSource(log.action);
   const topScore = log.metadata?.moderationLabels?.[0]?.confidence ?? 0;
@@ -222,9 +223,9 @@ function MediaCard({
         className="cursor-pointer rounded-3xl overflow-hidden flex flex-col relative group"
         style={{
           background: T.glass,
-          border: `1px solid ${hovered ? T.borderHi : T.borderMid}`,
+          border: `1px solid ${hovered || isSelected ? T.borderHi : T.borderMid}`,
           backdropFilter: "blur(24px) saturate(180%)",
-          boxShadow: hovered
+          boxShadow: hovered || isSelected
             ? `0 20px 60px -10px rgba(255,61,94,0.25), 0 0 0 1px ${T.borderHi}, inset 0 1px 0 rgba(255,255,255,0.06)`
             : `0 8px 32px -8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
           transition: "box-shadow 0.3s ease, border-color 0.3s ease",
@@ -247,6 +248,20 @@ function MediaCard({
         {/* Top accent line */}
         <div className="absolute top-0 left-0 right-0 h-px z-10 pointer-events-none"
           style={{ background: `linear-gradient(90deg, transparent, ${src.color}60, transparent)` }} />
+
+        {/* Selection Indicator */}
+        <button
+          onClick={onToggleSelect}
+          className={`absolute top-3 left-3 z-30 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100'}`}
+          style={{
+            background: isSelected ? T.rose : "rgba(0,0,0,0.5)",
+            border: `1px solid ${isSelected ? T.roseBright : "rgba(255,255,255,0.2)"}`,
+            color: "#fff",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          {isSelected && <Check size={16} strokeWidth={3} />}
+        </button>
 
         {/* Image Area */}
         <div className="relative w-full aspect-[16/9] overflow-hidden bg-black/60 shrink-0">
@@ -405,6 +420,8 @@ export default function UnsafeMediaPage() {
   const [mounted, setMounted] = useState(false);
   const [visibleImages, setVisibleImages] = useState<Record<string, boolean>>({});
   const [filterAction, setFilterAction] = useState<string>("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const toggleImage = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -424,17 +441,62 @@ export default function UnsafeMediaPage() {
     fetchLogs();
   }, []);
 
+  const toggleSelection = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const handleDelete = async (logId: string) => {
     if (!confirm("Permanently delete this evidence record?")) return;
     setDeletingId(logId);
     try {
       const res = await fetch(`/api/admin/unsafe-media/${logId}`, { method: "DELETE" });
-      const data = await res.json();
+      let data;
+
+      try {
+
+        data = await res.json();
+
+      } catch {
+
+        throw new Error(
+          "Invalid server response"
+        );
+
+      }
       if (!res.ok) { alert(data.error); return; }
       setLogs((p) => p.filter((l) => l._id !== logId));
       if (selectedLog?._id === logId) setSelectedLog(null);
+      setSelectedIds((p) => { const next = new Set(p); next.delete(logId); return next; });
     } catch (e) { console.error(e); }
     finally { setDeletingId(null); }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Permanently delete ${selectedIds.size} evidence records?`)) return;
+
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/admin/unsafe-media/${id}`, { method: "DELETE" })
+        )
+      );
+      setLogs((p) => p.filter((l) => !selectedIds.has(l._id)));
+      setSelectedIds(new Set());
+      if (selectedLog && selectedIds.has(selectedLog._id)) setSelectedLog(null);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete some records");
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   const filteredLogs = filterAction === "all" ? logs : logs.filter(l => l.action === filterAction);
@@ -652,6 +714,55 @@ export default function UnsafeMediaPage() {
           </div>
         </motion.div>
 
+        {/* ── BULK ACTIONS ROW ── */}
+        {!loading && paginatedLogs.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 mb-6"
+          >
+            <button
+              onClick={() => {
+                if (selectedIds.size === paginatedLogs.length && paginatedLogs.length > 0) {
+                  setSelectedIds(new Set());
+                } else {
+                  setSelectedIds(new Set(paginatedLogs.map(l => l._id)));
+                }
+              }}
+              className="px-4 py-2 rounded-2xl text-[11px] font-bold uppercase tracking-widest transition-all duration-200"
+              style={{
+                background: selectedIds.size > 0 && selectedIds.size === paginatedLogs.length ? T.roseGlowBright : T.glass,
+                color: selectedIds.size > 0 && selectedIds.size === paginatedLogs.length ? T.rose : T.textMuted,
+                border: `1px solid ${selectedIds.size > 0 && selectedIds.size === paginatedLogs.length ? T.borderHi : T.border}`,
+                backdropFilter: "blur(16px)"
+              }}
+            >
+              {selectedIds.size > 0 && selectedIds.size === paginatedLogs.length ? "Deselect Page" : "Select Page"}
+            </button>
+
+            <AnimatePresence>
+              {selectedIds.size > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8, width: 0 }}
+                  animate={{ opacity: 1, scale: 1, width: "auto" }}
+                  exit={{ opacity: 0, scale: 0.8, width: 0 }}
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting}
+                  className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold text-white text-[11px] uppercase tracking-widest transition-all whitespace-nowrap overflow-hidden"
+                  style={{
+                    background: `linear-gradient(135deg, ${T.rose} 0%, ${T.roseDeep} 100%)`,
+                    border: `1px solid rgba(255,255,255,0.1)`,
+                    boxShadow: `0 4px 15px ${T.roseGlowBright}`,
+                  }}
+                >
+                  {isBulkDeleting ? <Loader2 size={14} className="animate-spin shrink-0" /> : <Trash2 size={14} className="shrink-0" />}
+                  <span>Delete ({selectedIds.size})</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
         {/* ── CONTENT ── */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -690,6 +801,8 @@ export default function UnsafeMediaPage() {
                   isDeleting={deletingId === log._id}
                   visible={visibleImages[log._id] ?? false}
                   onToggleVisible={(e) => toggleImage(log._id, e)}
+                  isSelected={selectedIds.has(log._id)}
+                  onToggleSelect={(e) => toggleSelection(log._id, e)}
                 />
               ))}
             </AnimatePresence>

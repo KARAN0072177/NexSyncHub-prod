@@ -24,6 +24,7 @@ import {
     LifeBuoy,
     Activity,
     ShieldAlert,
+    Bot,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -273,6 +274,16 @@ export default function AdminLayout({
                 ShieldAlert,
         },
 
+        {
+            label:
+                "AI Moderation Lab",
+
+            href:
+                "/admin/ai-moderation-lab",
+
+            icon:
+                Bot,
+        },
     ];
 
     const renderLink = (link: { label: string; href: string; icon: React.ElementType }) => {
