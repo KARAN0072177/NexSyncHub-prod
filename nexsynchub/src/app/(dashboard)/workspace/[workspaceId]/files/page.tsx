@@ -10,6 +10,8 @@ import {
   useParams,
 } from "next/navigation";
 
+import Image from "next/image";
+
 import {
 
   Search,
@@ -200,7 +202,12 @@ WorkspaceFilesPage() {
 
   return (
 
-    <div className="min-h-screen bg-[#030712] text-white p-6">
+    <div className="h-full overflow-y-auto bg-[#030712] text-white p-6 pb-24">
+      <style>{`
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 4px; }
+      `}</style>
 
       {/* HEADER */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
@@ -291,8 +298,36 @@ WorkspaceFilesPage() {
       {/* LOADING */}
       {loading && (
 
-        <div className="text-gray-400">
-          Loading files...
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-3xl border border-white/10 bg-white/[0.02] overflow-hidden animate-pulse">
+              <div className="aspect-video bg-white/5" />
+              <div className="p-5">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1">
+                    <div className="h-5 bg-white/10 rounded-lg w-3/4 mb-2" />
+                    <div className="h-4 bg-white/5 rounded-lg w-1/4" />
+                  </div>
+                  <div className="w-5 h-5 bg-white/10 rounded-full shrink-0" />
+                </div>
+                <div className="flex items-center gap-3 mt-5">
+                  <div className="w-10 h-10 bg-white/10 rounded-full shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-white/10 rounded-lg w-1/2" />
+                    <div className="h-3 bg-white/5 rounded-lg w-1/3" />
+                  </div>
+                </div>
+                <div className="space-y-2 mt-5">
+                  <div className="h-4 bg-white/10 rounded-lg w-2/5" />
+                  <div className="h-4 bg-white/5 rounded-lg w-1/2" />
+                </div>
+                <div className="flex items-center gap-3 mt-6">
+                  <div className="flex-1 h-12 bg-white/10 rounded-2xl" />
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl shrink-0" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
       )}
@@ -316,7 +351,8 @@ WorkspaceFilesPage() {
       }
 
       {/* GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {!loading && filteredFiles.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
         {
 
@@ -571,7 +607,8 @@ WorkspaceFilesPage() {
 
         }
 
-      </div>
+        </div>
+      )}
 
     </div>
 

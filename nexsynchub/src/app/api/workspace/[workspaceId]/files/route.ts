@@ -1,7 +1,15 @@
+import mongoose from "mongoose";
+
 import {
   NextRequest,
   NextResponse,
 } from "next/server";
+
+import {
+
+  getCachedSignedFileUrl,
+
+} from "@/lib/s3";
 
 import {
   connectDB,
@@ -81,155 +89,89 @@ export async function GET(
 
     }
 
-    // 🔥 Fetch messages with attachments
-    const messages =
-      await Message.find({
-
-        attachments: {
-
-          $exists: true,
-
-          $ne: [],
-
+    // 🔥 Aggregation: Process entirely in the database for massive performance gains
+    const rawFiles = await Message.aggregate([
+      {
+        $match: {
+          attachments: { $exists: true, $ne: [] },
         },
-
-      })
-
-        .populate(
-
-          "sender",
-
-          "username avatar"
-
-        )
-
-        .populate(
-
-          "channel",
-
-          "name workspace"
-
-        )
-
-        .sort({
-
+      },
+      {
+        $lookup: {
+          from: "channels",
+          localField: "channel",
+          foreignField: "_id",
+          as: "channelDoc",
+        },
+      },
+      {
+        $unwind: "$channelDoc",
+      },
+      {
+        // 🔥 Critical optimization: DB filters down to ONLY this workspace immediately
+        $match: {
+          "channelDoc.workspace": new mongoose.Types.ObjectId(workspaceId),
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "sender",
+          foreignField: "_id",
+          as: "senderDoc",
+        },
+      },
+      {
+        $unwind: {
+          path: "$senderDoc",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        // Flattens the array so each file is its own document!
+        $unwind: "$attachments",
+      },
+      {
+        $sort: {
           createdAt: -1,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          id: { $concat: [{ $toString: "$_id" }, "-", "$attachments.key"] },
+          key: "$attachments.key",
+          type: "$attachments.type",
+          name: { $ifNull: ["$attachments.name", "Unnamed File"] },
+          size: { $ifNull: ["$attachments.size", 0] },
+          uploadedAt: "$createdAt",
+          messageId: "$_id",
+          uploadedBy: {
+            id: "$senderDoc._id",
+            username: "$senderDoc.username",
+            avatar: "$senderDoc.avatar",
+          },
+          channel: {
+            id: "$channelDoc._id",
+            name: "$channelDoc.name",
+          },
+        },
+      },
+    ]);
 
-        })
-
-        .lean();
-
-    // 🔥 Filter only workspace files
-    const workspaceMessages =
-
-      messages.filter(
-
-        (message: any) =>
-
-          message.channel?.workspace?.toString() ===
-          workspaceId
-
-      );
-
-    // 🔥 Transform files
-    const files =
-      await Promise.all(
-
-        workspaceMessages.flatMap(
-
-          async (
-            message: any
-          ) => {
-
-            return Promise.all(
-
-              message.attachments.map(
-
-                async (
-                  attachment: any
-                ) => {
-
-                  const signedUrl =
-
-                    await getSignedFileUrl(
-
-                      attachment.key
-
-                    );
-
-                  return {
-
-                    id:
-                      `${message._id}-${attachment.key}`,
-
-                    key:
-                      attachment.key,
-
-                    type:
-                      attachment.type,
-
-                    name:
-                      attachment.name ||
-
-                      "Unnamed File",
-
-                    size:
-                      attachment.size ||
-
-                      0,
-
-                    url:
-                      signedUrl,
-
-                    uploadedAt:
-                      message.createdAt,
-
-                    uploadedBy: {
-
-                      id:
-                        message.sender?._id,
-
-                      username:
-                        message.sender?.username,
-
-                      avatar:
-                        message.sender?.avatar,
-
-                    },
-
-                    channel: {
-
-                      id:
-                        message.channel?._id,
-
-                      name:
-                        message.channel?.name,
-
-                    },
-
-                    messageId:
-                      message._id,
-
-                  };
-
-                }
-
-              )
-
-            );
-
-          }
-
-        )
-
-      );
+    // 🔥 Sign URLs in parallel (no more nested flatMaps!)
+    const files = await Promise.all(
+      rawFiles.map(async (file) => ({
+        ...file,
+        url: await getCachedSignedFileUrl(file.key),
+      }))
+    );
 
     return NextResponse.json({
 
       success: true,
 
-      files:
-        files.flat(),
+      files,
 
     });
 

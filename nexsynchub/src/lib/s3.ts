@@ -10,6 +10,10 @@ import {
 } from "@aws-sdk/client-s3";
 
 import {
+  redis,
+} from "@/lib/redis";
+
+import {
 
   getSignedUrl,
 
@@ -38,9 +42,9 @@ export const s3 =
 
 // 🔥 Generate signed URL
 export async function
-getSignedFileUrl(
-  key: string
-) {
+  getSignedFileUrl(
+    key: string
+  ) {
 
   const command =
     new GetObjectCommand({
@@ -68,5 +72,52 @@ getSignedFileUrl(
     }
 
   );
+
+}
+
+export async function
+getCachedSignedFileUrl(
+  key: string
+) {
+
+  const cacheKey =
+    `signed-url:${key}`;
+
+  // 🔥 Check cache
+  const cachedUrl =
+    await redis.get<string>(
+      cacheKey
+    );
+
+  // ✅ Return cached
+  if (cachedUrl) {
+
+    return cachedUrl;
+
+  }
+
+  // 🔥 Generate new URL
+  const signedUrl =
+    await getSignedFileUrl(
+      key
+    );
+
+  // 🔥 Cache for 4 minutes
+  await redis.set(
+
+    cacheKey,
+
+    signedUrl,
+
+    {
+
+      ex:
+        60 * 4,
+
+    }
+
+  );
+
+  return signedUrl;
 
 }
