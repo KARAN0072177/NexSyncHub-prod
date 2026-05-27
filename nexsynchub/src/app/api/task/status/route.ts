@@ -210,9 +210,10 @@ export async function PATCH(req: Request) {
         }
 
         // 🔥 Get default channel
-        const channel = await Channel.findOne({
-            workspace: task.workspace,
-        });
+        const channel =
+            await Channel.findById(
+                task.channel
+            );
 
         // 🔥 Build system message
         let actionText = "";
