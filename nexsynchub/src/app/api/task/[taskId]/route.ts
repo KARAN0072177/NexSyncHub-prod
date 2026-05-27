@@ -43,7 +43,7 @@ export async function GET(
             task: taskId,
         })
             .sort({ createdAt: 1 })
-            .populate("sender", "username" , "email", "avatar");
+            .populate("sender", "username");
 
         return NextResponse.json({ task, comments });
 

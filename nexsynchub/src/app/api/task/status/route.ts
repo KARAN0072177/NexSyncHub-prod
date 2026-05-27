@@ -300,7 +300,7 @@ export async function PATCH(req: Request) {
 
         // 🔥 POPULATE MESSAGE (IMPORTANT FIX)
         const populatedMessage = await Message.findById(systemMessage._id)
-            .populate("sender", "username" , "email", "avatar")
+            .populate("sender", "username" , "avatar")
             .populate("task", "title")
             .lean();
 
