@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
     // 🔥 Get target message
     const target = await Message.findById(messageId)
-      .populate("sender", "username email")
+      .populate("sender", "username email avatar")
       .lean();
 
     if (!target) {
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
     })
       .sort({ createdAt: -1 })
       .limit(LIMIT)
-      .populate("sender", "username email")
+      .populate("sender", "username email avatar")
       .lean();
 
     // 🔥 Messages AFTER
@@ -77,7 +77,7 @@ export async function GET(req: Request) {
     })
       .sort({ createdAt: 1 })
       .limit(LIMIT)
-      .populate("sender", "username email")
+      .populate("sender", "username email avatar")
       .lean();
 
     // 🔥 Final ordered messages

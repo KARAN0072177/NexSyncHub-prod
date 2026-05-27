@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   }
 
   const message = await Message.findById(messageId)
-    .populate("sender", "username")
+    .populate("sender", "username" , "email", "avatar")
     .lean();
 
   if (!message) {

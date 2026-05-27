@@ -1,12 +1,11 @@
+// API Route: POST /api/message/send
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Message from "@/models/Message";
 import Channel from "@/models/Channel";
 import Membership from "@/models/Membership";
 import "@/models/Workspace";
-
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
 import { sendMessageSchema } from "@/lib/validators/message";
 
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
@@ -73,7 +72,7 @@ export async function POST(req: Request) {
         // 🔥 Populate sender BEFORE returning
         const populatedMessage = await message.populate(
             "sender",
-            "username email"
+            "username email avatar"
         );
 
         console.log(populatedMessage.attachments); // ✅ Check attachments in logs

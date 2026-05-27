@@ -788,9 +788,22 @@ export default function ChatArea({ channel }: { channel: any }) {
                                 )}
                                 <div
                                     id={`msg-${msg._id}`}
-                                    className={`flex relative w-full ${isOwnMessage ? "justify-end" : "justify-start"
+                                    className={`flex relative w-full gap-2.5 ${isOwnMessage ? "justify-end" : "justify-start"
                                         }`}
                                 >
+                                    {/* Avatar for others */}
+                                    {!isOwnMessage && (
+                                        <div className="flex-shrink-0 mt-0.5">
+                                            {msg.sender?.avatar ? (
+                                                <img src={msg.sender.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-700/50" />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-gray-800 text-gray-400 flex items-center justify-center text-[11px] font-bold border border-gray-700">
+                                                    {msg.sender?.username?.[0]?.toUpperCase() || "?"}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <div
                                         className={`group relative w-fit max-w-[85%] md:max-w-[75%] transition-all duration-300 ${activeHighlight === msg._id
                                             ? "ring-2 ring-yellow-500/50 shadow-lg shadow-yellow-500/10 scale-[1.02]"
@@ -937,6 +950,19 @@ export default function ChatArea({ channel }: { channel: any }) {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Avatar for current user */}
+                                    {isOwnMessage && (
+                                        <div className="flex-shrink-0 mt-0.5">
+                                            {msg.sender?.avatar || (session?.user as any)?.image || (session?.user as any)?.avatar ? (
+                                                <img src={msg.sender?.avatar || (session?.user as any)?.image || (session?.user as any)?.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover shadow-sm border border-indigo-500/30" />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-indigo-600/20 text-indigo-300 flex items-center justify-center text-[11px] font-bold border border-indigo-500/30">
+                                                    {username?.[0]?.toUpperCase() || "?"}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </Fragment>
                         );

@@ -33,7 +33,7 @@ export async function POST(req: Request) {
             sender: session.user.id,
         });
 
-        const populated = await comment.populate("sender", "username");
+        const populated = await comment.populate("sender", "username" , "email", "avatar");
 
         // 🔥 EMIT REAL-TIME COMMENT
         try {

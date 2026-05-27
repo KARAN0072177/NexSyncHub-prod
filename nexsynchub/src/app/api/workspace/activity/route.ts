@@ -48,7 +48,7 @@ export async function GET(req: Request) {
     })
       .sort({ createdAt: -1 })
       .limit(50)
-      .populate("sender", "username")
+      .populate("sender", "username" , "email", "avatar")
       .populate("task", "title")
       .lean();
 

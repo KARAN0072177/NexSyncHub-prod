@@ -17,7 +17,7 @@ export async function GET(
       task: taskId,
     })
       .sort({ createdAt: -1 })
-      .populate("sender", "username")
+      .populate("sender", "username" , "email", "avatar")
       .lean();
 
     return NextResponse.json({ activities });

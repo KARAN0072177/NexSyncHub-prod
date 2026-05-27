@@ -73,7 +73,7 @@ export async function GET(req: Request) {
     const rawMessages = await Message.find(query)
       .sort({ createdAt: -1 })
       .limit(PAGE_SIZE)
-      .populate("sender", "username email")
+      .populate("sender", "username email avatar")
       .lean();
 
     // 🔥 Fetch members (for seen count)
