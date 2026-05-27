@@ -763,7 +763,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                         const showUnreadBanner = firstUnreadId === msg._id;
 
                         // System message
-                        if (msg.type === "system") {
+                        if (msg.type === "system" || msg.type === "task_activity") {
                             return (
                                 <div key={msg._id} className="flex items-center gap-3 my-2">
                                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
