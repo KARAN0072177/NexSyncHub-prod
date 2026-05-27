@@ -1,3 +1,5 @@
+// src/app/api/task/create/route.ts
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Task from "@/models/Task";
@@ -9,6 +11,12 @@ import { createAuditLog } from "@/lib/audit";
 
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
+
+import { createNotification } from "@/lib/notification";
+
+import { sendTaskAssignedEmail } from "@/lib/email";
+
+import { sendTaskAssignmentNotification } from "@/lib/task-assignment-notification";
 
 export async function POST(req: Request) {
   try {
@@ -111,6 +119,39 @@ export async function POST(req: Request) {
         user: assignee,
         workspace: workspaceId,
       }).populate("user");
+
+      // 🔥 Centralized assignment notification
+      if (target?.user) {
+
+        await sendTaskAssignmentNotification({
+
+          assignee: {
+
+            _id:
+              target.user._id.toString(),
+
+            username:
+              target.user.username,
+
+            email:
+              target.user.email,
+
+          },
+
+          assignedBy:
+            session.user.username,
+
+          taskId:
+            task._id.toString(),
+
+          taskTitle:
+            title,
+
+          workspaceId,
+
+        });
+
+      }
 
       const actionText = `${session.user.username} created and assigned "${title}" to ${target?.user?.username}`;
 
