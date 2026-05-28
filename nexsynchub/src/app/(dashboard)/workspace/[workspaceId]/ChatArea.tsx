@@ -56,6 +56,10 @@ export default function ChatArea({ channel }: { channel: any }) {
     const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
     const [showScrollBottom, setShowScrollBottom] = useState(false);
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+    const [showMentions, setShowMentions] = useState(false);
+    const [mentionQuery, setMentionQuery] = useState("");
+    const [mentionIndex, setMentionIndex] = useState<number>(0);
+    const [filteredMentions, setFilteredMentions] = useState<any[]>([]);
 
     const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" | null }>({ show: false, message: "", type: null });
 
@@ -605,20 +609,114 @@ export default function ChatArea({ channel }: { channel: any }) {
         setLoading(false);
     };
 
-    const handleTyping = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setContent(e.target.value);
-        if (!userId || !username) return;
-        socketRef.current.emit("typing_start", {
-            channelId: channel._id,
-            user: { id: userId, username },
-        });
-        if (typingTimeout.current) clearTimeout(typingTimeout.current);
-        typingTimeout.current = setTimeout(() => {
-            socketRef.current.emit("typing_stop", {
+    const handleTyping = (
+        e: React.ChangeEvent<
+            HTMLInputElement | HTMLTextAreaElement
+        >
+    ) => {
+
+        const value = e.target.value;
+
+        setContent(value);
+
+        // ===================================
+        // 🔥 MENTION DETECTION
+        // ===================================
+
+        const cursorPos =
+            e.target.selectionStart ?? value.length;
+
+        const textBeforeCursor =
+            value.slice(0, cursorPos);
+
+        const mentionMatch =
+            textBeforeCursor.match(
+                /@([a-zA-Z0-9_]*)$/
+            );
+
+        if (mentionMatch) {
+
+            const query =
+                mentionMatch[1].toLowerCase();
+
+            setMentionQuery(query);
+
+            const filtered =
+                members.filter((m) =>
+                    m.user.username
+                        ?.toLowerCase()
+                        .includes(query)
+                );
+
+            setFilteredMentions(filtered);
+
+            setShowMentions(
+                filtered.length > 0
+            );
+
+            setMentionIndex(0);
+
+        } else {
+
+            setShowMentions(false);
+
+        }
+
+        // ===================================
+        // 🔥 SOCKET TYPING
+        // ===================================
+
+        if (!userId || !username)
+            return;
+
+        socketRef.current.emit(
+            "typing_start",
+            {
                 channelId: channel._id,
-                user: { id: userId, username },
-            });
-        }, 1500);
+                user: {
+                    id: userId,
+                    username,
+                },
+            }
+        );
+
+        if (typingTimeout.current)
+            clearTimeout(
+                typingTimeout.current
+            );
+
+        typingTimeout.current =
+            setTimeout(() => {
+
+                socketRef.current.emit(
+                    "typing_stop",
+                    {
+                        channelId: channel._id,
+                        user: {
+                            id: userId,
+                            username,
+                        },
+                    }
+                );
+
+            }, 1500);
+
+    };
+
+    const selectMention = (
+        username: string
+    ) => {
+
+        const newContent =
+            content.replace(
+                /@([a-zA-Z0-9_]*)$/,
+                `@${username} `
+            );
+
+        setContent(newContent);
+
+        setShowMentions(false);
+
     };
 
 
@@ -701,6 +799,33 @@ export default function ChatArea({ channel }: { channel: any }) {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const renderMessageContent = (content: string) => {
+        if (!content) return null;
+
+        const parts = content.split(/(@[a-zA-Z0-9_]+)/g);
+
+        return parts.map((part, index) => {
+            if (part.startsWith('@')) {
+                const mentionedUsername = part.substring(1);
+                const isCurrentUserMention = mentionedUsername === username;
+
+                return (
+                    <span
+                        key={index}
+                        className={`font-medium rounded px-1 py-0.5 ${
+                            isCurrentUserMention
+                                ? "bg-yellow-500/20 text-yellow-300"
+                                : "text-indigo-400 hover:bg-indigo-500/20 cursor-pointer"
+                        }`}
+                    >
+                        {part}
+                    </span>
+                );
+            }
+            return <Fragment key={index}>{part}</Fragment>;
+        });
     };
 
     if (!username) {
@@ -822,7 +947,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                                                     {msg.sender?.username ?? "Unknown"}
                                                 </p>
                                             )}
-                                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                            <p className="text-sm whitespace-pre-wrap break-words">{renderMessageContent(msg.content)}</p>
 
                                             {/* Reactions */}
                                             {msg.reactions?.length > 0 && (
@@ -1029,14 +1154,200 @@ export default function ChatArea({ channel }: { channel: any }) {
                 {/* Input row */}
                 <div className="flex items-end gap-2">
                     <div className="flex-1 relative">
+
+                        {showMentions && (
+
+                            <div
+                                className="
+      absolute
+      bottom-14
+      left-0
+      w-72
+      max-h-60
+      overflow-y-auto
+      bg-gray-900
+      border
+      border-gray-700
+      rounded-xl
+      shadow-2xl
+      z-50
+      p-1
+    "
+                            >
+
+                                {filteredMentions.map(
+                                    (member, index) => {
+
+                                        const active =
+                                            index === mentionIndex;
+
+                                        return (
+
+                                            <button
+                                                key={member.user._id}
+                                                type="button"
+                                                onClick={() =>
+                                                    selectMention(
+                                                        member.user.username
+                                                    )
+                                                }
+                                                className={`
+              w-full
+              flex
+              items-center
+              gap-3
+              px-3
+              py-2
+              rounded-lg
+              transition-all
+              text-left
+              ${active
+                                                        ? "bg-indigo-600/20 border border-indigo-500/30"
+                                                        : "hover:bg-gray-800"
+                                                    }
+            `}
+                                            >
+
+                                                {member.user.avatar ? (
+
+                                                    <img
+                                                        src={
+                                                            member.user.avatar
+                                                        }
+                                                        alt="avatar"
+                                                        className="
+                  w-8
+                  h-8
+                  rounded-full
+                  object-cover
+                "
+                                                    />
+
+                                                ) : (
+
+                                                    <div
+                                                        className="
+                  w-8
+                  h-8
+                  rounded-full
+                  bg-gray-700
+                  flex
+                  items-center
+                  justify-center
+                  text-xs
+                  text-white
+                "
+                                                    >
+                                                        {member.user.username?.[0]?.toUpperCase()}
+                                                    </div>
+
+                                                )}
+
+                                                <div className="flex flex-col">
+
+                                                    <span className="text-sm text-white font-medium">
+                                                        {member.user.username}
+                                                    </span>
+
+                                                    <span className="text-xs text-gray-400">
+                                                        {member.role}
+                                                    </span>
+
+                                                </div>
+
+                                            </button>
+
+                                        );
+
+                                    }
+                                )}
+
+                            </div>
+
+                        )}
+
                         <textarea
                             value={content}
                             onChange={handleTyping}
                             onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSend();
+
+                                // ===================================
+                                // 🔥 MENTION NAVIGATION
+                                // ===================================
+
+                                if (
+                                    showMentions &&
+                                    filteredMentions.length > 0
+                                ) {
+
+                                    if (e.key === "ArrowDown") {
+
+                                        e.preventDefault();
+
+                                        setMentionIndex((prev) =>
+                                            prev ===
+                                                filteredMentions.length - 1
+                                                ? 0
+                                                : prev + 1
+                                        );
+
+                                        return;
+
+                                    }
+
+                                    if (e.key === "ArrowUp") {
+
+                                        e.preventDefault();
+
+                                        setMentionIndex((prev) =>
+                                            prev === 0
+                                                ? filteredMentions.length - 1
+                                                : prev - 1
+                                        );
+
+                                        return;
+
+                                    }
+
+                                    if (e.key === "Enter") {
+
+                                        e.preventDefault();
+
+                                        selectMention(
+                                            filteredMentions[
+                                                mentionIndex
+                                            ].user.username
+                                        );
+
+                                        return;
+
+                                    }
+
+                                    if (e.key === "Escape") {
+
+                                        setShowMentions(false);
+
+                                        return;
+
+                                    }
+
                                 }
+
+                                // ===================================
+                                // 🔥 NORMAL SEND
+                                // ===================================
+
+                                if (
+                                    e.key === "Enter" &&
+                                    !e.shiftKey
+                                ) {
+
+                                    e.preventDefault();
+
+                                    handleSend();
+
+                                }
+
                             }}
                             placeholder="Type a message..."
                             rows={1}
