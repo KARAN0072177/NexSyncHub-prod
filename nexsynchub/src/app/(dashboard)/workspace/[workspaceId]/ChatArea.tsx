@@ -21,6 +21,9 @@ import {
     ChevronDown,
     CheckCircle2,
     XCircle,
+    Mail,
+    CalendarDays,
+    BadgeCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -60,6 +63,16 @@ export default function ChatArea({ channel }: { channel: any }) {
     const [mentionQuery, setMentionQuery] = useState("");
     const [mentionIndex, setMentionIndex] = useState<number>(0);
     const [filteredMentions, setFilteredMentions] = useState<any[]>([]);
+    const [hoveredMention, setHoveredMention] = useState<{
+        member: any;
+        left: number;
+        top?: number;
+        bottom?: number;
+        maxHeight: number;
+        placement: "top" | "bottom";
+    } | null>(null);
+    const [hoveringReactionDetails, setHoveringReactionDetails] = useState(false);
+    const mentionHoverTimeout = useRef<any>(null);
 
     const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" | null }>({ show: false, message: "", type: null });
 
@@ -84,6 +97,14 @@ export default function ChatArea({ channel }: { channel: any }) {
         socketRef.current = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
         return () => {
             socketRef.current?.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (mentionHoverTimeout.current) {
+                clearTimeout(mentionHoverTimeout.current);
+            }
         };
     }, []);
 
@@ -219,6 +240,9 @@ export default function ChatArea({ channel }: { channel: any }) {
         if (!container) return;
 
         const handleScroll = () => {
+            setHoveredMention(null);
+            setHoveringReactionDetails(false);
+
             if (container.scrollTop === 0) {
                 loadMoreMessages();
             }
@@ -801,6 +825,79 @@ export default function ChatArea({ channel }: { channel: any }) {
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
+    const getMentionedMember = (mentionedUsername: string) => {
+        return members.find(
+            (member) =>
+                member.user?.username?.toLowerCase() ===
+                mentionedUsername.toLowerCase()
+        );
+    };
+
+    const formatJoinedDate = (date?: string) => {
+        if (!date) return "";
+
+        return new Date(date).toLocaleDateString(undefined, {
+            month: "short",
+            year: "numeric",
+        });
+    };
+
+    const openMentionProfile = (
+        member: any,
+        element: HTMLElement
+    ) => {
+        if (mentionHoverTimeout.current) {
+            clearTimeout(mentionHoverTimeout.current);
+        }
+
+        const bubble =
+            element.closest("[data-message-bubble]") as HTMLElement | null;
+        const rect = (bubble || element).getBoundingClientRect();
+        const cardWidth = 320;
+        const viewportPadding = 12;
+        const gap = 10;
+        const left = Math.min(
+            Math.max(
+                rect.left + rect.width / 2 - cardWidth / 2,
+                viewportPadding
+            ),
+            window.innerWidth - cardWidth - viewportPadding
+        );
+        const spaceAbove = rect.top - gap - viewportPadding;
+        const spaceBelow = window.innerHeight - rect.bottom - gap - viewportPadding;
+        const hasSpaceAbove = spaceAbove >= 220 || spaceAbove >= spaceBelow;
+
+        setHoveredMention({
+            member,
+            left,
+            top: hasSpaceAbove ? undefined : rect.bottom + gap,
+            bottom: hasSpaceAbove
+                ? window.innerHeight - rect.top + gap
+                : undefined,
+            maxHeight: Math.max(
+                180,
+                hasSpaceAbove ? spaceAbove : spaceBelow
+            ),
+            placement: hasSpaceAbove ? "top" : "bottom",
+        });
+    };
+
+    const closeMentionProfile = () => {
+        if (mentionHoverTimeout.current) {
+            clearTimeout(mentionHoverTimeout.current);
+        }
+
+        mentionHoverTimeout.current = setTimeout(() => {
+            setHoveredMention(null);
+        }, 120);
+    };
+
+    const keepMentionProfileOpen = () => {
+        if (mentionHoverTimeout.current) {
+            clearTimeout(mentionHoverTimeout.current);
+        }
+    };
+
     const renderMessageContent = (content: string) => {
         if (!content) return null;
 
@@ -809,23 +906,160 @@ export default function ChatArea({ channel }: { channel: any }) {
         return parts.map((part, index) => {
             if (part.startsWith('@')) {
                 const mentionedUsername = part.substring(1);
-                const isCurrentUserMention = mentionedUsername === username;
+                const mentionedMember = getMentionedMember(mentionedUsername);
+                const mentionedUser = mentionedMember?.user;
+                const displayName = mentionedUser?.displayName || mentionedUser?.username;
+                const isCurrentUserMention =
+                    mentionedUsername.toLowerCase() === username?.toLowerCase();
+
+                if (!mentionedMember) {
+                    return (
+                        <span
+                            key={index}
+                            className={`font-medium rounded px-1 py-0.5 ${isCurrentUserMention
+                                ? "text-yellow-300"
+                                : "text-indigo-400"
+                                }`}
+                        >
+                            {part}
+                        </span>
+                    );
+                }
 
                 return (
                     <span
                         key={index}
-                        className={`font-medium rounded px-1 py-0.5 ${
-                            isCurrentUserMention
-                                ? "bg-yellow-500/20 text-yellow-300"
-                                : "text-indigo-400 hover:bg-indigo-500/20 cursor-pointer"
-                        }`}
+                        className="inline-flex align-baseline"
                     >
-                        {part}
+                        <span
+                            onMouseEnter={(event) =>
+                                openMentionProfile(
+                                    mentionedMember,
+                                    event.currentTarget
+                                )
+                            }
+                            onMouseLeave={closeMentionProfile}
+                            onFocus={(event) =>
+                                openMentionProfile(
+                                    mentionedMember,
+                                    event.currentTarget
+                                )
+                            }
+                            onBlur={closeMentionProfile}
+                            tabIndex={0}
+                            className={`font-medium rounded px-1 py-0.5 cursor-default transition-colors ${isCurrentUserMention
+                                ? "text-yellow-300"
+                                : "text-indigo-400 hover:bg-indigo-500/20 cursor-pointer"
+                                }`}
+                        >
+                            {part}
+                        </span>
                     </span>
                 );
             }
             return <Fragment key={index}>{part}</Fragment>;
         });
+    };
+
+    const renderHoveredMentionProfile = () => {
+        if (!hoveredMention) return null;
+
+        const mentionedUser = hoveredMention.member.user;
+        const displayName = mentionedUser?.displayName || mentionedUser?.username || "Unknown user";
+        const initials = displayName
+            .slice(0, 2)
+            .toUpperCase();
+        const roleLabel = String(hoveredMention.member.role || "member").toLowerCase();
+
+        return (
+            <motion.div
+                key={mentionedUser?._id || mentionedUser?.username}
+                initial={{ opacity: 0, y: hoveredMention.placement === "top" ? 8 : -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: hoveredMention.placement === "top" ? 8 : -8, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                onMouseEnter={keepMentionProfileOpen}
+                onMouseLeave={closeMentionProfile}
+                style={{
+                    left: hoveredMention.left,
+                    top: hoveredMention.top,
+                    bottom: hoveredMention.bottom,
+                    maxHeight: hoveredMention.maxHeight,
+                }}
+                className="fixed z-[3000] w-80 overflow-hidden rounded-2xl border border-gray-700/70 bg-gray-950/95 shadow-2xl shadow-black/60 ring-1 ring-white/10 backdrop-blur-xl"
+            >
+                <div className="relative h-16 overflow-hidden bg-gray-900">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/45 via-sky-500/20 to-emerald-400/25" />
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-gray-950 via-gray-950/70 to-transparent" />
+                    <div className="absolute right-4 top-4 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-gray-100 backdrop-blur-md">
+                        {roleLabel}
+                    </div>
+                </div>
+
+                <div className="max-h-[calc(100vh-88px)] overflow-y-auto px-4 py-4">
+                    <div className="mb-4 flex items-center gap-3">
+                        {mentionedUser?.avatar ? (
+                            <img
+                                src={mentionedUser.avatar}
+                                alt={displayName}
+                                className="h-14 w-14 shrink-0 rounded-2xl border border-gray-700 object-cover shadow-lg"
+                            />
+                        ) : (
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-indigo-500/30 bg-indigo-600 text-xl font-semibold text-white shadow-lg">
+                                {initials}
+                            </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                                <h3 className="min-w-0 truncate text-base font-semibold leading-6 text-white">
+                                    {displayName}
+                                </h3>
+                                <BadgeCheck size={15} className="shrink-0 text-indigo-300" />
+                            </div>
+                            <div className="truncate text-xs leading-5 text-gray-400">
+                                @{mentionedUser?.username}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mb-3 rounded-xl border border-gray-800 bg-gray-900/45 px-3 py-2.5">
+                        {mentionedUser?.bio ? (
+                            <p className="line-clamp-3 text-xs leading-5 text-gray-300">
+                                {mentionedUser.bio}
+                            </p>
+                        ) : (
+                            <p className="text-xs leading-5 text-gray-500">
+                                No bio added yet.
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                        {mentionedUser?.email && (
+                            <div className="flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs text-gray-300 transition-colors hover:bg-gray-900/70">
+                                <Mail size={14} className="shrink-0 text-gray-500" />
+                                <span className="min-w-0 truncate">{mentionedUser.email}</span>
+                            </div>
+                        )}
+
+                        {mentionedUser?.createdAt && (
+                            <div className="flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs text-gray-400">
+                                <CalendarDays size={14} className="shrink-0 text-gray-500" />
+                                <span>Joined {formatJoinedDate(mentionedUser.createdAt)}</span>
+                            </div>
+                        )}
+
+                        <div className="flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs text-gray-400">
+                            <User size={14} className="shrink-0 text-gray-500" />
+                            <span className="capitalize">
+                                Workspace {roleLabel}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        );
     };
 
     if (!username) {
@@ -886,6 +1120,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                         const isOwnMessage = msg.sender?._id === userId || msg.sender === userId;
                         const showSeen = index === messages.length - 1 && seenUsers.size > 0 && isOwnMessage;
                         const showUnreadBanner = firstUnreadId === msg._id;
+                        const hasReactions = msg.reactions?.length > 0;
 
                         // System message
                         if (msg.type === "system" || msg.type === "task_activity") {
@@ -930,13 +1165,14 @@ export default function ChatArea({ channel }: { channel: any }) {
                                     )}
 
                                     <div
-                                        className={`group relative w-fit max-w-[85%] md:max-w-[75%] transition-all duration-300 ${activeHighlight === msg._id
+                                        className={`group relative w-fit max-w-[85%] md:max-w-[75%] transition-all duration-300 ${hasReactions ? "mb-4" : ""} ${activeHighlight === msg._id
                                             ? "ring-2 ring-yellow-500/50 shadow-lg shadow-yellow-500/10 scale-[1.02]"
                                             : ""
                                             }`}
                                     >
                                         {/* Message bubble */}
                                         <div
+                                            data-message-bubble
                                             className={`rounded-2xl px-4 py-2.5 ${isOwnMessage
                                                 ? "bg-indigo-600/20 border border-indigo-500/30 text-gray-200"
                                                 : "bg-gray-800/80 border border-gray-700 text-gray-200"
@@ -948,55 +1184,6 @@ export default function ChatArea({ channel }: { channel: any }) {
                                                 </p>
                                             )}
                                             <p className="text-sm whitespace-pre-wrap break-words">{renderMessageContent(msg.content)}</p>
-
-                                            {/* Reactions */}
-                                            {msg.reactions?.length > 0 && (
-                                                <div className="flex flex-wrap gap-2 mt-3">
-
-                                                    {msg.reactions.map((reaction: any, index: number) => {
-
-                                                        const reacted =
-                                                            reaction.users?.some(
-                                                                (id: any) =>
-                                                                    String(typeof id === "object" ? id._id || id.id : id) === String(userId)
-                                                            );
-
-                                                        return (
-                                                            <div key={index} className="relative group/reaction">
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleReaction(
-                                                                            msg._id,
-                                                                            reaction.emoji
-                                                                        )
-                                                                    }
-                                                                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-all ${reacted
-                                                                        ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
-                                                                        : "bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500"
-                                                                        }`}
-                                                                >
-                                                                    <span>{reaction.emoji}</span>
-                                                                    {reaction.users?.length > 1 && <span>{reaction.users.length}</span>}
-                                                                </button>
-
-                                                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-3 py-2 bg-gray-800/95 text-gray-200 text-[11px] rounded-md shadow-xl whitespace-nowrap opacity-0 pointer-events-none group-hover/reaction:opacity-100 transition-all duration-200 z-[100] border border-gray-700/50 backdrop-blur-sm flex flex-col gap-1">
-                                                                    {getReactionUsernames(reaction.users).map((uname: string, idx: number) => (
-                                                                        <div key={idx} className="flex items-center justify-between gap-3">
-                                                                            <span className="font-medium text-gray-300">{uname}</span>
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <span className="text-gray-500">:</span>
-                                                                                <span>{reaction.emoji}</span>
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        );
-
-                                                    })}
-
-                                                </div>
-                                            )}
 
                                             {/* Attachments */}
                                             {msg.attachments?.length > 0 && (
@@ -1037,6 +1224,56 @@ export default function ChatArea({ channel }: { channel: any }) {
                                             )}
                                         </div>
 
+                                        {/* Reactions */}
+                                        {hasReactions && (
+                                            <div
+                                                onMouseEnter={() => setHoveringReactionDetails(true)}
+                                                onMouseLeave={() => setHoveringReactionDetails(false)}
+                                                className="absolute -bottom-4 left-3 z-20 flex items-center rounded-full border border-gray-800/90 bg-gray-900 px-1.5 py-0.5 shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
+                                            >
+                                                {msg.reactions.map((reaction: any, index: number) => {
+                                                    const reacted =
+                                                        reaction.users?.some(
+                                                            (id: any) =>
+                                                                String(typeof id === "object" ? id._id || id.id : id) === String(userId)
+                                                        );
+
+                                                    return (
+                                                        <div key={index} className="relative group/reaction">
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleReaction(
+                                                                        msg._id,
+                                                                        reaction.emoji
+                                                                    )
+                                                                }
+                                                                className={`flex h-5 min-w-5 items-center justify-center gap-1 rounded-full px-0.5 text-[12px] transition-colors ${reacted
+                                                                    ? "text-white"
+                                                                    : "text-gray-100"
+                                                                    }`}
+                                                            >
+                                                                <span className="leading-none">{reaction.emoji}</span>
+                                                                {reaction.users?.length > 1 && (
+                                                                    <span className="pl-0.5 pr-0.5 text-[10px] font-semibold leading-none text-gray-300">
+                                                                        {reaction.users.length}
+                                                                    </span>
+                                                                )}
+                                                            </button>
+
+                                                            <div className="absolute left-1/2 top-full z-[100] mt-1.5 flex -translate-x-1/2 flex-col gap-1 rounded-md border border-gray-700/50 bg-gray-800/95 px-3 py-2 text-[11px] text-gray-200 opacity-0 shadow-xl backdrop-blur-sm transition-all duration-200 pointer-events-none group-hover/reaction:opacity-100 whitespace-nowrap">
+                                                                {getReactionUsernames(reaction.users).map((uname: string, idx: number) => (
+                                                                    <div key={idx} className="flex items-center justify-between gap-3">
+                                                                        <span className="font-medium text-gray-300">{uname}</span>
+                                                                        <span>{reaction.emoji}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+
                                         {/* Seen indicator */}
                                         {showSeen && (
                                             <div className="flex items-center justify-end gap-1 mt-1 text-xs text-gray-500">
@@ -1046,7 +1283,12 @@ export default function ChatArea({ channel }: { channel: any }) {
                                         )}
 
                                         {/* Hover Actions Toolbar */}
-                                        <div className={`absolute -top-4 ${isOwnMessage ? "right-2" : "left-2"} opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center z-10 translate-y-2 group-hover:translate-y-0`}>
+                                        <div
+                                            className={`absolute -top-4 ${isOwnMessage ? "right-2" : "left-2"} transition-all duration-200 flex items-center z-10 ${hoveredMention || hoveringReactionDetails
+                                                ? "opacity-0 pointer-events-none translate-y-2"
+                                                : "opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
+                                                }`}
+                                        >
                                             <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden">
                                                 {/* Quick reactions */}
                                                 <div className="flex items-center px-1">
@@ -1392,6 +1634,10 @@ export default function ChatArea({ channel }: { channel: any }) {
                     </button>
                 </div>
             </div>
+
+            <AnimatePresence>
+                {renderHoveredMentionProfile()}
+            </AnimatePresence>
 
             {/* Task Modal */}
             {showTaskModal && selectedMessage && (

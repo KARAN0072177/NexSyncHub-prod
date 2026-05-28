@@ -5,7 +5,9 @@ import { connectDB } from "@/lib/db";
 import Message from "@/models/Message";
 import Channel from "@/models/Channel";
 import Membership from "@/models/Membership";
+import { createNotification } from "@/lib/notification";
 import "@/models/Workspace";
+import "@/models/User";
 import { sendMessageSchema } from "@/lib/validators/message";
 
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
@@ -17,6 +19,26 @@ import { handleApiError } from "@/lib/api-error";
 const s3 = new S3Client({
     region: process.env.AWS_REGION,
 });
+
+const extractMentionedUsernames = (content: string) => {
+    const matches = content.match(/@([a-zA-Z0-9_]+)/g) || [];
+
+    return [
+        ...new Set(
+            matches.map((mention) =>
+                mention.slice(1).toLowerCase()
+            )
+        ),
+    ];
+};
+
+const createMessagePreview = (content: string) => {
+    const compact = content.replace(/\s+/g, " ").trim();
+
+    if (compact.length <= 90) return compact;
+
+    return `${compact.slice(0, 87)}...`;
+};
 
 export async function POST(req: Request) {
     try {
@@ -101,6 +123,70 @@ export async function POST(req: Request) {
                 })
             ),
         };
+
+        const messageContent = content || "";
+        const mentionedUsernames = extractMentionedUsernames(messageContent);
+
+        if (mentionedUsernames.length > 0) {
+            const mentionedMembers = await Membership.find({
+                workspace: channel.workspace,
+                user: { $ne: session.user.id },
+            })
+                .populate("user", "username")
+                .lean();
+
+            const mentionedRecipients = mentionedMembers.filter((member: any) =>
+                Boolean(member.user?.username) &&
+                mentionedUsernames.includes(member.user.username.toLowerCase())
+            );
+
+            const senderName =
+                plainMessage.sender?.username ||
+                session.user.username ||
+                "Someone";
+            const notificationContent =
+                `${senderName} mentioned you in #${channel.name}: "${createMessagePreview(messageContent)}"`;
+            const notificationLink =
+                `/workspace/${channel.workspace}?channel=${channelId}&message=${message._id}`;
+
+            await Promise.all(
+                mentionedRecipients.map(async (member: any) => {
+                    const notification = await createNotification({
+                        user: member.user._id,
+                        type: "mention",
+                        content: notificationContent,
+                        link: notificationLink,
+                        workspace: channel.workspace,
+                    });
+
+                    if (!notification) return;
+
+                    try {
+                        await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                channelId: member.user._id.toString(),
+                                event: "new_notification",
+                                data: {
+                                    _id: notification._id,
+                                    type: notification.type,
+                                    content: notification.content,
+                                    link: notification.link,
+                                    workspace: notification.workspace,
+                                    isRead: notification.isRead,
+                                    createdAt: notification.createdAt,
+                                },
+                            }),
+                        });
+                    } catch (err) {
+                        console.error("Mention notification socket failed:", err);
+                    }
+                })
+            );
+        }
 
         // 🔥 CALL SOCKET SERVER (IMPORTANT)
         try {

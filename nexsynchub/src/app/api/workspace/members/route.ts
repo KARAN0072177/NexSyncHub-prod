@@ -39,7 +39,7 @@ export async function GET(req: Request) {
 
     // 🔥 Fetch members
     const members = await Membership.find({ workspace: workspaceId })
-      .populate("user", "username email")
+      .populate("user", "username email displayName bio avatar createdAt")
       .lean();
 
     return NextResponse.json({ members });

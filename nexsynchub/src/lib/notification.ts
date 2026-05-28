@@ -9,7 +9,7 @@ export const createNotification = async ({
   workspace,
 }: any) => {
   try {
-    await Notification.create({
+    return await Notification.create({
       user,
       type,
       content,
@@ -19,5 +19,6 @@ export const createNotification = async ({
     });
   } catch (err) {
     console.error("Notification error:", err);
+    return null;
   }
 };
