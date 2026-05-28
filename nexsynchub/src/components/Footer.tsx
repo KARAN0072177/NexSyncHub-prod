@@ -1,22 +1,181 @@
 "use client";
 
-import React, { useState } from "react";
+import React, {
+  useEffect,
+  useState,
+} from "react";
 import Link from "next/link";
 import { motion, Variants } from "framer-motion";
 import {
   Zap,
   ArrowRight,
   CheckCircle2,
+  AlertCircle,
   Box,
   BookOpen,
   Building2,
   Scale,
   Globe,
+  Loader2,
 } from "lucide-react";
+
+const NEWSLETTER_PENDING_EMAIL_KEY =
+  "nexsynchub:newsletter:pending-email";
+
+const NEWSLETTER_VERIFIED_EVENT_KEY =
+  "nexsynchub:newsletter:verified";
+
+function getInitialPendingEmail() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return (
+    window.localStorage.getItem(
+      NEWSLETTER_PENDING_EMAIL_KEY
+    ) || ""
+  );
+}
+
+function getInitialStatus() {
+  return getInitialPendingEmail()
+    ? "success"
+    : "idle";
+}
 
 export default function Footer() {
   const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >(getInitialStatus);
+  const [successType, setSuccessType] =
+    useState<
+      "verification_sent" | "already_verified"
+    >("verification_sent");
+  const [message, setMessage] = useState(() =>
+    getInitialPendingEmail()
+      ? "Confirmation link sent. Check your inbox."
+      : ""
+  );
+  const [submittedEmail, setSubmittedEmail] =
+    useState(getInitialPendingEmail);
+
+  const markVerified = () => {
+    setSuccessType("already_verified");
+    setMessage(
+      "Verified. You are now on the intelligence list."
+    );
+    window.localStorage.removeItem(
+      NEWSLETTER_PENDING_EMAIL_KEY
+    );
+  };
+
+  useEffect(() => {
+    if (
+      status !== "success" ||
+      successType !== "verification_sent" ||
+      !submittedEmail
+    ) {
+      return;
+    }
+
+    const checkVerificationStatus = async () => {
+      try {
+        const response = await fetch(
+          "/api/newsletter/status",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              email: submittedEmail,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data =
+          (await response.json()) as {
+            subscriptionStatus?:
+              | "verified"
+              | "pending_verification"
+              | "unsubscribed"
+              | "not_found";
+          };
+
+        if (
+          data.subscriptionStatus ===
+          "verified"
+        ) {
+          markVerified();
+        }
+      } catch {
+        // Keep the pending state; the next poll can recover.
+      }
+    };
+
+    checkVerificationStatus();
+
+    const handleVerifiedSignal = () => {
+      void checkVerificationStatus();
+    };
+
+    const handleStorageEvent = (
+      event: StorageEvent
+    ) => {
+      if (
+        event.key ===
+        NEWSLETTER_VERIFIED_EVENT_KEY
+      ) {
+        void checkVerificationStatus();
+      }
+    };
+
+    window.addEventListener(
+      NEWSLETTER_VERIFIED_EVENT_KEY,
+      handleVerifiedSignal
+    );
+    window.addEventListener(
+      "storage",
+      handleStorageEvent
+    );
+
+    const pollTimer =
+      window.setInterval(
+        checkVerificationStatus,
+        30000
+      );
+
+    return () => {
+      window.removeEventListener(
+        NEWSLETTER_VERIFIED_EVENT_KEY,
+        handleVerifiedSignal
+      );
+      window.removeEventListener(
+        "storage",
+        handleStorageEvent
+      );
+      window.clearInterval(pollTimer);
+    };
+  }, [
+    status,
+    successType,
+    submittedEmail,
+  ]);
+
+  const resetSubscribeForm = () => {
+    setStatus("idle");
+    setMessage("");
+    setSubmittedEmail("");
+    window.localStorage.removeItem(
+      NEWSLETTER_PENDING_EMAIL_KEY
+    );
+  };
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -31,11 +190,84 @@ export default function Footer() {
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 25 } },
   };
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
-      setSubscribed(true);
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || status === "loading") {
+      return;
+    }
+
+      setStatus("loading");
+      setMessage("");
+      setSubmittedEmail(normalizedEmail);
+      window.localStorage.setItem(
+        NEWSLETTER_PENDING_EMAIL_KEY,
+        normalizedEmail
+      );
+
+    try {
+      const response = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          source: "public_site",
+          tags: [
+            "workspace-intelligence",
+            "operational-digest",
+          ],
+        }),
+      });
+
+      const data = (await response.json()) as {
+        subscriptionStatus?:
+          | "verification_sent"
+          | "already_verified"
+          | "received";
+        message?: string;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setStatus("error");
+        window.localStorage.removeItem(
+          NEWSLETTER_PENDING_EMAIL_KEY
+        );
+        setMessage(
+          data.error ||
+            "Unable to register this email right now."
+        );
+        return;
+      }
+
+      setStatus("success");
+      if (
+        data.subscriptionStatus ===
+        "already_verified"
+      ) {
+        setSuccessType("already_verified");
+        setMessage(
+          "Already verified for intelligence updates."
+        );
+        window.localStorage.removeItem(
+          NEWSLETTER_PENDING_EMAIL_KEY
+        );
+      } else {
+        setSuccessType("verification_sent");
+        setMessage(
+          "Confirmation link sent. Check your inbox."
+        );
+      }
       setEmail("");
+    } catch {
+      setStatus("error");
+      setMessage(
+        "Connection failed. Please try again in a moment."
+      );
     }
   };
 
@@ -87,11 +319,11 @@ export default function Footer() {
             <motion.div variants={itemVariants} className="space-y-4 max-w-sm">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-2.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-                Newsletter Sign up
+                Intelligence updates
               </p>
               
-              {!subscribed ? (
-                <form onSubmit={handleSubscribe} className="relative group">
+              {status !== "success" ? (
+                <form onSubmit={handleSubscribe} className="relative group" noValidate>
                   <div className="absolute -inset-px bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-xl opacity-20 blur-sm group-hover:opacity-50 transition duration-500 group-focus-within:opacity-60" />
                   <div className="relative flex items-center bg-[#070b19]/90 backdrop-blur-xl border border-white/[0.08] rounded-xl p-1.5 transition-all duration-300 focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/10">
                     <input
@@ -100,25 +332,56 @@ export default function Footer() {
                       placeholder="name@ecosystem.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      disabled={status === "loading"}
                       className="w-full bg-transparent pl-3 pr-2 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none"
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center shadow-lg active:scale-[0.97] group/btn shrink-0"
+                      disabled={status === "loading"}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-700/60 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center shadow-lg active:scale-[0.97] group/btn shrink-0 min-w-[72px]"
                     >
-                      <span className="hidden sm:inline mr-1.5 text-xs tracking-wide">Join</span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                      {status === "loading" ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <span className="hidden sm:inline mr-1.5 text-xs tracking-wide">Join</span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                        </>
+                      )}
                     </button>
                   </div>
+                  {status === "error" && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-rose-300"
+                    >
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{message}</span>
+                    </motion.div>
+                  )}
                 </form>
               ) : (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-3 p-3.5 bg-emerald-500/5 border border-emerald-500/20 rounded-xl text-sm text-emerald-400 backdrop-blur-md"
+                  className="space-y-3 p-3.5 bg-emerald-500/5 border border-emerald-500/20 rounded-xl text-sm text-emerald-400 backdrop-blur-md"
                 >
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span className="font-medium tracking-wide">Secure link dispatched. Check inbox.</span>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0" />
+                    <span className="font-medium tracking-wide leading-relaxed">
+                      {successType === "already_verified"
+                        ? "Verified. You are already on the intelligence list."
+                        : message}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={resetSubscribeForm}
+                    className="ml-7 text-xs font-semibold text-emerald-300/80 transition-colors hover:text-emerald-200"
+                  >
+                    Use another email
+                  </button>
                 </motion.div>
               )}
             </motion.div>

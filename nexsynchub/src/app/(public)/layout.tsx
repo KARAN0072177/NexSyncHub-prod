@@ -1,5 +1,7 @@
 import Footer from "@/components/Footer";
+import NewsletterConfirmationPopup from "@/components/NewsletterConfirmationPopup";
 import PublicNavbar from "@/components/PublicNavbar";
+import { Suspense } from "react";
 
 export default function PublicLayout({
   children,
@@ -15,6 +17,10 @@ export default function PublicLayout({
       </main>
 
       <Footer />
+
+      <Suspense fallback={null}>
+        <NewsletterConfirmationPopup />
+      </Suspense>
     </div>
   );
 }

@@ -25,6 +25,7 @@ import {
     Activity,
     ShieldAlert,
     Bot,
+    Mail,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -199,6 +200,11 @@ export default function AdminLayout({
             label: "Support",
             href: "/admin/support",
             icon: LifeBuoy,
+        },
+        {
+            label: "Newsletter",
+            href: "/admin/newsletter",
+            icon: Mail,
         },
         {
             label: "Profile",
