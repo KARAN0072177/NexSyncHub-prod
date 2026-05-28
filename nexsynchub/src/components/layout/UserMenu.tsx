@@ -10,6 +10,7 @@ import {
     Settings,
     Bell,
     LogOut,
+    LayoutDashboard,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -165,6 +166,21 @@ export default function UserMenu() {
 
                     {/* Menu */}
                     <div className="p-2">
+
+                        <button
+                            onClick={() => {
+                                router.push("/dashboard");
+                                setOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5
+              rounded-xl hover:bg-white/5
+              text-gray-300 transition-colors cursor-pointer"
+                        >
+                            <LayoutDashboard size={16} />
+                            <span className="text-sm">
+                                Dashboard
+                            </span>
+                        </button>
 
                         <button
                             onClick={() => {
