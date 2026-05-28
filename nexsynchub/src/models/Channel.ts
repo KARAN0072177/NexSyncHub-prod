@@ -4,6 +4,7 @@ export interface IChannel {
   name: string;
   workspace: mongoose.Types.ObjectId;
   type: "TEXT" | "VOICE";
+  isSystem: boolean;
 
   createdAt: Date;
   updatedAt: Date;
@@ -29,6 +30,12 @@ const ChannelSchema = new Schema<IChannel>(
       type: String,
       enum: ["TEXT", "VOICE"],
       default: "TEXT",
+    },
+
+    isSystem: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
   },
   {

@@ -8,6 +8,7 @@ import Workspace from "@/models/Workspace";
 import Membership from "@/models/Membership";
 
 import { createAuditLog } from "@/lib/audit";
+import { createWorkspaceActivityMessage } from "@/lib/workspace-activity";
 
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
@@ -170,6 +171,20 @@ export async function PATCH(
             },
 
         });
+
+        if (existingWorkspace?.name !== name.trim()) {
+            await createWorkspaceActivityMessage({
+                workspaceId,
+                senderId: session.user.id,
+                content: `${session.user.username} renamed workspace from ${existingWorkspace?.name || "Unknown"} to ${name.trim()}`,
+            });
+        } else if ((existingWorkspace as any)?.description !== (description?.trim() || "")) {
+            await createWorkspaceActivityMessage({
+                workspaceId,
+                senderId: session.user.id,
+                content: `${session.user.username} updated workspace settings`,
+            });
+        }
 
         return NextResponse.json({
 

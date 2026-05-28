@@ -6,6 +6,7 @@ import Membership from "@/models/Membership";
 import Workspace from "@/models/Workspace";
 
 import { createAuditLog } from "@/lib/audit";
+import { createWorkspaceActivityMessage } from "@/lib/workspace-activity";
 
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
@@ -80,6 +81,12 @@ export async function POST(req: Request) {
 
       },
 
+    });
+
+    await createWorkspaceActivityMessage({
+      workspaceId,
+      senderId: session.user.id,
+      content: `${session.user.username} joined the workspace`,
     });
 
     return NextResponse.json({ success: true });

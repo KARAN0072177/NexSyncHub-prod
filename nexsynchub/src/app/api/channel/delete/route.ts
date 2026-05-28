@@ -25,6 +25,7 @@ import { requireAuth } from "@/lib/auth-guard";
 
 import { createAuditLog } from "@/lib/audit";
 import { handleApiError } from "@/lib/api-error";
+import { createWorkspaceActivityMessage } from "@/lib/workspace-activity";
 
 export async function DELETE(
     req: Request
@@ -82,6 +83,20 @@ export async function DELETE(
         }
 
         // 🔐 Membership check
+        if (channel.isSystem) {
+
+            return NextResponse.json(
+                {
+                    error:
+                        "System channels cannot be deleted",
+                },
+                {
+                    status: 400,
+                }
+            );
+
+        }
+
         const membership =
             await Membership.findOne({
 
@@ -142,6 +157,9 @@ export async function DELETE(
                 workspace:
                     channel.workspace,
 
+                isSystem:
+                    { $ne: true },
+
             });
 
         if (totalChannels <= 1) {
@@ -149,7 +167,7 @@ export async function DELETE(
             return NextResponse.json(
                 {
                     error:
-                        "Workspace must have at least one channel",
+                        "Workspace must have at least one chat channel",
                 },
                 {
                     status: 400,
@@ -185,6 +203,17 @@ export async function DELETE(
         });
 
         // 🔥 Delete messages
+        await createWorkspaceActivityMessage({
+            workspaceId:
+                String(channel.workspace),
+
+            senderId:
+                session.user.id,
+
+            content:
+                `${session.user.username} deleted #${channel.name}`,
+        });
+
         await Message.deleteMany({
             channel: channelId,
         });

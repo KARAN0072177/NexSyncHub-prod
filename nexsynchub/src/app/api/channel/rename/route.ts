@@ -20,6 +20,7 @@ import { requireAuth } from "@/lib/auth-guard";
 
 import { createAuditLog } from "@/lib/audit";
 import { handleApiError } from "@/lib/api-error";
+import { createWorkspaceActivityMessage } from "@/lib/workspace-activity";
 
 export async function PATCH(
     req: Request
@@ -107,6 +108,20 @@ export async function PATCH(
         }
 
         // 🔐 Membership check
+        if (channel.isSystem) {
+
+            return NextResponse.json(
+                {
+                    error:
+                        "System channels cannot be renamed",
+                },
+                {
+                    status: 400,
+                }
+            );
+
+        }
+
         const membership =
             await Membership.findOne({
 
@@ -194,6 +209,12 @@ export async function PATCH(
 
             },
 
+        });
+
+        await createWorkspaceActivityMessage({
+            workspaceId: String(channel.workspace),
+            senderId: session.user.id,
+            content: `${session.user.username} renamed #${oldName} to #${channel.name}`,
         });
 
         return NextResponse.json({

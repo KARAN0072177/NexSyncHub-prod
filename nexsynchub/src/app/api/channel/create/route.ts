@@ -10,6 +10,10 @@ import { requireAuth } from "@/lib/auth-guard";
 
 import { createAuditLog } from "@/lib/audit";
 import { handleApiError } from "@/lib/api-error";
+import {
+    createWorkspaceActivityMessage,
+    WORKSPACE_ACTIVITY_CHANNEL_NAME,
+} from "@/lib/workspace-activity";
 
 export async function POST(req: Request) {
     try {
@@ -30,6 +34,13 @@ export async function POST(req: Request) {
         }
 
         const { name, workspaceId } = parsed.data;
+
+        if (name.trim().toLowerCase() === WORKSPACE_ACTIVITY_CHANNEL_NAME) {
+            return NextResponse.json(
+                { error: "This channel name is reserved" },
+                { status: 400 }
+            );
+        }
 
         // 🔐 Check membership
         const membership = await Membership.findOne({
@@ -73,6 +84,12 @@ export async function POST(req: Request) {
 
             },
 
+        });
+
+        await createWorkspaceActivityMessage({
+            workspaceId,
+            senderId: session.user.id,
+            content: `${session.user.username} created #${channel.name}`,
         });
 
         return NextResponse.json(

@@ -3,10 +3,9 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Membership from "@/models/Membership";
-import Message from "@/models/Message";
-import Channel from "@/models/Channel"; // ✅ NEW
 
 import { createAuditLog } from "@/lib/audit";
+import { createWorkspaceActivityMessage } from "@/lib/workspace-activity";
 
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
@@ -54,8 +53,6 @@ export async function PATCH(req: Request) {
     }
 
     // 🔥 GET DEFAULT CHANNEL (IMPORTANT)
-    const channel = await Channel.findOne({ workspace: workspaceId });
-
     // 🚨 RBAC RULES
 
     // =============================
@@ -116,27 +113,13 @@ export async function PATCH(req: Request) {
       }
 
       // 🔥 CREATE SYSTEM MESSAGE
-      const systemMessage = await Message.create({
+      await createWorkspaceActivityMessage({
         content: actionText,
-        channel: channel._id,
-        sender: session.user.id,
-        type: "system",
+        senderId: session.user.id,
+        workspaceId,
       });
-
-      const plainMessage = JSON.parse(JSON.stringify(systemMessage));
 
       // 🔥 EMIT SOCKET
-      await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          channelId: channel._id,
-          message: plainMessage,
-        }),
-      });
-
       return NextResponse.json({ success: true });
     }
 
@@ -194,22 +177,10 @@ export async function PATCH(req: Request) {
 
       const actionText = `${session.user.username} transferred ownership to ${target.user.username}`;
 
-      const systemMessage = await Message.create({
+      await createWorkspaceActivityMessage({
         content: actionText,
-        channel: channel._id,
-        sender: session.user.id,
-        type: "system",
-      });
-
-      await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          channelId: channel._id,
-          message: systemMessage,
-        }),
+        senderId: session.user.id,
+        workspaceId,
       });
 
       return NextResponse.json({ success: true });

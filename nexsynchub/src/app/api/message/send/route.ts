@@ -71,6 +71,13 @@ export async function POST(req: Request) {
         }
 
         // 🔐 Check membership via workspace
+        if (channel.isSystem) {
+            return NextResponse.json(
+                { error: "Messages cannot be sent in system channels" },
+                { status: 403 }
+            );
+        }
+
         const membership = await Membership.findOne({
             user: session.user.id,
             workspace: channel.workspace,

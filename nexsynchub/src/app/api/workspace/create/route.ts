@@ -9,6 +9,7 @@ import { createSecurityLog } from "@/lib/security";
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
 import { canCreateWorkspace } from "@/lib/platform-feature";
+import { getWorkspaceActivityChannel } from "@/lib/workspace-activity";
 
 export async function POST(req: Request) {
   try {
@@ -183,6 +184,8 @@ export async function POST(req: Request) {
       workspace: workspace._id,
       role: "OWNER",
     });
+
+    await getWorkspaceActivityChannel(String(workspace._id));
 
     return NextResponse.json(
       {

@@ -88,6 +88,7 @@ export default function ChatArea({ channel }: { channel: any }) {
 
     const userId = session?.user?.id;
     const username = session?.user?.username;
+    const isSystemChannel = channel?.isSystem || channel?.name === "workspace-activity";
 
     const searchParams = useSearchParams();
     const highlightMessageId = searchParams.get("message");
@@ -615,6 +616,7 @@ export default function ChatArea({ channel }: { channel: any }) {
 
     // ✉️ Send message
     const handleSend = async () => {
+        if (isSystemChannel) return;
         if (!content.trim() && attachments.length === 0) return;
         setLoading(true);
         const res = await fetch("/api/message/send", {
@@ -1349,6 +1351,11 @@ export default function ChatArea({ channel }: { channel: any }) {
             </div>
 
             {/* Input Area */}
+            {isSystemChannel ? (
+                <div className="flex-shrink-0 border-t border-gray-800/50 bg-gray-900/30 px-4 py-3 text-center text-xs font-medium text-gray-500 backdrop-blur-sm">
+                    Workspace activity is read-only.
+                </div>
+            ) : (
             <div className="flex-shrink-0 p-4 border-t border-gray-800/50 bg-gray-900/30 backdrop-blur-sm">
                 {/* Typing indicator */}
                 {typingUsers.length > 0 && (
@@ -1634,6 +1641,7 @@ export default function ChatArea({ channel }: { channel: any }) {
                     </button>
                 </div>
             </div>
+            )}
 
             <AnimatePresence>
                 {renderHoveredMentionProfile()}

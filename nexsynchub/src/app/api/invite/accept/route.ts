@@ -9,6 +9,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
 
 import { canUseWorkspaceInvites } from "@/lib/platform-feature";
+import { createWorkspaceActivityMessage } from "@/lib/workspace-activity";
 
 export async function POST(req: Request) {
   try {
@@ -79,6 +80,12 @@ export async function POST(req: Request) {
       user: session.user.id,
       workspace: invite.workspace,
       role: invite.role,
+    });
+
+    await createWorkspaceActivityMessage({
+      workspaceId: invite.workspace.toString(),
+      senderId: session.user.id,
+      content: `${session.user.username} accepted an invite and joined the workspace`,
     });
 
     return NextResponse.json({

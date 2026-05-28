@@ -212,6 +212,7 @@ function ChannelRow({ ch, onRename, onDelete, deleting }: {
   ch: any; onRename: () => void; onDelete: () => void; deleting: boolean;
 }) {
   const [hov, setHov] = useState(false);
+  const isSystem = ch.isSystem || ch.name === "workspace-activity";
   return (
     <motion.div layout key={ch._id}
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20, transition: { duration: 0.18 } }}
@@ -223,17 +224,24 @@ function ChannelRow({ ch, onRename, onDelete, deleting }: {
         <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}>
           <Hash size={13} style={{ color: T.accent }} />
         </div>
-        <span className="text-sm font-medium" style={{ color: T.text, fontFamily: "'DM Sans',sans-serif" }}>{ch.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium" style={{ color: T.text, fontFamily: "'DM Sans',sans-serif" }}>{ch.name}</span>
+          {isSystem && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMd}` }}>
+              System
+            </span>
+          )}
+        </div>
       </div>
       <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: hov ? 1 : 0 }} transition={{ duration: 0.15 }}>
-        <button onClick={onRename} title="Rename"
+        <button onClick={onRename} disabled={isSystem} title={isSystem ? "System channel cannot be renamed" : "Rename"}
           className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.muted }}>
+          style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: isSystem ? "rgba(255,255,255,0.18)" : T.muted }}>
           <Edit2 size={12} />
         </button>
-        <button onClick={onDelete} disabled={deleting} title="Delete"
+        <button onClick={onDelete} disabled={deleting || isSystem} title={isSystem ? "System channel cannot be deleted" : "Delete"}
           className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ background: T.redLo, border: `1px solid rgba(255,77,109,0.20)`, color: T.red }}>
+          style={{ background: isSystem ? "rgba(255,255,255,0.04)" : T.redLo, border: `1px solid ${isSystem ? T.border : "rgba(255,77,109,0.20)"}`, color: isSystem ? "rgba(255,255,255,0.18)" : T.red }}>
           {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
         </button>
       </motion.div>

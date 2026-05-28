@@ -8,6 +8,7 @@ import { authOptions } from "@/lib/auth-options";
 
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
+import { getWorkspaceActivityChannel } from "@/lib/workspace-activity";
 
 export async function GET(req: Request) {
   try {
@@ -29,10 +30,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
+    await getWorkspaceActivityChannel(String(workspaceId));
+
     const channels = await Channel.find({
       workspace: workspaceId,
     })
-      .sort({ createdAt: 1 })
+      .sort({ isSystem: -1, createdAt: 1 })
       .lean();
 
     return NextResponse.json({ channels });
