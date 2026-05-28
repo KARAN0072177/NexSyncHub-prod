@@ -6,552 +6,408 @@ import { useRouter } from "next/navigation";
 import { io } from "socket.io-client";
 import { logout } from "@/lib/client/logout";
 import {
-    ChevronUp,
-    User,
-    Settings,
-    Bell,
-    LogOut,
-    LayoutDashboard,
-    Check,
-    ExternalLink,
-    Inbox,
-    BellOff,
-    Zap,
+  ChevronUp, User, Settings, Bell, LogOut,
+  LayoutDashboard, Check, ExternalLink, Inbox,
+  BellOff, Zap, Crown, Shield,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
+/* ─── tokens ─────────────────────────────────────────────────────────────── */
+const T = {
+  bg:       "#03060F",
+  surface:  "rgba(8,16,40,0.85)",
+  border:   "rgba(99,140,255,0.10)",
+  borderHi: "rgba(99,140,255,0.22)",
+  accent:   "#3D7BFF",
+  accentLo: "rgba(61,123,255,0.12)",
+  accentMd: "rgba(61,123,255,0.25)",
+  emerald:  "#10B981",
+  rose:     "#FF4D6D",
+  text:     "#E2E8F8",
+  muted:    "#4A5578",
+};
+
+/* ─── format time ────────────────────────────────────────────────────────── */
 function formatTime(dateString: string): string {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60_000);
-
-    if (diffMins < 1) return "now";
-    if (diffMins < 60) return `${diffMins}m`;
-
-    const diffHrs = Math.floor(diffMins / 60);
-    if (diffHrs < 24) return `${diffHrs}h`;
-
-    const diffDays = Math.floor(diffHrs / 24);
-    if (diffDays < 7) return `${diffDays}d`;
-
-    return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-    });
+  const date   = new Date(dateString);
+  const diffMs = Date.now() - date.getTime();
+  const m      = Math.floor(diffMs / 60_000);
+  if (m < 1)  return "now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  if (d < 7)  return `${d}d`;
+  return date.toLocaleDateString("en-US", { month:"short", day:"numeric" });
 }
 
-function NotificationItem({
-    notification,
-    index,
-    onClick,
-}: {
-    notification: any;
-    index: number;
-    onClick: () => void;
+/* ─── NotificationItem ───────────────────────────────────────────────────── */
+function NotificationItem({ notification, index, onClick }: {
+  notification: any; index: number; onClick: () => void;
 }) {
-    return (
-        <motion.button
-            key={notification._id}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.25, delay: index * 0.04 }}
-            onClick={onClick}
-            className="relative w-full border-b border-white/5 text-left transition-colors hover:bg-white/5"
-        >
-            {!notification.isRead && (
-                <div className="absolute bottom-0 left-0 top-0 w-0.5 rounded-r-full bg-blue-500" />
-            )}
+  const [hov, setHov] = useState(false);
+  const isUnread = !notification.isRead;
 
-            <div className="flex items-start gap-3 px-4 py-3.5">
-                <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${notification.isRead
-                    ? "border-white/5 bg-white/5"
-                    : "border-blue-500/25 bg-blue-500/15"
-                    }`}
-                >
-                    <Zap
-                        size={13}
-                        className={notification.isRead ? "text-gray-500" : "text-blue-400"}
-                    />
-                </div>
+  return (
+    <motion.button
+      initial={{ opacity:0, x:-8 }}
+      animate={{ opacity:1, x:0 }}
+      transition={{ duration:0.22, delay:index*0.04 }}
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="relative w-full text-left transition-all duration-150"
+      style={{
+        borderBottom: `1px solid ${T.border}`,
+        background: hov ? "rgba(61,123,255,0.05)" : "transparent",
+      }}
+    >
+      {/* unread left stripe */}
+      {isUnread && (
+        <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r-full"
+          style={{ background:`linear-gradient(180deg,${T.accent},#7C3AED)` }} />
+      )}
 
-                <div className="min-w-0 flex-1">
-                    <p className={`text-[13px] leading-snug ${notification.isRead
-                        ? "font-normal text-gray-400"
-                        : "font-medium text-gray-100"
-                        }`}
-                    >
-                        {notification.content}
-                    </p>
+      <div className="flex items-start gap-3 px-4 py-3.5">
+        {/* icon */}
+        <div className="mt-0.5 w-8 h-8 shrink-0 rounded-xl flex items-center justify-center transition-all duration-200"
+          style={{
+            background: isUnread ? T.accentLo : "rgba(255,255,255,0.04)",
+            border: `1px solid ${isUnread ? T.accentMd : T.border}`,
+          }}>
+          <Zap size={12} style={{ color: isUnread ? T.accent : T.muted }} />
+        </div>
 
-                    {notification.link && (
-                        <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-blue-400">
-                            <ExternalLink size={9} />
-                            View details
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                    <span className="text-[10px] text-gray-500">
-                        {formatTime(notification.createdAt)}
-                    </span>
-
-                    {!notification.isRead && (
-                        <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-                    )}
-                </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] leading-snug"
+            style={{ color: isUnread ? T.text : T.muted, fontWeight: isUnread ? 500 : 400, fontFamily:"'DM Sans',sans-serif" }}>
+            {notification.content}
+          </p>
+          {notification.link && (
+            <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide"
+              style={{ color:T.accent }}>
+              <ExternalLink size={9} /> View details
             </div>
-        </motion.button>
-    );
+          )}
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className="text-[10px]" style={{ color:T.muted }}>{formatTime(notification.createdAt)}</span>
+          {isUnread && (
+            <span className="h-2 w-2 rounded-full"
+              style={{ background:T.accent, boxShadow:`0 0 8px ${T.accent}` }} />
+          )}
+        </div>
+      </div>
+    </motion.button>
+  );
 }
 
+/* ─── MenuItem ───────────────────────────────────────────────────────────── */
+function MenuItem({ icon:Icon, label, onClick, danger }: {
+  icon: React.ElementType; label: string; onClick: () => void; danger?: boolean;
+}) {
+  const [hov, setHov] = useState(false);
+  const color = danger ? T.rose : hov ? T.text : T.muted;
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150"
+      style={{
+        background: hov ? (danger ? "rgba(255,77,109,0.08)" : "rgba(255,255,255,0.04)") : "transparent",
+        color,
+      }}
+    >
+      <Icon size={15} />
+      <span className="text-sm" style={{ fontFamily:"'DM Sans',sans-serif" }}>{label}</span>
+    </button>
+  );
+}
+
+/* ─── MAIN ───────────────────────────────────────────────────────────────── */
 export default function UserMenu() {
+  const { data:session, status } = useSession();
+  const router = useRouter();
+  const [open, setOpen]                         = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications]       = useState<any[]>([]);
+  const [unread, setUnread]                     = useState(0);
+  const [mounted, setMounted]                   = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const { data: session, status } = useSession();
+  useEffect(() => { setMounted(true); }, []);
 
-    const router = useRouter();
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res  = await fetch("/api/notification/list");
+      const data = await res.json();
+      if (res.ok) { setNotifications(data.notifications); setUnread(data.unreadCount); }
+    } catch (err) { console.error(err); }
+  }, []);
 
-    const [open, setOpen] = useState(false);
+  useEffect(() => { if (session?.user?.id) fetchNotifications(); }, [session, fetchNotifications]);
 
-    const [notificationsOpen, setNotificationsOpen] = useState(false);
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    socket.emit("join_channel", session.user.id);
+  }, [session]);
 
-    const [notifications, setNotifications] = useState<any[]>([]);
-
-    const [unread, setUnread] = useState(0);
-
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    const fetchNotifications = useCallback(async () => {
-        try {
-            const res = await fetch("/api/notification/list");
-            const data = await res.json();
-
-            if (res.ok) {
-                setNotifications(data.notifications);
-                setUnread(data.unreadCount);
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!session?.user?.id) return;
-
-        fetchNotifications();
-    }, [session, fetchNotifications]);
-
-    useEffect(() => {
-        if (!session?.user?.id) return;
-
-        socket.emit("join_channel", session.user.id);
-    }, [session]);
-
-    useEffect(() => {
-        const handler = (notification: any) => {
-            setNotifications((prev) => [notification, ...prev]);
-            setUnread((prev) => prev + 1);
-        };
-
-        socket.on("new_notification", handler);
-
-        return () => {
-            socket.off("new_notification", handler);
-        };
-    }, []);
-
-    // 🔥 Close on outside click
-    useEffect(() => {
-
-        const handleClickOutside = (e: MouseEvent) => {
-
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(e.target as Node)
-            ) {
-                setOpen(false);
-                setNotificationsOpen(false);
-            }
-
-        };
-
-        document.addEventListener(
-            "mousedown",
-            handleClickOutside
-        );
-
-        return () => {
-            document.removeEventListener(
-                "mousedown",
-                handleClickOutside
-            );
-        };
-
-    }, []);
-
-    if (!mounted || status === "loading") {
-        return null;
-    }
-
-    const username =
-        session?.user?.username || session?.user?.name || "User";
-
-    const email =
-        session?.user?.email || "";
-
-    const avatarUrl = 
-        session?.user?.image || (session?.user as any)?.avatar;
-
-    // 🔥 Initials avatar
-    const initials = username
-        .slice(0, 2)
-        .toUpperCase();
-
-    const handleNotificationClick = async (notification: any) => {
-        try {
-            await fetch("/api/notification/read", {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    notificationId: notification._id,
-                }),
-            });
-
-            setNotifications((prev) =>
-                prev.map((item) =>
-                    item._id === notification._id
-                        ? { ...item, isRead: true }
-                        : item
-                )
-            );
-            setUnread((prev) => Math.max(prev - 1, 0));
-            router.push(notification.link);
-            setNotificationsOpen(false);
-        } catch (err) {
-            console.error(err);
-        }
+  useEffect(() => {
+    const handler = (notification: any) => {
+      setNotifications(prev => [notification, ...prev]);
+      setUnread(prev => prev + 1);
     };
+    socket.on("new_notification", handler);
+    return () => { socket.off("new_notification", handler); };
+  }, []);
 
-    const markAllAsRead = async () => {
-        try {
-            await fetch("/api/notification/read-all", {
-                method: "PATCH",
-            });
-
-            setNotifications((prev) =>
-                prev.map((notification) => ({
-                    ...notification,
-                    isRead: true,
-                }))
-            );
-            setUnread(0);
-        } catch (err) {
-            console.error(err);
-        }
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false); setNotificationsOpen(false);
+      }
     };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
-    return (
-        <div
-            className="relative"
-            ref={dropdownRef}
-        >
+  const handleNotificationClick = async (notification: any) => {
+    try {
+      await fetch("/api/notification/read", {
+        method:"PATCH", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ notificationId:notification._id }),
+      });
+      setNotifications(prev => prev.map(n => n._id===notification._id ? { ...n, isRead:true } : n));
+      setUnread(prev => Math.max(prev-1, 0));
+      router.push(notification.link);
+      setNotificationsOpen(false);
+    } catch (err) { console.error(err); }
+  };
 
-            {/* Trigger */}
-            <div
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl
-        hover:bg-white/5 transition-colors cursor-pointer"
-            >
+  const markAllAsRead = async () => {
+    try {
+      await fetch("/api/notification/read-all", { method:"PATCH" });
+      setNotifications(prev => prev.map(n => ({ ...n, isRead:true })));
+      setUnread(0);
+    } catch (err) { console.error(err); }
+  };
 
-                {/* Avatar */}
-                <button
-                    type="button"
-                    onClick={() => {
-                        setOpen(!open);
-                        setNotificationsOpen(false);
-                    }}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                >
-                    <div className="relative shrink-0">
-                        {avatarUrl ? (
-                            <img src={avatarUrl} alt={username} className="w-9 h-9 rounded-full object-cover border border-blue-500/30" />
-                        ) : (
-                            <div className="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-semibold text-blue-400">
-                                {initials}
-                            </div>
-                        )}
+  if (!mounted || status==="loading") return null;
 
-                        {/* Online dot */}
-                        <span
-                            className="absolute bottom-0 right-0
-                w-3 h-3 rounded-full
-                bg-emerald-500 border-2 border-[#030712]"
-                        />
-                    </div>
+  const username   = (session?.user as any)?.username || session?.user?.name || "User";
+  const email      = session?.user?.email || "";
+  const avatarUrl  = session?.user?.image || (session?.user as any)?.avatar;
+  const userRole   = (session?.user as any)?.role || "user";
+  const initials   = username.slice(0, 2).toUpperCase();
 
-                    {/* User info */}
-                    <div className="flex-1 text-left min-w-0">
-                        <p className="text-sm font-medium text-gray-200 truncate">
-                            {username}
-                        </p>
+  /* role badge */
+  const roleBadge = userRole === "super_admin"
+    ? { icon:Crown,  color:"#F59E0B", lo:"rgba(245,158,11,0.12)", label:"Super Admin" }
+    : userRole === "admin"
+    ? { icon:Shield, color:T.accent,  lo:T.accentLo,              label:"Admin" }
+    : null;
 
-                        <p className="text-xs text-gray-500 truncate">
-                            Online
-                        </p>
-                    </div>
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');`}</style>
+
+      {/* ── TRIGGER ── */}
+      <div className="w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl transition-all duration-200 cursor-pointer"
+        style={{ background:"rgba(255,255,255,0.03)", border:`1px solid ${T.border}` }}
+        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background="rgba(61,123,255,0.06)"; (e.currentTarget as HTMLDivElement).style.borderColor=T.accentMd; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background="rgba(255,255,255,0.03)"; (e.currentTarget as HTMLDivElement).style.borderColor=T.border; }}
+      >
+        {/* avatar button */}
+        <button type="button" onClick={() => { setOpen(!open); setNotificationsOpen(false); }}
+          className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+          <div className="relative shrink-0">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={username}
+                className="w-8 h-8 rounded-xl object-cover"
+                style={{ border:`1.5px solid ${T.accentMd}` }} />
+            ) : (
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold"
+                style={{ background:T.accentLo, border:`1.5px solid ${T.accentMd}`, color:T.accent, fontFamily:"'Sora',sans-serif" }}>
+                {initials}
+              </div>
+            )}
+            {/* online dot */}
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+              style={{ background:T.emerald, borderColor:T.bg, boxShadow:`0 0 6px ${T.emerald}` }} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold truncate" style={{ color:T.text, fontFamily:"'DM Sans',sans-serif" }}>
+              {username}
+            </p>
+            <p className="text-[10px] truncate" style={{ color:T.muted }}>Online</p>
+          </div>
+        </button>
+
+        {/* notifications bell */}
+        <button type="button"
+          onClick={e => { e.stopPropagation(); setNotificationsOpen(p=>!p); setOpen(false); }}
+          className="relative w-7 h-7 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150"
+          style={{ background:T.accentLo, border:`1px solid ${T.accentMd}`, color:T.accent }}
+          aria-label="Notifications">
+          <Bell size={13} />
+          <AnimatePresence>
+            {unread > 0 && (
+              <motion.span
+                initial={{ scale:0, opacity:0 }} animate={{ scale:1, opacity:1 }} exit={{ scale:0, opacity:0 }}
+                className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-black text-white border-2"
+                style={{ background:T.rose, borderColor:T.bg, boxShadow:`0 0 8px ${T.rose}60` }}>
+                {unread > 9 ? "9+" : unread}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+
+        {/* chevron */}
+        <ChevronUp
+          onClick={() => { setOpen(!open); setNotificationsOpen(false); }}
+          size={14} className={`shrink-0 transition-transform duration-200 ${open ? "" : "rotate-180"}`}
+          style={{ color:T.muted }} />
+      </div>
+
+      {/* ── DROPDOWNS ── */}
+      <AnimatePresence>
+
+        {/* NOTIFICATIONS */}
+        {notificationsOpen && (
+          <motion.div
+            initial={{ opacity:0, y:8, scale:0.97 }}
+            animate={{ opacity:1, y:0, scale:1, transition:{ duration:0.22, ease:[0.22,1,0.36,1] } }}
+            exit={{ opacity:0, y:6, scale:0.97, transition:{ duration:0.15 } }}
+            className="absolute bottom-full left-0 right-0 mb-2.5 overflow-hidden rounded-2xl z-[9999]"
+            style={{ background:T.surface, border:`1px solid ${T.borderHi}`, backdropFilter:"blur(40px)", WebkitBackdropFilter:"blur(40px)", boxShadow:`0 -16px 48px -8px rgba(0,0,0,0.5)` }}
+          >
+            {/* top accent */}
+            <div className="h-0.5" style={{ background:`linear-gradient(90deg,${T.accent},#7C3AED,transparent)` }} />
+
+            {/* header */}
+            <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom:`1px solid ${T.border}` }}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 flex items-center justify-center rounded-xl"
+                  style={{ background:T.accentLo, border:`1px solid ${T.accentMd}` }}>
+                  <Bell size={12} style={{ color:T.accent }} />
+                </div>
+                <h3 className="text-[13px] font-bold text-white" style={{ fontFamily:"'Sora',sans-serif" }}>
+                  Notifications
+                </h3>
+                {unread > 0 && (
+                  <span className="rounded-lg px-1.5 py-0.5 text-[9px] font-black"
+                    style={{ background:T.accentLo, color:T.accent, border:`1px solid ${T.accentMd}` }}>
+                    {unread} new
+                  </span>
+                )}
+              </div>
+              {unread > 0 && (
+                <button onClick={markAllAsRead}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all"
+                  style={{ background:T.emerald+"18", border:`1px solid ${T.emerald}30`, color:T.emerald }}>
+                  <Check size={10} strokeWidth={2.5} /> Read all
                 </button>
-
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setNotificationsOpen((prev) => !prev);
-                        setOpen(false);
-                    }}
-                    className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-gray-400 transition-colors hover:border-blue-500/35 hover:bg-blue-500/15 hover:text-blue-300"
-                    aria-label="Notifications"
-                >
-                    <Bell size={15} />
-
-                    <AnimatePresence>
-                        {unread > 0 && (
-                            <motion.span
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0, opacity: 0 }}
-                                className="absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full border-2 border-[#030712] bg-red-500 px-1 text-[9px] font-black text-white shadow-lg shadow-red-500/40"
-                            >
-                                {unread > 9 ? "9+" : unread}
-                            </motion.span>
-                        )}
-                    </AnimatePresence>
-                </button>
-
-                <ChevronUp
-                    onClick={() => {
-                        setOpen(!open);
-                        setNotificationsOpen(false);
-                    }}
-                    size={16}
-                    className={`shrink-0 text-gray-500 transition-transform ${open ? "rotate-180" : ""
-                        }`}
-                />
-
+              )}
             </div>
 
-            {/* Dropdown */}
-            <AnimatePresence>
-                {notificationsOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute bottom-full left-0 right-0 mb-3 overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]/95 shadow-2xl backdrop-blur-[40px] z-[9999]"
-                    >
-                        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-blue-500/25 bg-blue-500/15">
-                                    <Bell size={12} className="text-blue-400" />
-                                </div>
+            {/* list */}
+            <div className="max-h-72 overflow-y-auto"
+              style={{ scrollbarWidth:"thin", scrollbarColor:`${T.accentMd} transparent` }}>
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+                  <div className="w-11 h-11 flex items-center justify-center rounded-2xl"
+                    style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${T.border}` }}>
+                    <BellOff size={18} style={{ color:T.muted }} />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-sm font-semibold text-white" style={{ fontFamily:"'Sora',sans-serif" }}>All quiet</p>
+                    <p className="text-[11px]" style={{ color:T.muted }}>No notifications yet</p>
+                  </div>
+                </div>
+              ) : (
+                <AnimatePresence>
+                  {notifications.map((n, i) => (
+                    <NotificationItem key={n._id} notification={n} index={i}
+                      onClick={() => handleNotificationClick(n)} />
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
 
-                                <h3 className="text-[13px] font-bold text-white">
-                                    Notifications
-                                </h3>
+            {/* footer */}
+            <div className="p-2.5" style={{ borderTop:`1px solid ${T.border}` }}>
+              <button
+                onClick={() => { router.push("/dashboard/notifications"); setNotificationsOpen(false); }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all"
+                style={{ background:T.accentLo, border:`1px solid ${T.accentMd}`, color:T.accent }}>
+                <Inbox size={11} /> View all notifications
+              </button>
+            </div>
+          </motion.div>
+        )}
 
-                                {unread > 0 && (
-                                    <span className="rounded-md border border-blue-500/25 bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-black text-blue-400">
-                                        {unread} new
-                                    </span>
-                                )}
-                            </div>
+        {/* USER MENU */}
+        {open && (
+          <motion.div
+            initial={{ opacity:0, y:8, scale:0.97 }}
+            animate={{ opacity:1, y:0, scale:1, transition:{ duration:0.22, ease:[0.22,1,0.36,1] } }}
+            exit={{ opacity:0, y:6, scale:0.97, transition:{ duration:0.15 } }}
+            className="absolute bottom-full left-0 right-0 mb-2.5 overflow-hidden rounded-2xl z-[9999]"
+            style={{ background:T.surface, border:`1px solid ${T.borderHi}`, backdropFilter:"blur(40px)", WebkitBackdropFilter:"blur(40px)", boxShadow:`0 -16px 48px -8px rgba(0,0,0,0.5)` }}
+          >
+            {/* top accent */}
+            <div className="h-0.5" style={{ background:`linear-gradient(90deg,${T.accent},#7C3AED,transparent)` }} />
 
-                            {unread > 0 && (
-                                <button
-                                    onClick={markAllAsRead}
-                                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/15"
-                                >
-                                    <Check size={10} strokeWidth={2.5} />
-                                    Read
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="max-h-80 overflow-y-auto">
-                            {notifications.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-                                        <BellOff size={20} className="text-gray-500" />
-                                    </div>
-
-                                    <div>
-                                        <p className="mb-1 text-sm font-semibold text-white">
-                                            All quiet
-                                        </p>
-                                        <p className="text-[11px] text-gray-500">
-                                            No notifications yet
-                                        </p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <AnimatePresence>
-                                    {notifications.map((notification, index) => (
-                                        <NotificationItem
-                                            key={notification._id}
-                                            notification={notification}
-                                            index={index}
-                                            onClick={() => handleNotificationClick(notification)}
-                                        />
-                                    ))}
-                                </AnimatePresence>
-                            )}
-                        </div>
-
-                        <div className="border-t border-white/10 p-2.5">
-                            <button
-                                onClick={() => {
-                                    router.push("/dashboard/notifications");
-                                    setNotificationsOpen(false);
-                                }}
-                                className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/10 py-2.5 text-[11px] font-bold uppercase tracking-widest text-blue-400 transition-colors hover:border-blue-500/35 hover:bg-blue-500/15"
-                            >
-                                <Inbox size={12} />
-                                View all notifications
-                            </button>
-                        </div>
-                    </motion.div>
+            {/* user header */}
+            <div className="px-4 py-4" style={{ borderBottom:`1px solid ${T.border}` }}>
+              <div className="flex items-center gap-3">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={username} className="w-10 h-10 rounded-2xl object-cover shrink-0"
+                    style={{ border:`1.5px solid ${T.accentMd}` }} />
+                ) : (
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0"
+                    style={{ background:T.accentLo, border:`1.5px solid ${T.accentMd}`, color:T.accent, fontFamily:"'Sora',sans-serif" }}>
+                    {initials}
+                  </div>
                 )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-white truncate" style={{ fontFamily:"'Sora',sans-serif" }}>{username}</p>
+                    {roleBadge && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase"
+                        style={{ background:roleBadge.lo, color:roleBadge.color, border:`1px solid ${roleBadge.color}30` }}>
+                        <roleBadge.icon size={8} /> {roleBadge.label}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs truncate" style={{ color:T.muted }}>{email}</p>
+                </div>
+              </div>
+            </div>
 
-                {open && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute bottom-full left-0 right-0 mb-3 bg-[#0f172a]/95 backdrop-blur-[40px] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[9999]"
-                    >
+            {/* menu items */}
+            <div className="p-2 space-y-0.5">
+              <MenuItem icon={LayoutDashboard} label="Dashboard" onClick={() => { router.push("/dashboard"); setOpen(false); }} />
+              <MenuItem icon={User}            label="Profile"   onClick={() => { router.push("/dashboard/profile"); setOpen(false); }} />
+              <MenuItem icon={Settings}        label="Settings"  onClick={() => { router.push("/dashboard/settings"); setOpen(false); }} />
+              <MenuItem icon={Bell}            label="Notifications" onClick={() => { router.push("/dashboard/notifications"); setOpen(false); }} />
+            </div>
 
-                    {/* Header */}
-                    <div className="p-4 border-b border-white/10">
+            <div className="mx-3 mb-1 h-px" style={{ background:T.border }} />
 
-                        <div className="flex items-center gap-3">
+            <div className="p-2 pt-1">
+              <MenuItem icon={LogOut} label="Log out" onClick={() => logout()} danger />
+            </div>
+          </motion.div>
+        )}
 
-                            {avatarUrl ? (
-                                <img src={avatarUrl} alt={username} className="w-11 h-11 rounded-full object-cover border border-blue-500/30 shrink-0" />
-                            ) : (
-                                <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-semibold text-blue-400 shrink-0">
-                                    {initials}
-                                </div>
-                            )}
-
-                            <div className="min-w-0">
-                                <p className="text-sm font-semibold text-white truncate">
-                                    {username}
-                                </p>
-
-                                <p className="text-xs text-gray-500 truncate">
-                                    {email}
-                                </p>
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    {/* Menu */}
-                    <div className="p-2">
-
-                        <button
-                            onClick={() => {
-                                router.push("/dashboard");
-                                setOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5
-              rounded-xl hover:bg-white/5
-              text-gray-300 transition-colors cursor-pointer"
-                        >
-                            <LayoutDashboard size={16} />
-                            <span className="text-sm">
-                                Dashboard
-                            </span>
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                router.push("/dashboard/profile");
-                                setOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5
-              rounded-xl hover:bg-white/5
-              text-gray-300 transition-colors cursor-pointer"
-                        >
-                            <User size={16} />
-                            <span className="text-sm">
-                                Profile
-                            </span>
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                router.push("/dashboard/settings");
-                                setOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5
-              rounded-xl hover:bg-white/5
-              text-gray-300 transition-colors cursor-pointer"
-                        >
-                            <Settings size={16} />
-                            <span className="text-sm">
-                                Settings
-                            </span>
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                router.push("/dashboard/notifications");
-                                setOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5
-              rounded-xl hover:bg-white/5
-              text-gray-300 transition-colors cursor-pointer"
-                        >
-                            <Bell size={16} />
-                            <span className="text-sm">
-                                Notifications
-                            </span>
-                        </button>
-
-                        <div className="my-2 border-t border-white/5" />
-
-                        <button
-                            onClick={() =>
-                                logout()
-                            }
-                            className="w-full flex items-center gap-3 px-3 py-2.5
-              rounded-xl hover:bg-red-500/10
-              text-red-400 transition-colors cursor-pointer"
-                        >
-                            <LogOut size={16} />
-                            <span className="text-sm">
-                                Logout
-                            </span>
-                        </button>
-
-                    </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-        </div>
-    );
+      </AnimatePresence>
+    </div>
+  );
 }
