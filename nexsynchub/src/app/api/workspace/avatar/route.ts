@@ -26,9 +26,16 @@ import {
 import {
     createSecurityLog,
 } from "@/lib/security";
+import { uploadModerationEvidence } from "@/lib/upload-moderation-evidence";
 
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
+
+type ModerationLabel = {
+    Name?: string;
+    Confidence?: number;
+    ParentName?: string;
+};
 
 export async function POST(
     req: Request
@@ -204,6 +211,15 @@ export async function POST(
         // ❌ Unsafe image
         if (!moderation.safe) {
 
+            const evidence =
+                await uploadModerationEvidence({
+                    buffer,
+                    fileName:
+                        file.name,
+                    contentType:
+                        file.type,
+                });
+
             // 🔥 Request info
             const ip =
                 req.headers.get(
@@ -216,8 +232,7 @@ export async function POST(
                 ) || "Unknown Device";
 
             // 🔥 Create security log
-            const securityLog =
-                await createSecurityLog({
+            await createSecurityLog({
 
                     userId:
                         session.user.id,
@@ -243,19 +258,19 @@ export async function POST(
                             moderation.labels
 
                                 .filter(
-                                    (label: any) =>
+                                    (label: ModerationLabel) =>
 
-                                        label.Confidence >= 70
+                                        (label.Confidence ?? 0) >= 70
                                 )
 
                                 .map(
-                                    (label: any) => ({
+                                    (label: ModerationLabel) => ({
 
                                         name:
                                             label.Name,
 
                                         confidence:
-                                            label.Confidence,
+                                            label.Confidence ?? 0,
 
                                         parentName:
                                             label.ParentName,
@@ -266,40 +281,21 @@ export async function POST(
                         ip,
                         userAgent,
 
+                        evidenceUrl:
+                            evidence.url,
+
+                        evidenceKey:
+                            evidence.key,
+
+                        evidenceExpiresAt:
+                            new Date(
+                                Date.now() +
+                                1000 * 60 * 60 * 24 * 30
+                            ),
+
                     },
 
                 });
-
-            // 🔥 Emit realtime event
-            await fetch(
-                "http://localhost:4000/emit",
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            channelId:
-                                "admin_global",
-
-                            event:
-                                "admin_security_log_created",
-
-                            data:
-                                securityLog,
-
-                        }),
-
-                }
-            );
 
             return NextResponse.json(
 

@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { socket } from "@/lib/socket";
 import {
   ShieldAlert, Loader2, Trash2, Eye, EyeOff, Maximize,
   Shield, Image as ImageIcon, X, ChevronLeft, ChevronRight,
@@ -48,6 +49,9 @@ const SOURCE = {
   unsafe_support_attachment: { label: "Support", color: T.amber, icon: "🎫", gradient: "from-amber-400 to-orange-600" },
   unsafe_chat_attachment: { label: "Chat", color: "#F97316", icon: "💬", gradient: "from-orange-400 to-rose-600" },
 } as const;
+
+const UNSAFE_MEDIA_ACTIONS =
+  Object.keys(SOURCE);
 
 function getSource(action: string) {
   return SOURCE[action as keyof typeof SOURCE] ?? { label: "Unknown", color: T.textMuted, icon: "❓", gradient: "from-gray-600 to-gray-800" };
@@ -176,12 +180,12 @@ function MagneticCard({ children, onClick, className = "", style = {} }: {
     const cy = rect.top + rect.height / 2;
     rotX.set(((e.clientY - cy) / rect.height) * -10);
     rotY.set(((e.clientX - cx) / rect.width) * 10);
-  }, []);
+  }, [rotX, rotY]);
 
   const handleMouseLeave = useCallback(() => {
     rotX.set(0);
     rotY.set(0);
-  }, []);
+  }, [rotX, rotY]);
 
   return (
     <motion.div
@@ -206,6 +210,9 @@ function MediaCard({
   isSelected: boolean; onToggleSelect: (e: React.MouseEvent) => void;
 }) {
   const src = getSource(log.action);
+  const evidenceUrl =
+    log.signedEvidenceUrl ||
+    log.metadata?.evidenceUrl;
   const topScore = log.metadata?.moderationLabels?.[0]?.confidence ?? 0;
   const [hovered, setHovered] = useState(false);
 
@@ -265,13 +272,13 @@ function MediaCard({
 
         {/* Image Area */}
         <div className="relative w-full aspect-[16/9] overflow-hidden bg-black/60 shrink-0">
-          {log.signedEvidenceUrl ? (
+          {evidenceUrl ? (
             <>
-              <img src={log.signedEvidenceUrl} alt=""
+              <img src={evidenceUrl} alt=""
                 className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none"
                 style={{ filter: "blur(24px) saturate(80%)", transform: "scale(1.15)" }}
               />
-              <img src={log.signedEvidenceUrl} alt="Evidence"
+              <img src={evidenceUrl} alt="Evidence"
                 className={`relative z-10 w-full h-full object-contain transition-all duration-700 ease-out ${visible ? "scale-100 blur-0" : "blur-[28px] scale-105"}`}
               />
               <motion.div
@@ -439,6 +446,54 @@ export default function UnsafeMediaPage() {
       finally { setLoading(false); }
     };
     fetchLogs();
+  }, []);
+
+  useEffect(() => {
+    socket.emit("join_admin_global");
+
+    const handleUnsafeMediaLog = (
+      newLog?: UnsafeLog
+    ) => {
+      if (
+        !newLog?._id ||
+        !UNSAFE_MEDIA_ACTIONS.includes(newLog.action)
+      ) {
+        return;
+      }
+
+      const liveLog = {
+        ...newLog,
+        signedEvidenceUrl:
+          newLog.signedEvidenceUrl ||
+          newLog.metadata?.evidenceUrl,
+      };
+
+      setLogs((currentLogs) => {
+        if (
+          currentLogs.some(
+            (log) => log._id === liveLog._id
+          )
+        ) {
+          return currentLogs;
+        }
+
+        return [liveLog, ...currentLogs];
+      });
+
+      setCurrentPage(1);
+    };
+
+    socket.on(
+      "admin_security_log_created",
+      handleUnsafeMediaLog
+    );
+
+    return () => {
+      socket.off(
+        "admin_security_log_created",
+        handleUnsafeMediaLog
+      );
+    };
   }, []);
 
   const toggleSelection = (id: string, e: React.MouseEvent) => {
@@ -877,13 +932,13 @@ export default function UnsafeMediaPage() {
                   <div className="relative lg:w-[55%] h-64 sm:h-80 lg:h-auto flex items-center justify-center overflow-hidden bg-black/60">
                     <div className="data-stream absolute inset-0 opacity-20 pointer-events-none" />
 
-                    {selectedLog.signedEvidenceUrl ? (
+                    {(selectedLog.signedEvidenceUrl || selectedLog.metadata?.evidenceUrl) ? (
                       <>
-                        <img src={selectedLog.signedEvidenceUrl} alt=""
+                        <img src={selectedLog.signedEvidenceUrl || selectedLog.metadata?.evidenceUrl} alt=""
                           className="absolute inset-0 w-full h-full object-cover opacity-20"
                           style={{ filter: "blur(30px) saturate(60%)", transform: "scale(1.2)" }}
                         />
-                        <img src={selectedLog.signedEvidenceUrl} alt="Evidence"
+                        <img src={selectedLog.signedEvidenceUrl || selectedLog.metadata?.evidenceUrl} alt="Evidence"
                           className="relative z-10 w-full h-full object-contain p-8 sm:p-12"
                         />
 

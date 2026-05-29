@@ -14,14 +14,13 @@ export async function getWorkspaceActivityChannel(workspaceId: string) {
         workspace: workspaceId,
         name: WORKSPACE_ACTIVITY_CHANNEL_NAME,
         type: "TEXT",
-        isSystem: true,
       },
       $set: {
         isSystem: true,
       },
     },
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
     }
   );

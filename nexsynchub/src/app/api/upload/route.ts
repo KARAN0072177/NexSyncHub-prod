@@ -20,6 +20,12 @@ const s3 = new S3Client({
   region: process.env.AWS_REGION,
 });
 
+type ModerationLabel = {
+  Name?: string;
+  Confidence?: number;
+  ParentName?: string;
+};
+
 export async function POST(req: Request) {
 
   // 🔐 Session
@@ -66,8 +72,7 @@ export async function POST(req: Request) {
         });
 
       // 🔥 Security log
-      const securityLog =
-        await createSecurityLog({
+      await createSecurityLog({
 
           userId:
             session?.user?.id,
@@ -91,19 +96,19 @@ export async function POST(req: Request) {
               moderation.labels
 
                 .filter(
-                  (label: any) =>
+                  (label: ModerationLabel) =>
 
-                    label.Confidence >= 70
+                    (label.Confidence ?? 0) >= 70
                 )
 
                 .map(
-                  (label: any) => ({
+                  (label: ModerationLabel) => ({
 
                     name:
                       label.Name,
 
                     confidence:
-                      label.Confidence,
+                      label.Confidence ?? 0,
 
                     parentName:
                       label.ParentName,
@@ -121,37 +126,6 @@ export async function POST(req: Request) {
           },
 
         });
-
-      // 🔥 Realtime admin event
-      await fetch(
-        "http://localhost:4000/emit",
-        {
-
-          method: "POST",
-
-          headers: {
-
-            "Content-Type":
-              "application/json",
-
-          },
-
-          body:
-            JSON.stringify({
-
-              channelId:
-                "admin_global",
-
-              event:
-                "admin_security_log_created",
-
-              data:
-                securityLog,
-
-            }),
-
-        }
-      );
 
       return NextResponse.json(
 

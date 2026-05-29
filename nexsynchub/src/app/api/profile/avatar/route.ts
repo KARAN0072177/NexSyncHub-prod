@@ -18,6 +18,7 @@ import User from "@/models/User";
 import {
   createSecurityLog,
 } from "@/lib/security";
+import { uploadModerationEvidence } from "@/lib/upload-moderation-evidence";
 import { handleApiError } from "@/lib/api-error";
 
 export async function POST(
@@ -120,6 +121,13 @@ export async function POST(
     // ❌ Unsafe image
     if (!moderation.safe) {
 
+      const evidence =
+        await uploadModerationEvidence({
+          buffer,
+          fileName: file.name,
+          contentType: file.type,
+        });
+
       // 🔥 Security log
       await createSecurityLog({
 
@@ -159,6 +167,18 @@ export async function POST(
                   label.ParentName,
 
               })
+            ),
+
+          evidenceUrl:
+            evidence.url,
+
+          evidenceKey:
+            evidence.key,
+
+          evidenceExpiresAt:
+            new Date(
+              Date.now() +
+                1000 * 60 * 60 * 24 * 30
             ),
 
         },

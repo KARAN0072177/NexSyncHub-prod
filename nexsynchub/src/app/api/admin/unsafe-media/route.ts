@@ -27,6 +27,13 @@ import {
 
 } from "@/lib/s3";
 
+type UnsafeMediaLog = {
+  metadata?: {
+    evidenceKey?: string;
+    evidenceUrl?: string;
+  };
+};
+
 export async function GET() {
 
   try {
@@ -85,7 +92,7 @@ export async function GET() {
 
         logs.map(
 
-          async (log: any) => {
+          async (log: UnsafeMediaLog) => {
 
             let signedEvidenceUrl =
               null;
@@ -109,7 +116,10 @@ export async function GET() {
 
               ...log,
 
-              signedEvidenceUrl,
+              signedEvidenceUrl:
+                signedEvidenceUrl ||
+                log.metadata?.evidenceUrl ||
+                null,
 
             };
 

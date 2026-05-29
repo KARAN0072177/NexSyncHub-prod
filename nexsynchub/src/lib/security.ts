@@ -1,5 +1,19 @@
 import SecurityLog
   from "@/models/SecurityLog";
+import {
+  getSignedFileUrl,
+} from "@/lib/s3";
+
+type SecurityLogMetadata =
+  Record<string, unknown> & {
+    evidenceKey?: string;
+  };
+
+type SecurityLogRealtimePayload =
+  Record<string, unknown> & {
+    metadata?: SecurityLogMetadata;
+    signedEvidenceUrl?: string;
+  };
 
 interface CreateSecurityLogParams {
 
@@ -11,10 +25,7 @@ interface CreateSecurityLogParams {
 
   userAgent?: string;
 
-  metadata?: Record<
-    string,
-    any
-  >;
+  metadata?: SecurityLogMetadata;
 
 }
 
@@ -54,7 +65,7 @@ export async function createSecurityLog({
 
     // 🔥 Populate user
     const populatedLog =
-      await SecurityLog.findById(
+      (await SecurityLog.findById(
         log._id
       )
 
@@ -63,40 +74,64 @@ export async function createSecurityLog({
           "username email role avatar"
         )
 
-        .lean();
+        .lean()) as SecurityLogRealtimePayload | null;
+
+    let realtimeLog =
+      populatedLog;
+
+    if (
+      populatedLog?.metadata?.evidenceKey
+    ) {
+      try {
+        realtimeLog = {
+          ...populatedLog,
+          signedEvidenceUrl:
+            await getSignedFileUrl(
+              populatedLog.metadata.evidenceKey
+            ),
+        };
+      } catch (error) {
+        console.error(
+          "SECURITY LOG SIGNED EVIDENCE ERROR:",
+          error
+        );
+      }
+    }
 
     // 🔥 Emit realtime event
-    await fetch(
+    const socketServerUrl =
+      process.env.SOCKET_SERVER_URL ||
+      process.env.NEXT_PUBLIC_SOCKET_URL;
 
-      `${process.env.SOCKET_SERVER_URL}/emit`,
-
-      {
-
-        method: "POST",
-
-        headers: {
-
-          "Content-Type":
-            "application/json",
-
-        },
-
-        body: JSON.stringify({
-
-          event:
-            "admin_security_log_created",
-
-          data:
-            populatedLog,
-
-          channelId:
-            "admin_global",
-
-        }),
-
+    if (socketServerUrl) {
+      try {
+        await fetch(
+          `${socketServerUrl}/emit`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              event:
+                "admin_security_log_created",
+              data:
+                realtimeLog,
+              channelId:
+                "admin_global",
+            }),
+          }
+        );
+      } catch (error) {
+        console.error(
+          "SECURITY LOG REALTIME EMIT ERROR:",
+          error
+        );
       }
+    }
 
-    );
+    return realtimeLog;
 
   } catch (error) {
 

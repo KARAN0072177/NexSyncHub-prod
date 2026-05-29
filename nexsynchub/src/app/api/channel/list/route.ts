@@ -3,9 +3,6 @@ import { connectDB } from "@/lib/db";
 import Channel from "@/models/Channel";
 import Membership from "@/models/Membership";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
 import { getWorkspaceActivityChannel } from "@/lib/workspace-activity";
