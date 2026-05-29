@@ -153,6 +153,7 @@ export async function POST(req: Request) {
                     },
                 },
                 $set: {
+                    hasUnreadAdminReply: true,
                     ...(ticket.status === "open"
                         ? {
                             status:

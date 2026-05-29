@@ -177,6 +177,12 @@ const SupportTicketSchema =
 
             },
 
+            // 🔥 Unread Status
+            hasUnreadAdminReply: {
+                type: Boolean,
+                default: false,
+            },
+
             // 🔥 Admin who handled it
             adminFollowUps: [
 
