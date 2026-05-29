@@ -3,13 +3,6 @@
 import { NextResponse }
     from "next/server";
 
-import { getServerSession }
-    from "next-auth";
-
-import {
-    authOptions,
-} from "@/lib/auth-options";
-
 import { requireAuth } from "@/lib/auth-guard";
 
 import {
@@ -26,6 +19,94 @@ import SupportTicket
 import { resend }
     from "@/lib/resend";
 import { handleApiError } from "@/lib/api-error";
+
+function escapeHtml(value: string) {
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function formatInlineSupportText(value: string) {
+    return escapeHtml(value)
+        .replace(
+            /\*\*(.+?)\*\*/g,
+            "<strong>$1</strong>"
+        );
+}
+
+function formatSupportMessage(value: string) {
+    const normalized =
+        value
+            .trim()
+            .replace(/\r\n/g, "\n")
+            .replace(/\s+\*\*([^*]+):\*\*/g, "\n\n**$1:**")
+            .replace(/\s+(\d+\.\s+)/g, "\n$1")
+            .replace(/\s+-\s+/g, "\n- ");
+
+    return normalized
+        .split(/\n{2,}/)
+        .map((block) => {
+            const lines =
+                block
+                    .split("\n")
+                    .map((line) => line.trim())
+                    .filter(Boolean);
+
+            if (!lines.length) {
+                return "";
+            }
+
+            if (
+                lines.every((line) =>
+                    /^\d+\.\s+/.test(line)
+                )
+            ) {
+                return `
+                    <ol style="margin:10px 0 0 22px;padding:0;color:#374151;">
+                        ${lines
+                            .map((line) => `
+                                <li style="margin:0 0 8px;line-height:1.7;">
+                                    ${formatInlineSupportText(
+                                        line.replace(/^\d+\.\s+/, "")
+                                    )}
+                                </li>
+                            `)
+                            .join("")}
+                    </ol>
+                `;
+            }
+
+            if (
+                lines.every((line) =>
+                    /^-\s+/.test(line)
+                )
+            ) {
+                return `
+                    <ul style="margin:10px 0 0 22px;padding:0;color:#374151;">
+                        ${lines
+                            .map((line) => `
+                                <li style="margin:0 0 8px;line-height:1.7;">
+                                    ${formatInlineSupportText(
+                                        line.replace(/^-\s+/, "")
+                                    )}
+                                </li>
+                            `)
+                            .join("")}
+                    </ul>
+                `;
+            }
+
+            return `
+                <p style="margin:0 0 14px;line-height:1.75;color:#374151;">
+                    ${formatInlineSupportText(lines.join("\n")).replace(/\n/g, "<br />")}
+                </p>
+            `;
+        })
+        .join("");
+}
 
 export async function PATCH(
     req: Request
@@ -270,40 +351,49 @@ export async function PATCH(
                         "Your support request has been resolved",
 
                     html: `
+            <div style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;color:#111827;">
+              <div style="max-width:680px;margin:0 auto;padding:32px 20px;">
+                <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,0.08);">
+                  <div style="padding:26px 30px;border-bottom:1px solid #eef2f7;background:linear-gradient(135deg,#f8fbff 0%,#ffffff 70%);">
+                    <p style="margin:0 0 10px;color:#6C63FF;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
+                      NexSyncHub Support
+                    </p>
+                    <h1 style="margin:0;color:#111827;font-size:24px;line-height:1.35;">
+                      Support request resolved
+                    </h1>
+                    <p style="margin:10px 0 0;color:#4b5563;font-size:15px;line-height:1.7;">
+                      Your support request has been marked as resolved.
+                    </p>
+                  </div>
 
-            <div style="font-family: Arial, sans-serif; padding: 24px;">
+                  <div style="padding:26px 30px;">
+                    <div style="margin:0 0 22px;padding:14px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;">
+                      <p style="margin:0;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">
+                        Ticket subject
+                      </p>
+                      <p style="margin:6px 0 0;color:#111827;font-size:15px;line-height:1.6;">
+                        ${escapeHtml(existingTicket.subject)}
+                      </p>
+                    </div>
 
-              <h2>
-                Support Request Resolved
-              </h2>
+                    ${resolutionMessage ? `
+                      <div style="margin-top:16px;padding:20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;">
+                        <p style="margin:0 0 14px;color:#111827;font-size:15px;font-weight:700;">
+                          Resolution message
+                        </p>
+                        <div style="font-size:15px;">
+                          ${formatSupportMessage(resolutionMessage)}
+                        </div>
+                      </div>
+                    ` : ""}
 
-              <p>
-                Your support request has been marked as resolved.
-              </p>
-
-              <p>
-                <strong>Subject:</strong>
-                ${existingTicket.subject}
-              </p>
-
-              ${resolutionMessage ? `
-
-                <div style="margin-top:16px;padding:16px;background:#f5f5f5;border-radius:8px;">
-
-                  <strong>
-                    Resolution Message:
-                  </strong>
-
-                  <p style="margin-top:8px;">
-                    ${resolutionMessage}
-                  </p>
-
+                    <p style="margin:22px 0 0;color:#6b7280;font-size:13px;line-height:1.7;">
+                      If you still need help, you can reply from your ticket page in NexSyncHub.
+                    </p>
+                  </div>
                 </div>
-
-              ` : ""}
-
+              </div>
             </div>
-
           `,
 
                 });

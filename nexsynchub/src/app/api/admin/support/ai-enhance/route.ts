@@ -1,15 +1,8 @@
 import { NextResponse }
   from "next/server";
 
-import { getServerSession }
-  from "next-auth";
-
 import OpenAI
   from "openai";
-
-import {
-  authOptions,
-} from "@/lib/auth-options";
 
 import {
   requireAdmin,
@@ -81,6 +74,23 @@ Requirements:
 - clear
 - internal-use tone
 - do not exaggerate
+
+`
+
+        : type === "follow_up"
+
+          ? `
+
+Rewrite this customer-facing request for additional information professionally.
+
+Requirements:
+- empathetic
+- specific
+- concise
+- ask clear questions or request clear next details
+- customer-friendly
+- do not invent facts
+- do not say the issue is resolved
 
 `
 

@@ -27,6 +27,19 @@ import {
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
 
+type SupportAttachment = {
+  filename?: string;
+  key?: string;
+  url?: string;
+  size?: number;
+  mimeType?: string;
+};
+
+type SupportTicketRecord = {
+  attachments?: SupportAttachment[];
+  [key: string]: unknown;
+};
+
 export async function GET() {
 
   try {
@@ -73,8 +86,8 @@ export async function GET() {
     const tickets =
       await Promise.all(
 
-        rawTickets.map(
-          async (ticket: any) => {
+        (rawTickets as SupportTicketRecord[]).map(
+          async (ticket) => {
 
             const attachments =
               await Promise.all(
@@ -83,7 +96,7 @@ export async function GET() {
                   ticket.attachments || []
                 ).map(
                   async (
-                    file: any
+                    file: SupportAttachment
                   ) => {
 
                     // ✅ Old public URLs

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Building2, Plus, Users, Copy, Loader2, ArrowRight,
-  Sparkles, Hash, CheckCircle2, XCircle, Bell,
+  LifeBuoy, Sparkles, Hash, CheckCircle2, XCircle, Bell,
   Activity, Zap, ChevronRight, RefreshCw, Crown, ShieldAlert,
   Shield, User, TrendingUp,
 } from "lucide-react";
@@ -481,9 +481,10 @@ export default function DashboardPage() {
               onClick={() => setInviteModalOpen(true)}
             />
             <QuickActionCard
-              icon={Sparkles} label="AI Insights" desc="Review smart workspace insights."
+              icon={LifeBuoy} label="Your Tickets" desc="Track support requests and reply to follow-ups."
               color={T.emerald} lo={T.emeraldLo} md={T.emeraldMd}
               gradient={`linear-gradient(135deg,${T.emerald},#059669)`}
+              onClick={() => router.push("/dashboard/tickets")}
             />
           </div>
         </motion.div>

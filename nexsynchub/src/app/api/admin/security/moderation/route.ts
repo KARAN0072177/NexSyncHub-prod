@@ -3,12 +3,6 @@
 import { NextResponse }
   from "next/server";
 
-import { getServerSession }
-  from "next-auth";
-
-import { authOptions }
-  from "@/lib/auth-options";
-
 import { requireAuth } from "@/lib/auth-guard";
 
 import { connectDB }
@@ -21,6 +15,20 @@ import {
   requireAdmin,
 } from "@/lib/permissions";
 import { handleApiError } from "@/lib/api-error";
+import {
+  getSignedFileUrl,
+} from "@/lib/s3";
+
+type ModerationLogMetadata = {
+  evidenceKey?: string;
+  evidenceUrl?: string;
+  [key: string]: unknown;
+};
+
+type ModerationLog = {
+  metadata?: ModerationLogMetadata;
+  [key: string]: unknown;
+};
 
 export async function GET() {
 
@@ -78,11 +86,50 @@ export async function GET() {
 
         .lean();
 
+    const logsWithEvidence =
+      await Promise.all(
+        (logs as ModerationLog[]).map(
+          async (log) => {
+            if (!log.metadata?.evidenceKey) {
+              return {
+                ...log,
+                signedEvidenceUrl:
+                  log.metadata?.evidenceUrl ||
+                  null,
+              };
+            }
+
+            try {
+              return {
+                ...log,
+                signedEvidenceUrl:
+                  await getSignedFileUrl(
+                    log.metadata.evidenceKey
+                  ),
+              };
+            } catch (error) {
+              console.error(
+                "MODERATION SIGNED EVIDENCE ERROR:",
+                error
+              );
+
+              return {
+                ...log,
+                signedEvidenceUrl:
+                  log.metadata.evidenceUrl ||
+                  null,
+              };
+            }
+          }
+        )
+      );
+
     return NextResponse.json({
 
       success: true,
 
-      logs,
+      logs:
+        logsWithEvidence,
 
     });
 

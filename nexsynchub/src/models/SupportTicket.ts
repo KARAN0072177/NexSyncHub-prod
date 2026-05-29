@@ -1,5 +1,4 @@
-import mongoose,
-{
+import {
     Schema,
     model,
     models,
@@ -179,6 +178,84 @@ const SupportTicketSchema =
             },
 
             // 🔥 Admin who handled it
+            adminFollowUps: [
+
+                {
+
+                    message: {
+
+                        type:
+                            String,
+
+                        required:
+                            true,
+
+                        trim:
+                            true,
+
+                        maxlength:
+                            5000,
+
+                    },
+
+                    sentAt: {
+
+                        type:
+                            Date,
+
+                        default:
+                            Date.now,
+
+                    },
+
+                    sentBy: {
+
+                        type:
+                            Schema.Types.ObjectId,
+
+                        ref:
+                            "User",
+
+                    },
+
+                },
+
+            ],
+
+            userReplies: [
+
+                {
+
+                    message: {
+
+                        type:
+                            String,
+
+                        required:
+                            true,
+
+                        trim:
+                            true,
+
+                        maxlength:
+                            5000,
+
+                    },
+
+                    sentAt: {
+
+                        type:
+                            Date,
+
+                        default:
+                            Date.now,
+
+                    },
+
+                },
+
+            ],
+
             handledBy: {
 
                 type:

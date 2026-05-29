@@ -434,7 +434,7 @@ export default function DashboardNavbar() {
           {/* ── LEFT: Logo + Nav ── */}
           <div className="flex items-center gap-6">
             {/* Logo */}
-            <Link href="/dashboard" className="flex items-center gap-2.5 group">
+            <Link href="/" className="flex items-center gap-2.5 group">
               <motion.div
                 whileHover={{ scale: 1.06, rotate: -5 }}
                 whileTap={{ scale: 0.94 }}

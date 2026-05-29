@@ -6,7 +6,7 @@ import { socket } from "@/lib/socket";
 import {
   LifeBuoy, Search, Loader2, MessageSquareWarning,
   Clock3, CheckCircle2, AlertTriangle, Inbox,
-  X, Paperclip, FileText, ExternalLink, ChevronDown,
+  X, Paperclip, FileText, ExternalLink,
   RefreshCw, User, Calendar, Tag, StickyNote,
   SendHorizonal, ShieldCheck,
 } from "lucide-react";
@@ -38,13 +38,32 @@ const T = {
   muted: "#8A8F9E",
 };
 
+type SupportAttachment = {
+  filename?: string;
+  key?: string;
+  url?: string;
+  size?: number;
+  mimeType?: string;
+};
+
 type Ticket = {
   _id: string; category: string; subject: string;
   message: string; status: string; priority: string;
-  attachments: any[]; createdAt: string;
+  attachments: SupportAttachment[]; createdAt: string;
   user?: { username?: string; email?: string; avatar?: string; role?: string };
   adminNotes?: string; handledBy?: { username?: string; email?: string };
   resolutionMessage?: string;
+  adminFollowUps?: {
+    _id?: string;
+    message: string;
+    sentAt: string;
+    sentBy?: { username?: string; email?: string; avatar?: string };
+  }[];
+  userReplies?: {
+    _id?: string;
+    message: string;
+    sentAt: string;
+  }[];
 };
 
 /* ─── status config ──────────────────────────────────────────────────────── */
@@ -106,18 +125,24 @@ function UserAvatar({ user, size = 9 }: { user?: Ticket["user"]; size?: number }
 }
 
 /* ─── StyledTextarea ─────────────────────────────────────────────────────── */
-function StyledTextarea({ value, onChange, placeholder, rows = 5, accentColor = T.accent, accentLo = T.accentLo, accentMd = T.accentMd }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
+function StyledTextarea({ value, onChange, placeholder, rows = 5, disabled = false, accentLo = T.accentLo, accentMd = T.accentMd }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; rows?: number; disabled?: boolean;
   accentColor?: string; accentLo?: string; accentMd?: string;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <div className="rounded-2xl transition-all duration-300"
-      style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${focused ? accentMd : T.border}`, boxShadow: focused ? `0 0 0 3px ${accentLo}` : "none" }}>
+      style={{
+        background: disabled ? "rgba(255,255,255,0.018)" : "rgba(255,255,255,0.03)",
+        border: `1px solid ${focused && !disabled ? accentMd : T.border}`,
+        boxShadow: focused && !disabled ? `0 0 0 3px ${accentLo}` : "none",
+        opacity: disabled ? 0.62 : 1,
+      }}>
       <textarea rows={rows} value={value}
+        disabled={disabled}
         onChange={e => onChange(e.target.value)} placeholder={placeholder}
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        className="w-full bg-transparent px-5 py-4 text-sm outline-none resize-none"
+        className="w-full bg-transparent px-5 py-4 text-sm outline-none resize-none disabled:cursor-not-allowed"
         style={{ color: T.text, fontFamily: "'DM Sans',sans-serif" }} />
     </div>
   );
@@ -145,14 +170,17 @@ function SkeletonCard({ idx }: { idx: number }) {
 }
 
 /* ─── TICKET MODAL ───────────────────────────────────────────────────────── */
-function TicketModal({ ticket, onClose, onSave }: {
+function TicketModal({ ticket, onClose, onSave, onSendFollowUp }: {
   ticket: Ticket; onClose: () => void;
   onSave: (ticketId: string, status: string, adminNotes: string, resolutionMessage: string) => Promise<void>;
+  onSendFollowUp: (ticketId: string, message: string) => Promise<Ticket | null>;
 }) {
   const [adminNotes, setAdminNotes] = useState(ticket.adminNotes ?? "");
   const [resolutionMessage, setResolutionMessage] = useState(ticket.resolutionMessage ?? "");
   const [status, setStatus] = useState(ticket.status);
   const [saving, setSaving] = useState(false);
+  const [followUpMessage, setFollowUpMessage] = useState("");
+  const [sendingFollowUp, setSendingFollowUp] = useState(false);
 
   const [
 
@@ -186,11 +214,21 @@ function TicketModal({ ticket, onClose, onSave }: {
 
   ] = useState(false);
 
+  const [
+
+    enhancingFollowUp,
+
+    setEnhancingFollowUp,
+
+  ] = useState(false);
+
   const cfg = getStatusCfg(status);
-  const priCfg = getPriorityCfg(ticket.priority);
+  const isResolvedLocked =
+    ticket.status === "resolved";
 
   const generateAISummary =
     async () => {
+      if (isResolvedLocked) return;
 
       try {
 
@@ -274,16 +312,19 @@ function TicketModal({ ticket, onClose, onSave }: {
         "notes"
         |
         "resolution"
+        |
+        "follow_up"
     ) => {
+      if (isResolvedLocked) return;
 
       try {
 
         const targetText =
           type === "notes"
-
             ? adminNotes
-
-            : resolutionMessage;
+            : type === "follow_up"
+              ? followUpMessage
+              : resolutionMessage;
 
         if (
           !targetText.trim()
@@ -302,6 +343,14 @@ function TicketModal({ ticket, onClose, onSave }: {
         ) {
 
           setEnhancingNotes(
+            true
+          );
+
+        } else if (
+          type === "follow_up"
+        ) {
+
+          setEnhancingFollowUp(
             true
           );
 
@@ -366,6 +415,14 @@ function TicketModal({ ticket, onClose, onSave }: {
             data.enhancedText
           );
 
+        } else if (
+          type === "follow_up"
+        ) {
+
+          setFollowUpMessage(
+            data.enhancedText
+          );
+
         } else {
 
           setResolutionMessage(
@@ -392,11 +449,43 @@ function TicketModal({ ticket, onClose, onSave }: {
           false
         );
 
+        setEnhancingFollowUp(
+          false
+        );
+
       }
 
     };
 
+  const handleSendFollowUp = async () => {
+    if (isResolvedLocked) return;
+
+    if (!followUpMessage.trim()) {
+      alert("Please write a question or information request first.");
+      return;
+    }
+
+    setSendingFollowUp(true);
+
+    try {
+      const updatedTicket =
+        await onSendFollowUp(
+          ticket._id,
+          followUpMessage
+        );
+
+      if (updatedTicket) {
+        setFollowUpMessage("");
+        setStatus(updatedTicket.status);
+      }
+    } finally {
+      setSendingFollowUp(false);
+    }
+  };
+
   const handleSave = async () => {
+    if (isResolvedLocked) return;
+
     setSaving(true);
     await onSave(ticket._id, status, adminNotes, resolutionMessage);
     setSaving(false);
@@ -458,6 +547,55 @@ function TicketModal({ ticket, onClose, onSave }: {
         {/* SCROLLABLE BODY */}
         <div className="relative z-10 overflow-y-auto flex-1 p-6 sm:p-8 space-y-7">
 
+          {isResolvedLocked && (
+            <div
+              className="flex items-start gap-3 p-4 rounded-2xl"
+              style={{
+                background:
+                  T.emeraldLo,
+                border:
+                  `1px solid ${T.emeraldMd}`,
+              }}
+            >
+              <div
+                className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
+                style={{
+                  background:
+                    "rgba(16,185,129,0.16)",
+                  border:
+                    `1px solid ${T.emeraldMd}`,
+                }}
+              >
+                <CheckCircle2
+                  size={16}
+                  style={{
+                    color: T.emerald,
+                  }}
+                />
+              </div>
+              <div>
+                <p
+                  className="text-sm font-bold"
+                  style={{
+                    color: T.text,
+                    fontFamily:
+                      "'Sora',sans-serif",
+                  }}
+                >
+                  Case resolved
+                </p>
+                <p
+                  className="text-sm leading-6 mt-1"
+                  style={{
+                    color: T.muted,
+                  }}
+                >
+                  This support ticket is locked because it has already been resolved. Admin edits, status changes, follow-up emails, and AI enhancement actions are disabled to preserve the final case record.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* USER MESSAGE */}
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -515,9 +653,9 @@ function TicketModal({ ticket, onClose, onSave }: {
 
                 onClick={generateAISummary}
 
-                disabled={aiSummaryLoading}
+                disabled={aiSummaryLoading || isResolvedLocked}
 
-                className="px-4 py-2 rounded-2xl text-xs font-semibold transition-all"
+                className="px-4 py-2 rounded-2xl text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 
                 style={{
 
@@ -584,7 +722,7 @@ function TicketModal({ ticket, onClose, onSave }: {
                 </h3>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
-                {ticket.attachments.map((file: any, i: number) => (
+                {ticket.attachments.map((file, i) => (
                   <a key={i} href={file.url} target="_blank" rel="noopener noreferrer"
                     className="group flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-200"
                     style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}
@@ -619,6 +757,121 @@ function TicketModal({ ticket, onClose, onSave }: {
             </div>
           )}
 
+          {/* FOLLOW-UP REQUEST */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: T.goldLo, border: `1px solid ${T.goldMd}` }}>
+                <SendHorizonal size={12} style={{ color: T.gold }} />
+              </div>
+              <h3 className="text-sm font-bold text-white" style={{ fontFamily: "'Sora',sans-serif" }}>
+                Request More Information
+              </h3>
+              <button
+                onClick={() =>
+                  enhanceAdminText(
+                    "follow_up"
+                  )
+                }
+                disabled={enhancingFollowUp || isResolvedLocked}
+                className="px-4 py-2 rounded-2xl text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background:
+                    T.goldLo,
+                  border:
+                    `1px solid ${T.goldMd}`,
+                  color:
+                    T.gold,
+                }}
+              >
+                {enhancingFollowUp
+                  ? "Enhancing..."
+                  : "✨ Enhance Request"}
+              </button>
+              <span className="text-xs ml-1" style={{ color: T.muted }}>
+                (emailed to user)
+              </span>
+            </div>
+
+            {ticket.adminFollowUps?.length ? (
+              <div className="space-y-2 mb-3">
+                {ticket.adminFollowUps.map((followUp, index) => (
+                  <div
+                    key={followUp._id || `${followUp.sentAt}-${index}`}
+                    className="px-4 py-3 rounded-2xl"
+                    style={{ background: "rgba(245,158,11,0.06)", border: `1px solid ${T.goldMd}` }}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <p className="text-xs font-semibold" style={{ color: T.gold }}>
+                        Sent request
+                      </p>
+                      <p className="text-xs" style={{ color: T.muted }}>
+                        {formatDistanceToNow(new Date(followUp.sentAt), { addSuffix: true })}
+                      </p>
+                    </div>
+                    <p className="text-sm leading-7 whitespace-pre-wrap" style={{ color: T.text }}>
+                      {followUp.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {ticket.userReplies?.length ? (
+              <div className="space-y-2 mb-3">
+                {ticket.userReplies.map((userReply, index) => (
+                  <div
+                    key={userReply._id || `${userReply.sentAt}-${index}`}
+                    className="px-4 py-3 rounded-2xl"
+                    style={{ background: T.accentLo, border: `1px solid ${T.accentMd}` }}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <p className="text-xs font-semibold" style={{ color: T.accent }}>
+                        User replied
+                      </p>
+                      <p className="text-xs" style={{ color: T.muted }}>
+                        {formatDistanceToNow(new Date(userReply.sentAt), { addSuffix: true })}
+                      </p>
+                    </div>
+                    <p className="text-sm leading-7 whitespace-pre-wrap" style={{ color: T.text }}>
+                      {userReply.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <StyledTextarea
+              value={followUpMessage}
+              onChange={setFollowUpMessage}
+              placeholder="Ask the user for screenshots, steps to reproduce, workspace name, browser details, or any missing context..."
+              rows={4}
+              disabled={isResolvedLocked}
+              accentColor={T.gold}
+              accentLo={T.goldLo}
+              accentMd={T.goldMd}
+            />
+
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={handleSendFollowUp}
+                disabled={isResolvedLocked || sendingFollowUp || !followUpMessage.trim() || !ticket.user?.email}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background:
+                    T.goldLo,
+                  border:
+                    `1px solid ${T.goldMd}`,
+                  color:
+                    T.gold,
+                }}
+              >
+                {sendingFollowUp
+                  ? <><Loader2 size={14} className="animate-spin" /> Sending...</>
+                  : <><SendHorizonal size={14} /> Send Email</>}
+              </button>
+            </div>
+          </div>
+
           {/* STATUS SELECTOR */}
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -634,7 +887,8 @@ function TicketModal({ ticket, onClose, onSave }: {
                 const active = status === s;
                 return (
                   <button key={s} onClick={() => setStatus(s)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-200"
+                    disabled={isResolvedLocked}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-55"
                     style={{
                       background: active ? c.lo : "rgba(255,255,255,0.03)",
                       border: `1px solid ${active ? c.md : T.border}`,
@@ -682,9 +936,9 @@ function TicketModal({ ticket, onClose, onSave }: {
                     )
                   }
 
-                  disabled={enhancingNotes}
+                  disabled={enhancingNotes || isResolvedLocked}
 
-                  className="px-4 py-2 rounded-2xl text-xs font-semibold transition-all"
+                  className="px-4 py-2 rounded-2xl text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 
                   style={{
 
@@ -713,7 +967,7 @@ function TicketModal({ ticket, onClose, onSave }: {
             </div>
             <StyledTextarea value={adminNotes} onChange={setAdminNotes}
               placeholder="Internal notes about this ticket..."
-              rows={5} accentColor={T.violet} accentLo={T.violetLo} accentMd={T.violetMd} />
+              rows={5} disabled={isResolvedLocked} accentColor={T.violet} accentLo={T.violetLo} accentMd={T.violetMd} />
           </div>
 
           {/* RESOLUTION MESSAGE */}
@@ -732,10 +986,11 @@ function TicketModal({ ticket, onClose, onSave }: {
                 }
 
                 disabled={
-                  enhancingResolution
+                  enhancingResolution ||
+                  isResolvedLocked
                 }
 
-                className="px-4 py-2 rounded-2xl text-xs font-semibold transition-all"
+                className="px-4 py-2 rounded-2xl text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 
                 style={{
 
@@ -762,7 +1017,7 @@ function TicketModal({ ticket, onClose, onSave }: {
             </div>
             <StyledTextarea value={resolutionMessage} onChange={setResolutionMessage}
               placeholder="Explain how this was resolved or what the user should do..."
-              rows={5} accentColor={T.emerald} accentLo={T.emeraldLo} accentMd={T.emeraldMd} />
+              rows={5} disabled={isResolvedLocked} accentColor={T.emerald} accentLo={T.emeraldLo} accentMd={T.emeraldMd} />
           </div>
         </div>
 
@@ -774,10 +1029,10 @@ function TicketModal({ ticket, onClose, onSave }: {
             style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${T.border}`, color: T.muted, fontFamily: "'DM Sans',sans-serif" }}>
             Cancel
           </button>
-          <button onClick={handleSave} disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold text-white transition-all active:scale-95 disabled:opacity-60"
+          <button onClick={handleSave} disabled={saving || isResolvedLocked}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold text-white transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ background: `linear-gradient(135deg,${T.accent},${T.violet})`, boxShadow: "0 4px 20px rgba(61,123,255,0.35)", fontFamily: "'DM Sans',sans-serif" }}>
-            {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><CheckCircle2 size={14} /> Save Changes</>}
+            {saving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><CheckCircle2 size={14} /> {isResolvedLocked ? "Resolved" : "Save Changes"}</>}
           </button>
         </div>
       </motion.div>
@@ -931,6 +1186,52 @@ export default function AdminSupportPage() {
       setTickets(prev => prev.map(t => t._id === ticketId ? data.ticket : t));
       setSelectedTicket(null);
     }
+  };
+
+  const handleSendFollowUp = async (
+    ticketId: string,
+    message: string
+  ) => {
+    const res = await fetch(
+      "/api/admin/support/follow-up",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          ticketId,
+          message,
+        }),
+      }
+    );
+
+    const data =
+      await res.json();
+
+    if (!res.ok) {
+      alert(
+        data.error ||
+        "Unable to send follow-up email."
+      );
+
+      return null;
+    }
+
+    setTickets((prev) =>
+      prev.map((ticket) =>
+        ticket._id === ticketId
+          ? data.ticket
+          : ticket
+      )
+    );
+
+    setSelectedTicket(
+      data.ticket
+    );
+
+    return data.ticket as Ticket;
   };
 
   return (
@@ -1098,6 +1399,7 @@ export default function AdminSupportPage() {
             ticket={selectedTicket}
             onClose={() => setSelectedTicket(null)}
             onSave={handleSave}
+            onSendFollowUp={handleSendFollowUp}
           />
         )}
       </AnimatePresence>

@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import {
-  ShieldAlert, AlertTriangle, Activity,
+  ShieldAlert, AlertTriangle,
   Search, X, RefreshCw, FileImage,
   Eye, User, Zap, Shield, ChevronLeft, ChevronRight, Download
 } from "lucide-react";
@@ -36,17 +36,87 @@ const T = {
 interface ModerationLog {
   _id: string;
   action: string;
+  signedEvidenceUrl?: string;
   createdAt: string;
   metadata?: {
     filename?: string;
     mimeType?: string;
+    contentType?: string;
     size?: number;
-    moderationLabels?: { name: string; confidence: number }[];
+    evidenceUrl?: string;
+    evidenceKey?: string;
+    moderationLabels?: { name: string; confidence: number; parentName?: string }[];
     workspaceName?: string;
     moderationReason?: string;
     aiTriggered?: boolean;
   };
   user?: { username?: string; email?: string; avatar?: string; role?: string };
+}
+
+const MODERATION_ACTIONS = [
+  "unsafe_avatar_upload",
+  "unsafe_workspace_name",
+  "unsafe_workspace_avatar_upload",
+  "unsafe_support_attachment",
+  "unsafe_chat_attachment",
+] as const;
+
+function isModerationLog(value: unknown): value is ModerationLog {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "_id" in value &&
+    "action" in value &&
+    typeof (value as { _id?: unknown })._id === "string" &&
+    typeof (value as { action?: unknown }).action === "string" &&
+    MODERATION_ACTIONS.includes(
+      (value as { action: string }).action as typeof MODERATION_ACTIONS[number]
+    )
+  );
+}
+
+function normalizeModerationLog(log: ModerationLog): ModerationLog {
+  const metadata = log.metadata ?? {};
+  const moderationLabels =
+    metadata.moderationLabels?.map((label) => ({
+      name: label.name,
+      confidence: label.confidence ?? 0,
+      parentName: label.parentName,
+    })) ?? [];
+
+  return {
+    ...log,
+    signedEvidenceUrl:
+      log.signedEvidenceUrl ||
+      metadata.evidenceUrl,
+    metadata: {
+      ...metadata,
+      mimeType:
+        metadata.mimeType ||
+        metadata.contentType,
+      moderationLabels,
+    },
+  };
+}
+
+function mergeUniqueLogs(
+  incomingLogs: ModerationLog[],
+  existingLogs: ModerationLog[] = []
+) {
+  const byId = new Map<string, ModerationLog>();
+
+  [...incomingLogs, ...existingLogs].forEach((log) => {
+    byId.set(
+      log._id,
+      normalizeModerationLog(log)
+    );
+  });
+
+  return Array.from(byId.values()).sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() -
+      new Date(a.createdAt).getTime()
+  );
 }
 
 /* ─── confidence → severity colour ──────────────────────────────────────── */
@@ -160,7 +230,15 @@ export default function ModerationPage() {
       try {
         const res = await fetch("/api/admin/security/moderation");
         const data = await res.json();
-        if (res.ok) setLogs(data.logs);
+        if (res.ok) {
+          setLogs(
+            mergeUniqueLogs(
+              Array.isArray(data.logs)
+                ? data.logs.filter(isModerationLog)
+                : []
+            )
+          );
+        }
       } catch (err) { console.error("MODERATION FETCH ERROR:", err); }
       finally { setLoading(false); }
     };
@@ -169,36 +247,44 @@ export default function ModerationPage() {
 
   useEffect(() => {
     socket.emit("join_admin_global");
-    socket.on("admin_security_log_created", (newLog) => {
 
-      if (
-        !newLog
-        ||
-        typeof newLog !== "object"
-        ||
-        !("action" in newLog)
-      ) return;
+    const handleModerationLog = (newLog: unknown) => {
+      if (!isModerationLog(newLog)) return;
 
-      if (
-        newLog.action !== "unsafe_avatar_upload"
-        &&
-        newLog.action !== "unsafe_workspace_name"
-        &&
-        newLog.action !==
-        "unsafe_workspace_avatar_upload"
-        &&
-        newLog.action !==
-        "unsafe_support_attachment"
-        &&
-        newLog.action !==
-        "unsafe_chat_attachment"
-      ) return;
+      setLogs((prev) => {
+        const exists = prev.some(
+          (log) => log._id === newLog._id
+        );
 
-      setLogs(prev => [newLog, ...prev]);
+        if (exists) {
+          return mergeUniqueLogs(
+            [newLog],
+            prev
+          );
+        }
 
-      setLiveCount(c => c + 1);
-    });
-    return () => { socket.off("admin_security_log_created"); };
+        setLiveCount((c) => c + 1);
+
+        return mergeUniqueLogs(
+          [newLog],
+          prev
+        );
+      });
+
+      setCurrentPage(1);
+    };
+
+    socket.on(
+      "admin_security_log_created",
+      handleModerationLog
+    );
+
+    return () => {
+      socket.off(
+        "admin_security_log_created",
+        handleModerationLog
+      );
+    };
   }, []);
 
   // Reset page when filtering changes
@@ -207,7 +293,17 @@ export default function ModerationPage() {
   }, [search, itemsPerPage]);
 
   const toggleExpand = (id: string) =>
-    setExpanded(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+    setExpanded((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
+      return next;
+    });
 
   const filtered = logs.filter(l => {
     const q = search.toLowerCase();
@@ -565,6 +661,9 @@ export default function ModerationPage() {
                 const topSev = topLabel ? severityColor(topLabel.confidence) : null;
                 const name = log.user?.username || log.user?.email || "Unknown User";
                 const previewLabels = isExpanded ? labels : labels.slice(0, 3);
+                const evidenceUrl =
+                  log.signedEvidenceUrl ||
+                  log.metadata?.evidenceUrl;
 
                 return (
                   <motion.div
@@ -738,10 +837,23 @@ export default function ModerationPage() {
                         {(log.metadata?.filename || log.metadata?.mimeType || log.metadata?.size) && (
                           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-5"
                             style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                              style={{ background: T.roseLo, border: `1px solid ${T.roseMd}` }}>
-                              <FileImage size={14} style={{ color: T.rose }} />
-                            </div>
+                            {evidenceUrl ? (
+                              <div
+                                className="w-12 h-12 rounded-2xl overflow-hidden shrink-0"
+                                style={{ border: `1px solid ${T.roseMd}` }}
+                              >
+                                <img
+                                  src={evidenceUrl}
+                                  alt=""
+                                  className="w-full h-full object-cover blur-[8px] scale-110"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                                style={{ background: T.roseLo, border: `1px solid ${T.roseMd}` }}>
+                                <FileImage size={14} style={{ color: T.rose }} />
+                              </div>
+                            )}
                             <div className="min-w-0">
                               <p className="text-sm font-medium truncate" style={{ color: T.text }}>
                                 {log.metadata?.filename ?? "Unknown file"}
