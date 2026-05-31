@@ -456,8 +456,9 @@ export async function PATCH(
         }
 
         // 🔥 Emit realtime ticket update
+        const socketUrl = process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
         await fetch(
-            "http://localhost:4000/emit",
+            `${socketUrl}/emit`,
             {
 
                 method: "POST",
@@ -483,6 +484,22 @@ export async function PATCH(
 
                     }),
 
+            }
+        );
+        
+        // Emit to specific user
+        await fetch(
+            `${socketUrl}/emit`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    channelId: ticket?.user?._id?.toString() || ticket?.user?.toString(),
+                    event: "support_ticket_updated",
+                    data: ticket,
+                }),
             }
         );
 

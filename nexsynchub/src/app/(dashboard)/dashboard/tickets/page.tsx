@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   AlertTriangle, CheckCircle2, Clock3, ExternalLink,
@@ -10,6 +10,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { socket } from "@/lib/socket";
 
 const T = {
   bg: "#03060F",
@@ -51,6 +53,7 @@ type TicketMessage = {
 
 type Ticket = {
   _id: string;
+  user?: string | { _id?: string };
   category: string;
   subject: string;
   message: string;
@@ -283,12 +286,44 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [isLive, setIsLive] = useState(socket.connected);
+  const [lastLiveUpdate, setLastLiveUpdate] = useState<string | null>(null);
+  const [updatedTicketIds, setUpdatedTicketIds] = useState<Set<string>>(new Set());
 
   const selectedTicket =
     tickets.find((ticket) => ticket._id === selectedId) ??
     (tickets.length > 0 ? tickets[0] : null);
 
-  const fetchTickets = async () => {
+  const { data: session } = useSession();
+
+  const mergeTicketUpdate = (
+    currentTicket: Ticket,
+    updatedTicket: Ticket
+  ): Ticket => ({
+    ...currentTicket,
+    ...updatedTicket,
+    attachments:
+      updatedTicket.attachments?.some((file) => file.url)
+        ? updatedTicket.attachments
+        : currentTicket.attachments,
+  });
+
+  const sortTickets = (items: Ticket[]) =>
+    [...items].sort(
+      (a, b) =>
+        new Date(b.updatedAt ?? b.createdAt).getTime() -
+        new Date(a.updatedAt ?? a.createdAt).getTime()
+    );
+
+  const getTicketUserId = (ticket: Ticket) => {
+    if (typeof ticket.user === "string") {
+      return ticket.user;
+    }
+
+    return ticket.user?._id;
+  };
+  
+  const fetchTickets = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch("/api/support/tickets");
@@ -296,18 +331,123 @@ export default function TicketsPage() {
 
       if (res.ok) {
         setTickets(data.tickets ?? []);
-        if (data.tickets?.length > 0 && !selectedId) {
-           setSelectedId(data.tickets[0]._id);
-        }
+        setSelectedId((current) =>
+          current ?? data.tickets?.[0]?._id ?? null
+        );
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTickets();
-  }, []);
+  }, [fetchTickets]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    socket.emit(
+      "join_channel",
+      session.user.id
+    );
+
+    const handleConnect = () => {
+      setIsLive(true);
+      socket.emit(
+        "join_channel",
+        session.user.id
+      );
+    };
+
+    const handleDisconnect = () => {
+      setIsLive(false);
+    };
+
+    const handleTicketUpdated = (updatedTicket: Ticket) => {
+      if (!updatedTicket?._id) return;
+
+      const updatedTicketUserId =
+        getTicketUserId(updatedTicket);
+
+      setTickets(prev => {
+        const exists = prev.some(t => t._id === updatedTicket._id);
+
+        if (
+          !exists &&
+          updatedTicketUserId &&
+          updatedTicketUserId !== session.user.id
+        ) {
+          return prev;
+        }
+
+        if (exists) {
+          return sortTickets(
+            prev.map((ticket) =>
+              ticket._id === updatedTicket._id
+                ? mergeTicketUpdate(
+                  ticket,
+                  updatedTicket
+                )
+                : ticket
+            )
+          );
+        } else {
+          return sortTickets([updatedTicket, ...prev]);
+        }
+      });
+
+      setUpdatedTicketIds((current) => {
+        const next = new Set(current);
+        next.add(updatedTicket._id);
+        return next;
+      });
+
+      setLastLiveUpdate(
+        updatedTicket.status === "resolved"
+          ? "Ticket resolved by support"
+          : updatedTicket.adminFollowUps?.length
+            ? "New support follow-up received"
+            : "Ticket updated"
+      );
+    };
+
+    socket.on(
+      "connect",
+      handleConnect
+    );
+    socket.on(
+      "disconnect",
+      handleDisconnect
+    );
+    socket.on("support_ticket_updated", handleTicketUpdated);
+    
+    return () => {
+      socket.off(
+        "connect",
+        handleConnect
+      );
+      socket.off(
+        "disconnect",
+        handleDisconnect
+      );
+      socket.off("support_ticket_updated", handleTicketUpdated);
+    };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    setUpdatedTicketIds((current) => {
+      if (!current.has(selectedId)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(selectedId);
+      return next;
+    });
+  }, [selectedId]);
 
   useEffect(() => {
     if (selectedTicket?.hasUnreadAdminReply) {
@@ -464,7 +604,26 @@ export default function TicketsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-semibold"
+                style={{
+                  background:
+                    isLive ? T.emeraldLo : T.roseLo,
+                  border:
+                    `1px solid ${isLive ? T.emeraldMd : T.roseMd}`,
+                  color:
+                    isLive ? T.emerald : T.rose,
+                }}
+              >
+                <span className="relative flex h-2 w-2">
+                  {isLive && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: T.emerald }} />
+                  )}
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: isLive ? T.emerald : T.rose }} />
+                </span>
+                {isLive ? "Live" : "Reconnecting"}
+              </div>
               <Link
                 href="/support-center"
                 className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all hover:opacity-80"
@@ -486,6 +645,29 @@ export default function TicketsPage() {
         </motion.div>
 
         {/* ── STATS ── */}
+        <AnimatePresence>
+          {lastLiveUpdate && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl"
+              style={{ background: T.emeraldLo, border: `1px solid ${T.emeraldMd}`, color: T.emerald }}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <CheckCircle2 size={15} />
+                {lastLiveUpdate}
+              </div>
+              <button
+                onClick={() => setLastLiveUpdate(null)}
+                className="text-xs font-semibold opacity-70 hover:opacity-100 transition-opacity"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {!loading && tickets.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.45 }}>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -560,7 +742,7 @@ export default function TicketsPage() {
                     <div className="flex items-start justify-between gap-3 mb-3 w-full">
                       <div className="flex items-center gap-2">
                         <StatusBadge status={ticket.status} />
-                        {ticket.hasUnreadAdminReply && (
+                        {(ticket.hasUnreadAdminReply || updatedTicketIds.has(ticket._id)) && (
                           <span className="relative flex h-2.5 w-2.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: T.gold }}></span>
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: T.gold }}></span>

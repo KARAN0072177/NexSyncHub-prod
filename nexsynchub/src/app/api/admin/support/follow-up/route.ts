@@ -187,6 +187,7 @@ export async function POST(req: Request) {
 
         if (socketServerUrl) {
             try {
+                // Emit to admins
                 await fetch(
                     `${socketServerUrl}/emit`,
                     {
@@ -198,6 +199,25 @@ export async function POST(req: Request) {
                         body: JSON.stringify({
                             channelId:
                                 "admin_global",
+                            event:
+                                "support_ticket_updated",
+                            data:
+                                updatedTicket,
+                        }),
+                    }
+                );
+                // Emit to specific user
+                await fetch(
+                    `${socketServerUrl}/emit`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+                        body: JSON.stringify({
+                            channelId:
+                                updatedTicket?.user?._id?.toString() || ticket.user.toString(),
                             event:
                                 "support_ticket_updated",
                             data:
