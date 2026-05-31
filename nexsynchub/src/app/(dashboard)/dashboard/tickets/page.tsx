@@ -281,6 +281,13 @@ function TicketDetailSkeleton() {
 }
 
 export default function TicketsPage() {
+  const [initialTicketId] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    return new URLSearchParams(window.location.search).get("ticketId");
+  });
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -322,7 +329,8 @@ export default function TicketsPage() {
 
     return ticket.user?._id;
   };
-  
+
+
   const fetchTickets = useCallback(async () => {
     try {
       setLoading(true);
@@ -330,15 +338,32 @@ export default function TicketsPage() {
       const data = await res.json();
 
       if (res.ok) {
-        setTickets(data.tickets ?? []);
+        const nextTickets =
+          data.tickets ?? [];
+
+        setTickets(nextTickets);
         setSelectedId((current) =>
-          current ?? data.tickets?.[0]?._id ?? null
+          current ??
+          (
+            nextTickets.some((ticket: Ticket) => ticket._id === initialTicketId)
+              ? initialTicketId
+              : nextTickets[0]?._id ?? null
+          )
         );
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [initialTicketId]);
+
+  useEffect(() => {
+    if (
+      initialTicketId &&
+      tickets.some((ticket) => ticket._id === initialTicketId)
+    ) {
+      setSelectedId(initialTicketId);
+    }
+  }, [initialTicketId, tickets]);
 
   useEffect(() => {
     fetchTickets();

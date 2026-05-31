@@ -19,6 +19,7 @@ import SupportTicket
 import { resend }
     from "@/lib/resend";
 import { handleApiError } from "@/lib/api-error";
+import { createSupportTicketNotification } from "@/lib/support-ticket-notifications";
 
 function escapeHtml(value: string) {
     return value
@@ -271,6 +272,10 @@ export async function PATCH(
         const userEmail =
             existingTicket.user?.email;
 
+        const userId =
+            existingTicket.user?._id?.toString() ||
+            existingTicket.user?.toString();
+
         if (userEmail) {
 
             // 🔥 IN PROGRESS
@@ -453,6 +458,23 @@ export async function PATCH(
 
             }
 
+        }
+
+        if (
+            userId &&
+            status &&
+            oldStatus !== status
+        ) {
+            await createSupportTicketNotification({
+                userId,
+                ticketId:
+                    ticketId.toString(),
+                subject:
+                    existingTicket.subject,
+                kind:
+                    "status_update",
+                status,
+            });
         }
 
         // 🔥 Emit realtime ticket update

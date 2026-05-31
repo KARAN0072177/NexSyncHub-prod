@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/db";
 import Notification from "@/models/Notification";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import Link from "next/link";
 import {
   Bell, CheckCheck, Clock, Inbox, Zap,
   ShieldOff, Hash, Users, MessageSquare, Settings,
@@ -45,6 +46,15 @@ const T = {
   textGhost: "#0F1628",
 } as const;
 
+type DashboardNotification = {
+  _id: string;
+  content: string;
+  action?: string;
+  link?: string;
+  isRead: boolean;
+  createdAt: Date;
+};
+
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -70,6 +80,8 @@ function formatFullDate(date: Date): string {
 /* Derive a type/color hint from notification content */
 function getNotifMeta(content: string, action: string = "") {
   const lower = (content + action).toLowerCase();
+  if (lower.includes("support") || lower.includes("ticket"))
+    return { color: T.amber,  bg: T.amberLo,   border: "rgba(245,158,11,0.20)", Icon: MessageSquare };
   if (lower.includes("channel") || lower.includes("#"))
     return { color: T.blue,    bg: T.blueLo,    border: T.borderMid, Icon: Hash         };
   if (lower.includes("member") || lower.includes("joined") || lower.includes("invite"))
@@ -82,8 +94,8 @@ function getNotifMeta(content: string, action: string = "") {
 }
 
 /* Group notifications by date label */
-function groupByDay(notifications: any[]): { label: string; items: any[] }[] {
-  const groups: Record<string, any[]> = {};
+function groupByDay(notifications: DashboardNotification[]): { label: string; items: DashboardNotification[] }[] {
+  const groups: Record<string, DashboardNotification[]> = {};
   const now = new Date();
 
   for (const n of notifications) {
@@ -143,13 +155,13 @@ export default async function NotificationsPage() {
     .sort({ createdAt: -1 })
     .lean();
 
-  const notifications = rawNotifications.map((n: any) => ({
+  const notifications: DashboardNotification[] = rawNotifications.map((n) => ({
     ...n,
     _id: String(n._id),
     createdAt: new Date(n.createdAt),
   }));
 
-  const unreadCount = notifications.filter((n: any) => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
   const groups = groupByDay(notifications);
 
   return (
@@ -265,7 +277,7 @@ export default async function NotificationsPage() {
                 All quiet here
               </h3>
               <p className="text-[15px] max-w-sm" style={{ color: T.textDim }}>
-                Notifications will appear when there's activity in your workspaces.
+                Notifications will appear when there&apos;s activity in your workspaces.
               </p>
             </div>
           </div>
@@ -300,7 +312,7 @@ export default async function NotificationsPage() {
                   {/* Top accent */}
                   <div className="h-px w-full" style={{ background: `linear-gradient(90deg, transparent, ${T.blue}40, ${T.violet}25, transparent)` }} />
 
-                  {items.map((n: any, idx: number) => {
+                  {items.map((n, idx) => {
                     const meta = getNotifMeta(n.content, n.action);
                     const isLast = idx === items.length - 1;
 
@@ -363,6 +375,16 @@ export default async function NotificationsPage() {
                                 }}>
                                 New
                               </span>
+                            )}
+
+                            {n.link && (
+                              <Link
+                                href={n.link}
+                                className="inline-flex items-center gap-1.5 text-[11px] font-bold transition-opacity hover:opacity-80"
+                                style={{ color: meta.color, fontFamily: "'Geist Mono',monospace" }}
+                              >
+                                View details
+                              </Link>
                             )}
                           </div>
                         </div>

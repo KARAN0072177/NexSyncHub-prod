@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { requireAdmin } from "@/lib/permissions";
 import { handleApiError } from "@/lib/api-error";
 import { resend } from "@/lib/resend";
+import { createSupportTicketNotification } from "@/lib/support-ticket-notifications";
 import SupportTicket from "@/models/SupportTicket";
 
 function escapeHtml(value: string) {
@@ -104,6 +105,10 @@ export async function POST(req: Request) {
             );
         }
 
+        const userId =
+            ticket.user?._id?.toString() ||
+            ticket.user?.toString();
+
         await resend.emails.send({
             from:
                 process.env.RESEND_FROM_EMAIL ||
@@ -180,6 +185,18 @@ export async function POST(req: Request) {
                     "handledBy",
                     "username email avatar"
                 );
+
+        if (userId) {
+            await createSupportTicketNotification({
+                userId,
+                ticketId:
+                    ticket._id.toString(),
+                subject:
+                    ticket.subject,
+                kind:
+                    "follow_up",
+            });
+        }
 
         const socketServerUrl =
             process.env.SOCKET_SERVER_URL ||
