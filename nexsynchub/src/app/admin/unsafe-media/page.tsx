@@ -53,6 +53,29 @@ const SOURCE = {
 const UNSAFE_MEDIA_ACTIONS =
   Object.keys(SOURCE);
 
+const REVIEW_REJECTION_REASONS = [
+  {
+    id: "explicit_content",
+    label: "Explicit or adult content",
+  },
+  {
+    id: "violent_or_graphic",
+    label: "Violent, graphic, or disturbing content",
+  },
+  {
+    id: "harassment_or_hate",
+    label: "Harassment, hateful, or abusive material",
+  },
+  {
+    id: "privacy_or_identity",
+    label: "Privacy, identity, or impersonation concern",
+  },
+  {
+    id: "platform_policy",
+    label: "Does not meet platform safety standards",
+  },
+];
+
 function getSource(action: string) {
   return SOURCE[action as keyof typeof SOURCE] ?? { label: "Unknown", color: T.textMuted, icon: "❓", gradient: "from-gray-600 to-gray-800" };
 }
@@ -67,10 +90,69 @@ interface UnsafeLog {
     evidenceUrl?: string;
     evidenceKey?: string;
     evidenceExpiresAt?: string;
-    moderationLabels?: { name: string; confidence: number; parentName?: string }[];
+    moderationLabels?: {
+      name?: string;
+      Name?: string;
+      confidence?: number;
+      Confidence?: number;
+      parentName?: string;
+      parent?: string;
+      ParentName?: string;
+    }[];
+    reviewNotice?: {
+      decision: "approved" | "rejected";
+      rejectionReasons?: string[];
+      sentAt?: string;
+    };
   };
   user?: { username?: string; email: string; avatar?: string; role: string };
   createdAt: string;
+}
+
+type NormalizedModerationLabel = {
+  name: string;
+  confidence: number;
+  parentName?: string;
+};
+
+function normalizeModerationLabels(
+  labels: UnsafeLog["metadata"]["moderationLabels"] = []
+): NormalizedModerationLabel[] {
+  return labels
+    .map((label) => ({
+      name:
+        label.name ||
+        label.Name ||
+        "Unknown signal",
+      confidence:
+        label.confidence ??
+        label.Confidence ??
+        0,
+      parentName:
+        label.parentName ||
+        label.parent ||
+        label.ParentName,
+    }))
+    .filter((label) => label.name !== "Unknown signal" || label.confidence > 0);
+}
+
+function normalizeUnsafeLog(log: UnsafeLog): UnsafeLog {
+  const metadata =
+    log.metadata ?? {};
+
+  return {
+    ...log,
+    signedEvidenceUrl:
+      log.signedEvidenceUrl ||
+      metadata.evidenceUrl,
+    metadata: {
+      ...metadata,
+      moderationLabels:
+        normalizeModerationLabels(
+          metadata.moderationLabels
+        ),
+    },
+  };
 }
 
 /* ─── Animated Threat Score Ring ─────────────────────────────────────────── */
@@ -213,7 +295,12 @@ function MediaCard({
   const evidenceUrl =
     log.signedEvidenceUrl ||
     log.metadata?.evidenceUrl;
-  const topScore = log.metadata?.moderationLabels?.[0]?.confidence ?? 0;
+  const moderationLabels =
+    normalizeModerationLabels(
+      log.metadata?.moderationLabels
+    );
+  const topScore =
+    moderationLabels[0]?.confidence ?? 0;
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -390,12 +477,12 @@ function MediaCard({
               <Tag size={9} />
               Detected Labels
             </p>
-            {log.metadata?.moderationLabels?.slice(0, 3).map((label, i) => (
+            {moderationLabels.slice(0, 3).map((label, i) => (
               <ConfidenceBar key={i} label={label.name} confidence={label.confidence} parentName={label.parentName} />
             ))}
-            {(log.metadata?.moderationLabels?.length ?? 0) > 3 && (
+            {moderationLabels.length > 3 && (
               <p className="text-[10px] text-center py-1 font-medium" style={{ color: T.textMuted }}>
-                +{(log.metadata!.moderationLabels!.length) - 3} more signals
+                +{moderationLabels.length - 3} more signals
               </p>
             )}
           </div>
@@ -429,6 +516,10 @@ export default function UnsafeMediaPage() {
   const [filterAction, setFilterAction] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [reviewDecision, setReviewDecision] = useState<"approved" | "rejected">("rejected");
+  const [rejectionReasons, setRejectionReasons] = useState<string[]>(["platform_policy"]);
+  const [sendingReviewEmail, setSendingReviewEmail] = useState(false);
+  const [reviewEmailMessage, setReviewEmailMessage] = useState("");
 
   const toggleImage = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -441,12 +532,24 @@ export default function UnsafeMediaPage() {
       try {
         const res = await fetch("/api/admin/unsafe-media");
         const data = await res.json();
-        if (res.ok) setLogs(data.logs);
+        if (res.ok) {
+          setLogs(
+            (data.logs ?? []).map(
+              normalizeUnsafeLog
+            )
+          );
+        }
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     };
     fetchLogs();
   }, []);
+
+  useEffect(() => {
+    setReviewDecision("rejected");
+    setRejectionReasons(["platform_policy"]);
+    setReviewEmailMessage("");
+  }, [selectedLog?._id]);
 
   useEffect(() => {
     socket.emit("join_admin_global");
@@ -461,12 +564,8 @@ export default function UnsafeMediaPage() {
         return;
       }
 
-      const liveLog = {
-        ...newLog,
-        signedEvidenceUrl:
-          newLog.signedEvidenceUrl ||
-          newLog.metadata?.evidenceUrl,
-      };
+      const liveLog =
+        normalizeUnsafeLog(newLog);
 
       setLogs((currentLogs) => {
         if (
@@ -532,6 +631,99 @@ export default function UnsafeMediaPage() {
     finally { setDeletingId(null); }
   };
 
+  const toggleRejectionReason = (reasonId: string) => {
+    setRejectionReasons((current) =>
+      current.includes(reasonId)
+        ? current.filter((id) => id !== reasonId)
+        : [...current, reasonId]
+    );
+  };
+
+  const handleSendReviewEmail = async () => {
+    if (!selectedLog) return;
+
+    if (reviewDecision === "rejected" && rejectionReasons.length === 0) {
+      setReviewEmailMessage("Select at least one rejection reason.");
+      return;
+    }
+
+    setSendingReviewEmail(true);
+    setReviewEmailMessage("");
+
+    try {
+      const res = await fetch(
+        `/api/admin/unsafe-media/${selectedLog._id}/notify`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            decision:
+              reviewDecision,
+            rejectionReasons:
+              reviewDecision === "rejected"
+                ? rejectionReasons
+                : [],
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setReviewEmailMessage(data.error || "Failed to send review email.");
+        return;
+      }
+
+      const nextNotice = {
+        decision:
+          reviewDecision,
+        rejectionReasons:
+          reviewDecision === "rejected"
+            ? rejectionReasons
+            : [],
+        sentAt:
+          new Date().toISOString(),
+      };
+
+      setLogs((current) =>
+        current.map((log) =>
+          log._id === selectedLog._id
+            ? {
+              ...log,
+              metadata: {
+                ...log.metadata,
+                reviewNotice:
+                  nextNotice,
+              },
+            }
+            : log
+        )
+      );
+
+      setSelectedLog((current) =>
+        current
+          ? {
+            ...current,
+            metadata: {
+              ...current.metadata,
+              reviewNotice:
+                nextNotice,
+            },
+          }
+          : current
+      );
+
+      setReviewEmailMessage("Review email sent to user.");
+    } catch (error) {
+      console.error(error);
+      setReviewEmailMessage("Failed to send review email.");
+    } finally {
+      setSendingReviewEmail(false);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     if (!confirm(`Permanently delete ${selectedIds.size} evidence records?`)) return;
@@ -562,6 +754,15 @@ export default function UnsafeMediaPage() {
     acc[key] = logs.filter(l => l.action === key).length;
     return acc;
   }, {} as Record<string, number>);
+  const selectedModerationLabels =
+    selectedLog
+      ? normalizeModerationLabels(
+        selectedLog.metadata?.moderationLabels
+      )
+      : [];
+  const selectedEvidenceUrl =
+    selectedLog?.signedEvidenceUrl ||
+    selectedLog?.metadata?.evidenceUrl;
 
   return (
     <div className="min-h-screen relative" style={{ background: T.bg, color: T.text }}>
@@ -874,24 +1075,24 @@ export default function UnsafeMediaPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.16 }}
                 className="fixed inset-0 z-[9998]"
-                style={{ background: "rgba(2,4,12,0.90)", backdropFilter: "blur(20px)" }}
+                style={{ background: "rgba(2,4,12,0.86)" }}
                 onClick={() => setSelectedLog(null)}
               />
 
               <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8">
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.88, y: 30 }}
+                  initial={{ opacity: 0, scale: 0.98, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.88, y: 20 }}
-                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                  exit={{ opacity: 0, scale: 0.98, y: 8 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   className="relative w-full max-w-5xl max-h-[92vh] rounded-[2rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl"
                   style={{
                     background: `linear-gradient(135deg, rgba(12,18,40,0.95) 0%, rgba(8,12,28,0.98) 100%)`,
                     border: `1px solid ${T.borderHi}`,
-                    backdropFilter: "blur(60px) saturate(200%)",
-                    boxShadow: `0 40px 100px -20px rgba(0,0,0,0.8), 0 0 0 1px ${T.borderMid}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+                    boxShadow: `0 24px 70px -18px rgba(0,0,0,0.78), 0 0 0 1px ${T.borderMid}`,
+                    willChange: "transform, opacity",
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -930,15 +1131,11 @@ export default function UnsafeMediaPage() {
 
                   {/* LEFT — Image */}
                   <div className="relative lg:w-[55%] h-64 sm:h-80 lg:h-auto flex items-center justify-center overflow-hidden bg-black/60">
-                    <div className="data-stream absolute inset-0 opacity-20 pointer-events-none" />
-
-                    {(selectedLog.signedEvidenceUrl || selectedLog.metadata?.evidenceUrl) ? (
+                    {selectedEvidenceUrl ? (
                       <>
-                        <img src={selectedLog.signedEvidenceUrl || selectedLog.metadata?.evidenceUrl} alt=""
-                          className="absolute inset-0 w-full h-full object-cover opacity-20"
-                          style={{ filter: "blur(30px) saturate(60%)", transform: "scale(1.2)" }}
-                        />
-                        <img src={selectedLog.signedEvidenceUrl || selectedLog.metadata?.evidenceUrl} alt="Evidence"
+                        <img src={selectedEvidenceUrl} alt="Evidence"
+                          loading="eager"
+                          decoding="async"
                           className="relative z-10 w-full h-full object-contain p-8 sm:p-12"
                         />
 
@@ -962,7 +1159,7 @@ export default function UnsafeMediaPage() {
 
                         {/* Threat score overlay */}
                         <div className="absolute top-5 left-5 z-20">
-                          <ThreatRing score={selectedLog.metadata?.moderationLabels?.[0]?.confidence ?? 0} size={60} />
+                          <ThreatRing score={selectedModerationLabels[0]?.confidence ?? 0} size={60} />
                         </div>
                       </>
                     ) : (
@@ -1017,13 +1214,13 @@ export default function UnsafeMediaPage() {
                     )}
 
                     {/* Labels */}
-                    {selectedLog.metadata?.moderationLabels?.length ? (
+                    {selectedModerationLabels.length ? (
                       <div>
                         <h3 className="text-[9px] font-black uppercase tracking-[0.2em] mb-3 flex items-center gap-2" style={{ color: T.textMuted }}>
                           <Zap size={11} style={{ color: T.rose }} /> Threat Signals
                         </h3>
                         <div className="space-y-2">
-                          {selectedLog.metadata.moderationLabels.map((label, i) => (
+                          {selectedModerationLabels.map((label, i) => (
                             <ConfidenceBar key={i} label={label.name} confidence={label.confidence} parentName={label.parentName} />
                           ))}
                         </div>
@@ -1040,6 +1237,130 @@ export default function UnsafeMediaPage() {
                         </span>
                       </div>
                     )}
+
+                    {/* Review Email */}
+                    <div className="rounded-2xl p-4 space-y-4"
+                      style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${T.border}` }}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2" style={{ color: T.textMuted }}>
+                            <Mail size={11} style={{ color: T.cyan }} /> User Email Notice
+                          </h3>
+                          {selectedLog.metadata?.reviewNotice?.sentAt && (
+                            <p className="text-[10px] mt-1" style={{ color: T.textMuted }}>
+                              Last sent: {selectedLog.metadata.reviewNotice.decision} · {new Date(selectedLog.metadata.reviewNotice.sentAt).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {selectedLog.user?.email ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { value: "approved" as const, label: "Approved", color: T.emerald, bg: T.emeraldLo },
+                              { value: "rejected" as const, label: "Rejected", color: T.rose, bg: T.roseGlow },
+                            ].map((item) => (
+                              <button
+                                key={item.value}
+                                onClick={() => setReviewDecision(item.value)}
+                                className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
+                                style={{
+                                  background: reviewDecision === item.value ? item.bg : "rgba(255,255,255,0.03)",
+                                  color: reviewDecision === item.value ? item.color : T.textMuted,
+                                  border: `1px solid ${reviewDecision === item.value ? `${item.color}55` : "rgba(255,255,255,0.06)"}`,
+                                }}
+                              >
+                                <Check size={13} />
+                                {item.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {reviewDecision === "rejected" && (
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: T.textMuted }}>
+                                Rejection reasons
+                              </p>
+                              {REVIEW_REJECTION_REASONS.map((reason) => {
+                                const checked =
+                                  rejectionReasons.includes(reason.id);
+
+                                return (
+                                  <label
+                                    key={reason.id}
+                                    className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors"
+                                    style={{
+                                      background: checked ? T.roseGlow : "rgba(255,255,255,0.025)",
+                                      border: `1px solid ${checked ? T.borderHi : "rgba(255,255,255,0.05)"}`,
+                                      color: checked ? T.text : T.textDim,
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => toggleRejectionReason(reason.id)}
+                                      className="sr-only"
+                                    />
+                                    <span
+                                      className="w-4 h-4 rounded-md flex items-center justify-center shrink-0"
+                                      style={{
+                                        background: checked ? T.rose : "rgba(255,255,255,0.04)",
+                                        border: `1px solid ${checked ? T.roseBright : "rgba(255,255,255,0.12)"}`,
+                                      }}
+                                    >
+                                      {checked && <Check size={11} color="white" strokeWidth={3} />}
+                                    </span>
+                                    <span className="text-xs font-semibold leading-snug">
+                                      {reason.label}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          <motion.button
+                            whileHover={{ scale: 1.02, y: -1 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={handleSendReviewEmail}
+                            disabled={sendingReviewEmail}
+                            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl font-black text-white text-xs uppercase tracking-wider transition-all disabled:opacity-60"
+                            style={{
+                              background: reviewDecision === "approved"
+                                ? `linear-gradient(135deg, ${T.emerald} 0%, #047857 100%)`
+                                : `linear-gradient(135deg, ${T.rose} 0%, ${T.roseDeep} 100%)`,
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              boxShadow: reviewDecision === "approved"
+                                ? "0 8px 28px rgba(16,185,129,0.25)"
+                                : `0 8px 28px ${T.roseGlowBright}`,
+                              fontFamily: "'Space Grotesk',sans-serif",
+                            }}
+                          >
+                            {sendingReviewEmail ? (
+                              <><Loader2 size={15} className="animate-spin" /> Sending...</>
+                            ) : (
+                              <><Mail size={15} /> Send {reviewDecision} email</>
+                            )}
+                          </motion.button>
+
+                          {reviewEmailMessage && (
+                            <p
+                              className="text-[10px] text-center font-bold"
+                              style={{ color: reviewEmailMessage.includes("sent") ? T.emerald : T.amber }}
+                            >
+                              {reviewEmailMessage}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <div className="p-3 rounded-xl text-xs flex items-center gap-2"
+                          style={{ background: T.amberLo, border: `1px solid ${T.amber}25`, color: T.amber }}>
+                          <AlertTriangle size={13} />
+                          No user email is attached to this evidence record.
+                        </div>
+                      )}
+                    </div>
 
                     {/* Delete */}
                     <motion.button

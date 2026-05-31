@@ -37,10 +37,90 @@ type Attachment = {
     size?: number;
 };
 
+function ChatMessagesSkeleton() {
+    const rows = [
+        { side: "left", width: "w-[58%]", lines: ["w-44", "w-72", "w-52"] },
+        { side: "right", width: "w-[46%]", lines: ["w-40", "w-56"] },
+        { side: "left", width: "w-[64%]", lines: ["w-52", "w-80", "w-44"] },
+        { side: "right", width: "w-[52%]", lines: ["w-48", "w-64"] },
+        { side: "left", width: "w-[50%]", lines: ["w-36", "w-60"] },
+    ];
+
+    return (
+        <div className="h-full px-5 py-5 overflow-hidden">
+            <div className="flex items-center justify-center gap-3 mb-7">
+                <div className="h-px w-20 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+                <div className="flex items-center gap-2 rounded-full border border-indigo-500/15 bg-indigo-500/10 px-3 py-1.5">
+                    <Loader2 size={12} className="animate-spin text-indigo-300" />
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200/80">
+                        Loading channel
+                    </span>
+                </div>
+                <div className="h-px w-20 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+            </div>
+
+            <div className="space-y-5">
+                {rows.map((row, index) => {
+                    const isRight =
+                        row.side === "right";
+
+                    return (
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.28, delay: index * 0.05 }}
+                            className={`flex items-end gap-3 ${isRight ? "justify-end" : "justify-start"}`}
+                        >
+                            {!isRight && (
+                                <div className="h-9 w-9 shrink-0 rounded-2xl border border-white/5 bg-gray-800/70">
+                                    <div className="h-full w-full animate-pulse rounded-2xl bg-gradient-to-br from-gray-700/80 to-gray-900/80" />
+                                </div>
+                            )}
+
+                            <div
+                                className={`${row.width} max-w-[680px] rounded-2xl border p-4 shadow-lg`}
+                                style={{
+                                    background: isRight
+                                        ? "linear-gradient(135deg, rgba(79,70,229,0.20), rgba(37,99,235,0.13))"
+                                        : "rgba(15,23,42,0.72)",
+                                    borderColor: isRight
+                                        ? "rgba(99,102,241,0.20)"
+                                        : "rgba(255,255,255,0.07)",
+                                }}
+                            >
+                                <div className="mb-3 flex items-center gap-2">
+                                    <div className="h-2.5 w-20 animate-pulse rounded-full bg-white/12" />
+                                    <div className="h-2 w-10 animate-pulse rounded-full bg-white/7" />
+                                </div>
+                                <div className="space-y-2.5">
+                                    {row.lines.map((line, lineIndex) => (
+                                        <div
+                                            key={lineIndex}
+                                            className={`h-3 animate-pulse rounded-full bg-gradient-to-r from-white/14 via-white/7 to-white/12 ${line}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            {isRight && (
+                                <div className="h-9 w-9 shrink-0 rounded-2xl border border-indigo-400/10 bg-indigo-500/15">
+                                    <div className="h-full w-full animate-pulse rounded-2xl bg-gradient-to-br from-indigo-400/30 to-blue-500/10" />
+                                </div>
+                            )}
+                        </motion.div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 export default function ChatArea({ channel }: { channel: any }) {
     const [messages, setMessages] = useState<any[]>([]);
     const [content, setContent] = useState("");
     const [loading, setLoading] = useState(false);
+    const [loadingChannelMessages, setLoadingChannelMessages] = useState(false);
     const [typingUsers, setTypingUsers] = useState<any[]>([]);
     const typingTimeout = useRef<any>(null);
     const [seenUsers, setSeenUsers] = useState<Set<string>>(new Set());
@@ -90,6 +170,73 @@ export default function ChatArea({ channel }: { channel: any }) {
     const username = session?.user?.username;
     const isSystemChannel = channel?.isSystem || channel?.name === "workspace-activity";
 
+    const getMessageSenderId = useCallback((message: any) => {
+        const sender =
+            message?.sender;
+
+        if (!sender) {
+            return null;
+        }
+
+        if (typeof sender === "string") {
+            return sender;
+        }
+
+        return sender._id || sender.id || null;
+    }, []);
+
+    const getFirstUnreadMessageId = useCallback((
+        channelMessages: any[],
+        unreadCount: number
+    ) => {
+        if (!unreadCount) return null;
+
+        let remaining =
+            unreadCount;
+
+        for (let index = channelMessages.length - 1; index >= 0; index -= 1) {
+            const senderId =
+                getMessageSenderId(channelMessages[index]);
+
+            if (senderId && String(senderId) === String(userId)) {
+                continue;
+            }
+
+            remaining -= 1;
+
+            if (remaining === 0) {
+                return channelMessages[index]._id;
+            }
+        }
+
+        return null;
+    }, [getMessageSenderId, userId]);
+
+    const markChannelRead = useCallback(
+        async (channelId: string) => {
+            try {
+                const res = await fetch("/api/channel/read", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ channelId }),
+                });
+
+                if (res.ok) {
+                    window.dispatchEvent(
+                        new CustomEvent("channel-read", {
+                            detail: {
+                                channelId,
+                            },
+                        })
+                    );
+                }
+            } catch (err) {
+                console.error("Failed to mark channel as read:", err);
+            }
+        },
+        []
+    );
+
     const searchParams = useSearchParams();
     const highlightMessageId = searchParams.get("message");
 
@@ -136,58 +283,76 @@ export default function ChatArea({ channel }: { channel: any }) {
     // 📩 Fetch messages
     useEffect(() => {
         if (!channel?._id) return;
+        let cancelled =
+            false;
+
+        setLoadingChannelMessages(true);
         setFirstUnreadId(null);
+
         const fetchMessages = async () => {
-            // Fetch unread count first
-            const unreadRes = await fetch(`/api/channel/unread-counts?workspaceId=${channel.workspace}`);
-            const unreadData = await unreadRes.json();
-            const unreadCount = unreadData.unreadCounts?.[channel._id] || 0;
+            try {
+                // Fetch unread count first
+                const unreadRes = await fetch(`/api/channel/unread-counts?workspaceId=${channel.workspace}`);
+                const unreadData = await unreadRes.json();
+                const unreadCount = unreadData.unreadCounts?.[channel._id] || 0;
 
-            const res = await fetch(`/api/message/list?channelId=${channel._id}`);
-            const data = await res.json();
+                const res = await fetch(`/api/message/list?channelId=${channel._id}`);
+                const data = await res.json();
 
-            if (res.ok) {
-                setMessages(data.messages);
-                setCursor(data.nextCursor); // ✅ IMPORTANT
+                if (cancelled) return;
 
-                if (data.messages.length > 0) {
-                    const lastMsg = data.messages[data.messages.length - 1];
+                if (res.ok) {
+                    setMessages(data.messages);
+                    setCursor(data.nextCursor); // ✅ IMPORTANT
 
-                    // Safely extract from possible backend field names
-                    let readers = lastMsg.readBy || lastMsg.seenBy || lastMsg.viewedBy || lastMsg.readers || [];
-                    if (!Array.isArray(readers) && typeof readers === "object") {
-                        readers = Object.keys(readers); // Handle if backend returns a dictionary map
+                    if (data.messages.length > 0) {
+                        const lastMsg = data.messages[data.messages.length - 1];
+
+                        // Safely extract from possible backend field names
+                        let readers = lastMsg.readBy || lastMsg.seenBy || lastMsg.viewedBy || lastMsg.readers || [];
+                        if (!Array.isArray(readers) && typeof readers === "object") {
+                            readers = Object.keys(readers); // Handle if backend returns a dictionary map
+                        }
+
+                        const initialSeen = new Set<string>();
+                        if (Array.isArray(readers)) {
+                            readers.forEach((u: any) => {
+                                const id = u?._id || u?.user || u?.id || (typeof u === "string" ? u : null);
+                                if (id && String(id) !== String(userId)) {
+                                    initialSeen.add(String(id));
+                                }
+                            });
+                        }
+                        setSeenUsers(initialSeen);
+                    } else {
+                        setSeenUsers(new Set());
                     }
 
-                    const initialSeen = new Set<string>();
-                    if (Array.isArray(readers)) {
-                        readers.forEach((u: any) => {
-                            const id = u?._id || u?.user || u?.id || (typeof u === "string" ? u : null);
-                            if (id && String(id) !== String(userId)) {
-                                initialSeen.add(String(id));
-                            }
-                        });
+                    if (unreadCount > 0 && data.messages.length > 0) {
+                        setFirstUnreadId(
+                            getFirstUnreadMessageId(
+                                data.messages,
+                                unreadCount
+                            )
+                        );
                     }
-                    setSeenUsers(initialSeen);
+
+                    // 🔥 Mark channel as read since the user just opened it!
+                    markChannelRead(channel._id);
                 }
-
-                if (unreadCount > 0 && data.messages.length > 0) {
-                    const firstUnreadIndex = Math.max(0, data.messages.length - unreadCount);
-                    if (data.messages[firstUnreadIndex]) {
-                        setFirstUnreadId(data.messages[firstUnreadIndex]._id);
-                    }
+            } finally {
+                if (!cancelled) {
+                    setLoadingChannelMessages(false);
                 }
-
-                // 🔥 Mark channel as read since the user just opened it!
-                fetch("/api/channel/read", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ channelId: channel._id }),
-                }).catch(err => console.error("Failed to mark channel as read:", err));
             }
         };
+
         fetchMessages();
-    }, [channel._id, channel.workspace, userId]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [channel._id, channel.workspace, userId, markChannelRead, getFirstUnreadMessageId]);
 
     // 🔥 Load more messages (pagination)
 
@@ -398,22 +563,7 @@ export default function ChatArea({ channel }: { channel: any }) {
 
                 setSeenUsers(new Set());
 
-                fetch(
-                    "/api/channel/read",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json",
-                        },
-
-                        body: JSON.stringify({
-                            channelId:
-                                channel._id,
-                        }),
-                    }
-                );
+                markChannelRead(channel._id);
 
             }
         );
@@ -509,7 +659,7 @@ export default function ChatArea({ channel }: { channel: any }) {
             socket.off("message_seen"); // seen cleanup
             socket.off("message_reaction_update"); // reaction cleanup 
         };
-    }, [channel._id, userId]);
+    }, [channel._id, userId, markChannelRead]);
 
     // 📌 Auto scroll to bottom (only if already near bottom)
     useEffect(() => {
@@ -787,11 +937,7 @@ export default function ChatArea({ channel }: { channel: any }) {
             setCursor(null);
 
             // 🔥 Mark channel as read when deep linking
-            fetch("/api/channel/read", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ channelId: channel._id }),
-            }).catch(err => console.error("Failed to mark channel as read:", err));
+            markChannelRead(channel._id);
 
         } catch (err) {
             console.error("Context load failed:", err);
@@ -1110,15 +1256,19 @@ export default function ChatArea({ channel }: { channel: any }) {
                     className="h-full overflow-y-auto overflow-x-hidden px-5 py-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
                 >
 
-                    {/* Loading more indicator */}
+                    {loadingChannelMessages ? (
+                        <ChatMessagesSkeleton />
+                    ) : (
+                        <>
+                            {/* Loading more indicator */}
 
-                    {loadingMore && (
-                        <div className="flex justify-center mb-2">
-                            <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
-                        </div>
-                    )}
+                            {loadingMore && (
+                                <div className="flex justify-center mb-2">
+                                    <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+                                </div>
+                            )}
 
-                    {messages.map((msg, index) => {
+                            {messages.map((msg, index) => {
                         const isOwnMessage = msg.sender?._id === userId || msg.sender === userId;
                         const showSeen = index === messages.length - 1 && seenUsers.size > 0 && isOwnMessage;
                         const showUnreadBanner = firstUnreadId === msg._id;
@@ -1335,12 +1485,14 @@ export default function ChatArea({ channel }: { channel: any }) {
                                 </div>
                             </Fragment>
                         );
-                    })}
-                    <div ref={bottomRef} />
+                            })}
+                            <div ref={bottomRef} />
+                        </>
+                    )}
                 </div>
 
                 {/* Scroll to Bottom Button */}
-                {showScrollBottom && (
+                {showScrollBottom && !loadingChannelMessages && (
                     <button
                         onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
                         className="absolute bottom-4 right-6 p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg shadow-black/50 transition-all z-20 group"

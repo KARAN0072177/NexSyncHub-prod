@@ -4,7 +4,8 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 import {
     useRouter,
@@ -27,6 +28,7 @@ import {
 
 import UserMenu from "@/components/layout/UserMenu";
 import { motion, AnimatePresence } from "framer-motion";
+import { socket } from "@/lib/socket";
 
 /* ─── design tokens ──────────────────────────────────────────────────────── */
 const T = {
@@ -53,6 +55,8 @@ export default function WorkspaceSidebar({
 
     const [unreadCounts, setUnreadCounts] =
         useState<Record<string, number>>({});
+    const { data: session } =
+        useSession();
 
     const [showModal, setShowModal] =
         useState(false);
@@ -75,6 +79,21 @@ export default function WorkspaceSidebar({
 
     const activeChannelId =
         searchParams.get("channel");
+
+    const getSenderId = useCallback((message: any) => {
+        const sender =
+            message?.sender;
+
+        if (!sender) {
+            return null;
+        }
+
+        if (typeof sender === "string") {
+            return sender;
+        }
+
+        return sender._id || sender.id || null;
+    }, []);
 
     // 🔥 Fetch channels
     useEffect(() => {
@@ -155,6 +174,78 @@ export default function WorkspaceSidebar({
         };
 
     }, []);
+
+    // 🔥 Listen to message sockets for every visible channel.
+    useEffect(() => {
+        if (!channels.length) return;
+
+        channels.forEach((channel) => {
+            socket.emit(
+                "join_channel",
+                channel._id
+            );
+        });
+
+        const handler = (message: any) => {
+            const channelId =
+                String(message?.channel || "");
+
+            if (!channelId) return;
+
+            const isKnownChannel =
+                channels.some(
+                    (channel) =>
+                        String(channel._id) === channelId
+                );
+
+            if (!isKnownChannel) return;
+
+            const senderId =
+                getSenderId(message);
+
+            if (
+                senderId &&
+                session?.user?.id &&
+                String(senderId) === String(session.user.id)
+            ) {
+                return;
+            }
+
+            const currentActiveChannelId =
+                activeChannelId ||
+                (
+                    pathname === `/workspace/${workspaceId}`
+                        ? channels[0]?._id
+                        : null
+                );
+
+            if (channelId === String(currentActiveChannelId || "")) {
+                setUnreadCounts((prev) => ({
+                    ...prev,
+                    [channelId]: 0,
+                }));
+                return;
+            }
+
+            setUnreadCounts((prev) => ({
+                ...prev,
+                [channelId]:
+                    (prev[channelId] || 0) + 1,
+            }));
+        };
+
+        socket.on(
+            "receive_message",
+            handler
+        );
+
+        return () => {
+            socket.off(
+                "receive_message",
+                handler
+            );
+        };
+    }, [channels, activeChannelId, getSenderId, pathname, session?.user?.id, workspaceId]);
 
     // 🔥 Listen for unread increments
     useEffect(() => {
@@ -374,9 +465,15 @@ export default function WorkspaceSidebar({
                                         key={ch._id}
 
                                         onClick={() =>
+                                        {
+                                            setUnreadCounts((prev) => ({
+                                                ...prev,
+                                                [ch._id]: 0,
+                                            }));
                                             router.push(
                                                 `/workspace/${workspaceId}?channel=${ch._id}`
-                                            )
+                                            );
+                                        }
                                         }
 
                                         className="relative w-full flex items-center gap-3 pl-3 pr-8 py-2.5 rounded-xl text-sm font-semibold transition-all group hover:bg-white/5 cursor-pointer"

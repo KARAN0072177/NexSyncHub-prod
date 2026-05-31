@@ -27,12 +27,44 @@ import {
 
 } from "@/lib/s3";
 
+type RawModerationLabel = {
+  name?: string;
+  Name?: string;
+  confidence?: number;
+  Confidence?: number;
+  parentName?: string;
+  parent?: string;
+  ParentName?: string;
+};
+
 type UnsafeMediaLog = {
   metadata?: {
     evidenceKey?: string;
     evidenceUrl?: string;
+    moderationLabels?: RawModerationLabel[];
   };
 };
+
+function normalizeModerationLabels(
+  labels: RawModerationLabel[] = []
+) {
+  return labels
+    .map((label) => ({
+      name:
+        label.name ||
+        label.Name ||
+        "Unknown signal",
+      confidence:
+        label.confidence ??
+        label.Confidence ??
+        0,
+      parentName:
+        label.parentName ||
+        label.parent ||
+        label.ParentName,
+    }))
+    .filter((label) => label.name !== "Unknown signal" || label.confidence > 0);
+}
 
 export async function GET() {
 
@@ -115,6 +147,13 @@ export async function GET() {
             return {
 
               ...log,
+              metadata: {
+                ...log.metadata,
+                moderationLabels:
+                  normalizeModerationLabels(
+                    log.metadata?.moderationLabels
+                  ),
+              },
 
               signedEvidenceUrl:
                 signedEvidenceUrl ||
