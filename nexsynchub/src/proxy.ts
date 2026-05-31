@@ -124,9 +124,12 @@ export default withAuth(
         // Allow public access to these routes so middleware can handle them
         if (
           pathname.startsWith("/api/auth") ||
+          pathname === "/api/platform/public-settings" ||
           pathname === "/login" ||
           pathname === "/register" ||
           pathname === "/verify-email" ||
+          pathname === "/features" ||
+          pathname === "/support-center" ||
           pathname === "/maintenance" ||
           pathname === "/"
         ) {

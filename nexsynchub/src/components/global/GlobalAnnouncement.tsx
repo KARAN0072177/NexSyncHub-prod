@@ -8,9 +8,32 @@ import {
   AlertTriangle,
   ShieldAlert,
   CheckCircle2,
+  type LucideIcon,
 } from "lucide-react";
 
-const THEME: any = {
+type AnnouncementType = "info" | "warning" | "danger" | "success";
+
+type Announcement = {
+  enabled?: boolean;
+  text: string;
+  type: AnnouncementType;
+  startAt?: string | null;
+  endAt?: string | null;
+};
+
+type ThemeConfig = {
+  bg: string;
+  border: string;
+  text: string;
+  icon: LucideIcon;
+  glow: string;
+};
+
+type PublicSettingsResponse = {
+  announcement?: Announcement;
+};
+
+const THEME: Record<AnnouncementType, ThemeConfig> = {
   info: {
     bg: "rgba(61,123,255,0.12)",
     border: "rgba(61,123,255,0.25)",
@@ -49,12 +72,12 @@ const GLASS = {
 };
 
 export default function GlobalAnnouncement() {
-  const [announcement, setAnnouncement] = useState<any>(null);
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   // Creates a unique ID based on the announcement details.
   // If Super Admin edits ANY field, the signature changes and pops up again!
-  const getSignature = (ann: any) => {
+  const getSignature = (ann: Announcement | null) => {
     if (!ann) return "";
     return `${ann.text}_${ann.type}_${ann.startAt || "no-start"}_${ann.endAt || "no-end"}`;
   };
@@ -63,7 +86,14 @@ export default function GlobalAnnouncement() {
     const fetchAnnouncement = async () => {
       try {
         const res = await fetch("/api/platform/public-settings");
-        const data = await res.json();
+        const contentType = res.headers.get("content-type") || "";
+
+        if (!res.ok || !contentType.includes("application/json")) {
+          return;
+        }
+
+        const data =
+          await res.json() as PublicSettingsResponse;
 
         if (data.announcement?.enabled) {
           setAnnouncement(data.announcement);

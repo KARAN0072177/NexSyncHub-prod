@@ -8,6 +8,7 @@ import {
   ShieldAlert, Loader2, Trash2, Eye, EyeOff, Maximize,
   Shield, Image as ImageIcon, X, ChevronLeft, ChevronRight,
   Mail, Tag, Clock, AlertTriangle, Zap, Activity, Check,
+  Play, Pause, ZoomIn, ZoomOut, RotateCcw, Download, ExternalLink,
 } from "lucide-react";
 
 /* ─── Design Tokens ───────────────────────────────────────────────────────── */
@@ -153,6 +154,12 @@ function normalizeUnsafeLog(log: UnsafeLog): UnsafeLog {
         ),
     },
   };
+}
+
+function getEvidenceUrl(log: UnsafeLog) {
+  return log.signedEvidenceUrl ||
+    log.metadata?.evidenceUrl ||
+    "";
 }
 
 /* ─── Animated Threat Score Ring ─────────────────────────────────────────── */
@@ -504,6 +511,236 @@ function StatPill({ label, value, color }: { label: string; value: number | stri
 }
 
 /* ─── MAIN PAGE ──────────────────────────────────────────────────────────── */
+function ImagesOnlyLightbox({
+  logs,
+  index,
+  onClose,
+  onNext,
+  onPrev,
+  onSelect,
+}: {
+  logs: UnsafeLog[];
+  index: number;
+  onClose: () => void;
+  onNext: () => void;
+  onPrev: () => void;
+  onSelect: (index: number) => void;
+}) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [zoomState, setZoomState] = useState({
+    logId: "",
+    value: 1,
+  });
+  const activeLog = logs[index];
+  const activeUrl = activeLog ? getEvidenceUrl(activeLog) : "";
+  const canNavigate = logs.length > 1;
+  const zoom =
+    activeLog && zoomState.logId === activeLog._id
+      ? zoomState.value
+      : 1;
+
+  useEffect(() => {
+    if (!isPlaying || !canNavigate) return;
+
+    const timer = window.setInterval(() => {
+      onNext();
+    }, 3600);
+
+    return () => window.clearInterval(timer);
+  }, [canNavigate, isPlaying, onNext]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      if (event.key === "ArrowRight" && canNavigate) onNext();
+      if (event.key === "ArrowLeft" && canNavigate) onPrev();
+      if (event.key === " " && canNavigate) {
+        event.preventDefault();
+        setIsPlaying((current) => !current);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canNavigate, onClose, onNext, onPrev]);
+
+  if (!activeLog || !activeUrl) return null;
+
+  const updateZoom = (nextZoom: number | ((current: number) => number)) => {
+    setZoomState((current) => {
+      const currentZoom =
+        activeLog && current.logId === activeLog._id
+          ? current.value
+          : 1;
+      const value =
+        typeof nextZoom === "function"
+          ? nextZoom(currentZoom)
+          : nextZoom;
+
+      return {
+        logId: activeLog._id,
+        value,
+      };
+    });
+  };
+
+  const zoomIn = () => updateZoom((current) => Math.min(current + 0.25, 3));
+  const zoomOut = () => updateZoom((current) => Math.max(current - 0.25, 0.75));
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[10020] flex items-center justify-center overflow-hidden p-3 sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          background: "radial-gradient(circle at 50% 20%, rgba(255,61,94,0.16), transparent 34%), rgba(2,4,12,0.94)",
+          backdropFilter: "blur(18px)",
+        }}
+        onClick={onClose}
+      />
+
+      <motion.div
+        className="relative flex h-full w-full max-w-7xl flex-col overflow-hidden rounded-[2rem]"
+        initial={{ scale: 0.96, y: 18 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.96, y: 12 }}
+        transition={{ duration: 0.24, ease: "easeOut" }}
+        style={{
+          background: "rgba(5,7,15,0.72)",
+          border: `1px solid ${T.borderHi}`,
+          boxShadow: "0 28px 90px rgba(0,0,0,0.72)",
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="absolute left-0 right-0 top-0 z-30 flex items-center justify-between gap-3 p-4 sm:p-5">
+          <div
+            className="flex min-w-0 items-center gap-3 rounded-2xl px-3 py-2"
+            style={{ background: "rgba(0,0,0,0.42)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: T.roseGlow, color: T.rose, border: `1px solid ${T.borderHi}` }}
+            >
+              <ImageIcon size={17} />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-white">
+                Unsafe image {index + 1} of {logs.length}
+              </p>
+              <p className="truncate text-[10px] font-mono" style={{ color: T.textMuted }}>
+                #{activeLog._id.slice(-8).toUpperCase()}
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="flex items-center gap-2 rounded-2xl p-1.5"
+            style={{ background: "rgba(0,0,0,0.42)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <button
+              onClick={() => setIsPlaying((current) => !current)}
+              disabled={!canNavigate}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/10 disabled:opacity-35"
+              title={isPlaying ? "Pause slideshow" : "Start slideshow"}
+            >
+              {isPlaying ? <Pause size={17} /> : <Play size={17} />}
+            </button>
+            <button onClick={zoomOut} className="flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/10" title="Zoom out">
+              <ZoomOut size={17} />
+            </button>
+            <button onClick={zoomIn} className="flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/10" title="Zoom in">
+              <ZoomIn size={17} />
+            </button>
+            <button onClick={() => updateZoom(1)} className="hidden h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/10 sm:flex" title="Reset zoom">
+              <RotateCcw size={17} />
+            </button>
+            <a href={activeUrl} download target="_blank" rel="noreferrer" className="hidden h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/10 sm:flex" title="Download image">
+              <Download size={17} />
+            </a>
+            <a href={activeUrl} target="_blank" rel="noreferrer" className="flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/10" title="Open original">
+              <ExternalLink size={17} />
+            </a>
+            <button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:bg-white/10" title="Close">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-3 py-20 sm:px-16">
+          {canNavigate && (
+            <>
+              <button
+                onClick={onPrev}
+                className="absolute left-3 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-2xl text-white transition hover:bg-white/10 active:scale-95 sm:left-5"
+                style={{ background: "rgba(0,0,0,0.42)", border: "1px solid rgba(255,255,255,0.08)" }}
+                title="Previous image"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <button
+                onClick={onNext}
+                className="absolute right-3 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-2xl text-white transition hover:bg-white/10 active:scale-95 sm:right-5"
+                style={{ background: "rgba(0,0,0,0.42)", border: "1px solid rgba(255,255,255,0.08)" }}
+                title="Next image"
+              >
+                <ChevronRight size={24} />
+              </button>
+            </>
+          )}
+
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={activeLog._id}
+              src={activeUrl}
+              alt="Unsafe media evidence"
+              className="max-h-full max-w-full select-none object-contain"
+              initial={{ opacity: 0, scale: 0.94, filter: "blur(12px)" }}
+              animate={{ opacity: 1, scale: zoom, filter: "blur(0px)" }}
+              exit={{ opacity: 0, scale: 0.96, filter: "blur(10px)" }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+              style={{ transformOrigin: "center", cursor: zoom > 1 ? "zoom-out" : "zoom-in" }}
+              onClick={() => updateZoom((current) => current > 1 ? 1 : 1.6)}
+              draggable={false}
+            />
+          </AnimatePresence>
+        </div>
+
+        <div
+          className="absolute bottom-0 left-0 right-0 z-30 px-4 py-4"
+          style={{ background: "linear-gradient(to top, rgba(2,4,12,0.92), transparent)" }}
+        >
+          <div className="mx-auto flex max-w-4xl items-center gap-2 overflow-x-auto pb-1">
+            {logs.map((log, thumbIndex) => {
+              const thumbUrl = getEvidenceUrl(log);
+              const isActive = thumbIndex === index;
+
+              return (
+                <button
+                  key={log._id}
+                  onClick={() => onSelect(thumbIndex)}
+                  className="h-14 w-20 shrink-0 overflow-hidden rounded-xl transition-all"
+                  style={{
+                    border: `1px solid ${isActive ? T.roseBright : "rgba(255,255,255,0.12)"}`,
+                    boxShadow: isActive ? `0 0 20px ${T.roseGlowBright}` : "none",
+                    opacity: isActive ? 1 : 0.55,
+                  }}
+                  title={`Open image ${thumbIndex + 1}`}
+                >
+                  <img src={thumbUrl} alt="" className="h-full w-full object-cover" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function UnsafeMediaPage() {
   const [logs, setLogs] = useState<UnsafeLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -520,6 +757,8 @@ export default function UnsafeMediaPage() {
   const [rejectionReasons, setRejectionReasons] = useState<string[]>(["platform_policy"]);
   const [sendingReviewEmail, setSendingReviewEmail] = useState(false);
   const [reviewEmailMessage, setReviewEmailMessage] = useState("");
+  const [imagesOnlyMode, setImagesOnlyMode] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const toggleImage = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -626,6 +865,7 @@ export default function UnsafeMediaPage() {
       if (!res.ok) { alert(data.error); return; }
       setLogs((p) => p.filter((l) => l._id !== logId));
       if (selectedLog?._id === logId) setSelectedLog(null);
+      setLightboxIndex(null);
       setSelectedIds((p) => { const next = new Set(p); next.delete(logId); return next; });
     } catch (e) { console.error(e); }
     finally { setDeletingId(null); }
@@ -747,6 +987,7 @@ export default function UnsafeMediaPage() {
   };
 
   const filteredLogs = filterAction === "all" ? logs : logs.filter(l => l.action === filterAction);
+  const imageOnlyLogs = filteredLogs.filter((log) => Boolean(getEvidenceUrl(log)));
   const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
   const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -761,8 +1002,36 @@ export default function UnsafeMediaPage() {
       )
       : [];
   const selectedEvidenceUrl =
-    selectedLog?.signedEvidenceUrl ||
-    selectedLog?.metadata?.evidenceUrl;
+    selectedLog
+      ? getEvidenceUrl(selectedLog)
+      : "";
+
+  useEffect(() => {
+    if (lightboxIndex !== null && lightboxIndex >= imageOnlyLogs.length) {
+      setLightboxIndex(null);
+    }
+  }, [imageOnlyLogs.length, lightboxIndex]);
+
+  const openLightboxForLog = (logId: string) => {
+    const nextIndex = imageOnlyLogs.findIndex((log) => log._id === logId);
+    if (nextIndex >= 0) setLightboxIndex(nextIndex);
+  };
+
+  const showNextImage = useCallback(() => {
+    setLightboxIndex((current) => {
+      if (imageOnlyLogs.length === 0) return null;
+      if (current === null) return 0;
+      return (current + 1) % imageOnlyLogs.length;
+    });
+  }, [imageOnlyLogs.length]);
+
+  const showPreviousImage = useCallback(() => {
+    setLightboxIndex((current) => {
+      if (imageOnlyLogs.length === 0) return null;
+      if (current === null) return 0;
+      return (current - 1 + imageOnlyLogs.length) % imageOnlyLogs.length;
+    });
+  }, [imageOnlyLogs.length]);
 
   return (
     <div className="min-h-screen relative" style={{ background: T.bg, color: T.text }}>
@@ -909,6 +1178,21 @@ export default function UnsafeMediaPage() {
                 transition={{ delay: 0.2 }}
                 className="flex items-center gap-3 flex-wrap lg:flex-nowrap"
               >
+                <button
+                  onClick={() => setImagesOnlyMode((current) => !current)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-2xl text-[11px] font-bold uppercase tracking-widest transition-all duration-200"
+                  style={{
+                    background: imagesOnlyMode ? T.accentMid : T.glass,
+                    color: imagesOnlyMode ? T.accent : T.textMuted,
+                    border: `1px solid ${imagesOnlyMode ? T.accent : T.border}`,
+                    boxShadow: imagesOnlyMode ? `0 0 24px ${T.accentLo}` : "none",
+                    backdropFilter: "blur(16px)",
+                  }}
+                >
+                  <ImageIcon size={14} />
+                  {imagesOnlyMode ? "Evidence Cards" : "Images Only"}
+                </button>
+
                 {/* Filter tabs */}
                 <div className="flex items-center gap-1 p-1 rounded-2xl"
                   style={{ background: T.glass, border: `1px solid ${T.border}`, backdropFilter: "blur(16px)" }}>
@@ -971,7 +1255,7 @@ export default function UnsafeMediaPage() {
         </motion.div>
 
         {/* ── BULK ACTIONS ROW ── */}
-        {!loading && paginatedLogs.length > 0 && (
+        {!loading && !imagesOnlyMode && paginatedLogs.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1045,6 +1329,68 @@ export default function UnsafeMediaPage() {
               </p>
             </div>
           </motion.div>
+        ) : imagesOnlyMode ? (
+          imageOnlyLogs.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center gap-5 py-28 text-center rounded-3xl relative overflow-hidden"
+              style={{ background: T.glass, border: `1px solid ${T.border}`, backdropFilter: "blur(24px)" }}
+            >
+              <div className="relative z-10 w-20 h-20 rounded-3xl flex items-center justify-center"
+                style={{ background: T.accentLo, border: `1px solid ${T.accent}30` }}>
+                <ImageIcon size={32} style={{ color: T.accent }} />
+              </div>
+              <div className="relative z-10">
+                <p className="text-2xl font-black text-white mb-2" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>
+                  No Images Available
+                </p>
+                <p className="text-sm font-medium" style={{ color: T.textMuted }}>
+                  The current filter has no viewable image evidence.
+                </p>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              layout
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4"
+            >
+              <AnimatePresence mode="popLayout">
+                {imageOnlyLogs.map((log, index) => {
+                  const imageUrl = getEvidenceUrl(log);
+
+                  return (
+                    <motion.button
+                      key={log._id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.92, y: 14 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                      whileHover={{ y: -4, scale: 1.015 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => openLightboxForLog(log._id)}
+                      className="group relative aspect-square overflow-hidden rounded-2xl bg-black"
+                      style={{
+                        border: `1px solid ${T.borderMid}`,
+                        boxShadow: "0 16px 42px rgba(0,0,0,0.32)",
+                      }}
+                    >
+                      <img
+                        src={imageUrl}
+                        alt={`Unsafe media evidence ${index + 1}`}
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div
+                        className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                        style={{ background: "linear-gradient(to top, rgba(2,4,12,0.64), transparent 62%)" }}
+                      />
+                    </motion.button>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
+          )
         ) : (
           <motion.div layout className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <AnimatePresence mode="popLayout">
@@ -1067,6 +1413,22 @@ export default function UnsafeMediaPage() {
       </div>
 
       {/* ── MODAL ── */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {lightboxIndex !== null && imageOnlyLogs[lightboxIndex] && (
+            <ImagesOnlyLightbox
+              logs={imageOnlyLogs}
+              index={lightboxIndex}
+              onClose={() => setLightboxIndex(null)}
+              onNext={showNextImage}
+              onPrev={showPreviousImage}
+              onSelect={setLightboxIndex}
+            />
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
       {mounted && createPortal(
         <AnimatePresence>
           {selectedLog && (

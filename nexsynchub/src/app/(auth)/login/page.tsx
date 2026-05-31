@@ -1,8 +1,15 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import {
+  Suspense,
+  useState,
+  type FormEvent,
+} from "react";
 
-import { signIn } from "next-auth/react";
+import {
+  getSession,
+  signIn,
+} from "next-auth/react";
 
 import {
   useRouter,
@@ -41,7 +48,7 @@ function LoginContent() {
   const [showPassword, setShowPassword] =
     useState(false);
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setLoading(true);
@@ -57,13 +64,38 @@ function LoginContent() {
     if (res?.error) {
       setError(res.error);
     } else {
-      const sessionRes =
-        await fetch(
-          "/api/auth/session"
-        );
+      let session =
+        await getSession();
 
-      const session =
-        await sessionRes.json();
+      if (!session) {
+        const sessionRes =
+          await fetch(
+            "/api/auth/session"
+          );
+
+        const contentType =
+          sessionRes.headers.get(
+            "content-type"
+          ) || "";
+
+        if (
+          sessionRes.ok &&
+          contentType.includes(
+            "application/json"
+          )
+        ) {
+          session =
+            await sessionRes.json();
+        }
+      }
+
+      if (!session?.user) {
+        setError(
+          "Signed in, but we could not load your session. Please refresh and try again."
+        );
+        setLoading(false);
+        return;
+      }
 
       const role =
         session?.user?.role;
@@ -254,7 +286,7 @@ function LoginContent() {
 
             {/* Register */}
             <p className="text-center text-sm text-gray-400">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/register"
                 className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium"
