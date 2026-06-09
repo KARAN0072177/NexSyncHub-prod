@@ -1,26 +1,21 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion, useInView, useScroll, useTransform } from "framer-motion";
+import { useState } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import {
   MessageSquare,
   CheckSquare,
   Bell,
+  CalendarDays,
+  Clock,
   Users,
-  Activity,
   Layers,
   GitBranch,
   Shield,
-  Zap,
   ArrowRight,
-  Mail,
-  ChevronRight,
   Play,
   FileText,
-  CalendarDays,
-  Hash,
-  TreesIcon,
-  BirdIcon,
+  CircleCheck,
 } from "lucide-react";
 import { Typewriter } from "react-simple-typewriter";
 
@@ -36,6 +31,7 @@ export default function LandingPage() {
       <main>
         <Hero />
         <Features />
+        <WhyNexSyncHub />
         <WorkspacePreview />
         <TeamCollaboration />
       </main>
@@ -92,6 +88,24 @@ function Hero() {
             Watch demo
           </button>
         </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-wrap gap-x-4 gap-y-2 pt-1 text-sm text-gray-400"
+        >
+          {[
+            "Real-time chat",
+            "Task management",
+            "File collaboration",
+            "Role-based permissions",
+          ].map((item) => (
+            <span key={item} className="flex items-center gap-1.5">
+              <CircleCheck className="h-4 w-4 text-emerald-400" />
+              {item}
+            </span>
+          ))}
+        </motion.div>
       </div>
 
       {/* Parallax wrapper for Realistic product mockup */}
@@ -128,7 +142,7 @@ function Hero() {
                 K
               </div>
               <div className="bg-white/5 rounded-lg px-3 py-2 max-w-[80%]">
-                <p className="text-gray-300">Nice, I'll review after lunch. The Kanban board is synced.</p>
+                <p className="text-gray-300">Nice, I&lsquo;ll review after lunch. The Kanban board is synced.</p>
                 <span className="text-gray-600">2:42 PM</span>
               </div>
             </div>
@@ -290,6 +304,215 @@ function Features() {
   );
 }
 
+function WhyNexSyncHub() {
+  const scatteredTools = [
+    ["Chat app", "Conversations"],
+    ["Task board", "Assignments"],
+    ["Docs tool", "Specs"],
+    ["File drive", "Uploads"],
+    ["Email inbox", "Alerts"],
+  ];
+
+  const frustrations = [
+    "Lost files",
+    "Missed updates",
+    "Too many tabs",
+    "Context switching",
+    "Duplicate notifications",
+  ];
+
+  const workspaceTools = [
+    "Chat",
+    "Tasks",
+    "Media Hub",
+    "Docs",
+    "Activity Timeline",
+    "Role Management",
+    "Smart Notifications",
+  ];
+
+  const outcomes = [
+    {
+      icon: Layers,
+      title: "Stop Context Switching",
+      desc: "Chat, tasks, docs, and Media Hub stay inside the same workspace.",
+    },
+    {
+      icon: GitBranch,
+      title: "Track Everything",
+      desc: "Assignments, role changes, uploads, and updates appear in the Activity Timeline.",
+    },
+    {
+      icon: Shield,
+      title: "Built For Real Teams",
+      desc: "Role Management, workspace controls, and collaboration settings are included.",
+    },
+    {
+      icon: FileText,
+      title: "Centralized Workspace Media",
+      desc: "Access uploaded files, images, videos, and documents without digging through months of chat history.",
+    },
+  ];
+
+  const comparisons = [
+    ["Important updates get lost in chat", "Task activity stays attached to work"],
+    ["Files are scattered across tools", "Media Hub keeps uploads centralized"],
+    ["Too many browser tabs", "Everything lives in one focused workspace"],
+    ["No visibility into changes", "Every action has an activity trail"],
+    ["Permissions become messy", "Role Management keeps access clear"],
+  ];
+
+  return (
+    <section className="relative py-24 px-6 max-w-6xl mx-auto">
+      <div className="absolute inset-x-8 top-20 h-64 bg-indigo-500/5 blur-[120px] -z-10 pointer-events-none" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        className="mb-14 max-w-3xl"
+      >
+        <span className="text-sm font-medium uppercase tracking-[0.25em] text-indigo-300/80">
+          Why NexSyncHub
+        </span>
+        <h2 className="mt-4 text-3xl md:text-4xl font-bold tracking-tight">
+          Work from one workspace, not five apps.
+        </h2>
+        <p className="mt-4 text-lg text-gray-400">
+          Chat, tasks, files, activity tracking, and team collaboration in one focused workspace.
+        </p>
+      </motion.div>
+
+      <div className="grid lg:grid-cols-[1fr_1.05fr] gap-6 items-stretch">
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          className="rounded-2xl border border-white/5 bg-white/[0.02] p-6"
+        >
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-300">Traditional Workflow</p>
+              <p className="text-sm text-gray-500">Scattered work, scattered context.</p>
+            </div>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-500">
+              5 tabs
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {scatteredTools.map(([tool, job], index) => (
+              <div
+                key={tool}
+                className="flex items-center justify-between rounded-xl border border-white/5 bg-black/30 px-4 py-3 opacity-70"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 text-xs text-gray-500">
+                    {index + 1}
+                  </span>
+                  <span className="font-medium text-gray-300">{tool}</span>
+                </div>
+                <span className="text-sm text-gray-500">{job}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 grid grid-cols-3 gap-3 text-center text-sm">
+            {["5 tools", "5 logins", "5 places to search"].map((item) => (
+              <div key={item} className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-3 text-gray-500">
+                {item}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-red-500/10 bg-red-500/[0.03] p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-red-200/60">
+              Common frustrations
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {frustrations.map((item) => (
+                <div key={item} className="flex items-center gap-2 rounded-xl bg-black/25 px-3 py-2 text-sm text-gray-500">
+                  <span className="text-red-300/70">x</span>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ delay: 0.1 }}
+          className="relative overflow-hidden rounded-2xl border border-indigo-400/20 bg-indigo-500/[0.08] p-6 shadow-2xl shadow-indigo-500/10"
+        >
+          <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-indigo-400/10 blur-3xl" />
+          <div className="relative">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-white">NexSyncHub Workflow</p>
+                <p className="text-sm text-indigo-100/60">One workspace, connected work.</p>
+              </div>
+              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
+                unified
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/35 p-5">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-indigo-400/30 bg-indigo-400/10">
+                  <Layers className="h-5 w-5 text-indigo-300" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">NexSyncHub</p>
+                  <p className="text-sm text-gray-500">Your team&apos;s operating workspace.</p>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                {workspaceTools.map((item) => (
+                  <div key={item} className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-sm text-gray-300">
+                    <CircleCheck className="h-4 w-4 text-emerald-400" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {comparisons.map(([problem, solution]) => (
+                <div key={problem} className="grid gap-2 rounded-xl border border-white/5 bg-black/25 p-3 text-sm sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+                  <span className="text-gray-500">{problem}</span>
+                  <ArrowRight className="hidden h-4 w-4 text-indigo-300 sm:block" />
+                  <span className="text-gray-200">{solution}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        className="mt-6 grid md:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        {outcomes.map((item) => (
+          <div key={item.title} className="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-300">
+              <item.icon className="h-5 w-5" />
+            </div>
+            <h3 className="font-semibold text-white">{item.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">{item.desc}</p>
+          </div>
+        ))}
+      </motion.div>
+    </section>
+  );
+}
+
 function WorkspacePreview() {
   const tabs = ["Chat", "Tasks", "Docs", "Calendar", "Files"];
   const [activeTab, setActiveTab] = useState("Chat");
@@ -342,10 +565,31 @@ function WorkspacePreview() {
             </div>
           )}
           {activeTab === "Tasks" && (
-            <div className="grid grid-cols-3 gap-3">
-              <MockTaskColumn title="To Do" count={4} />
-              <MockTaskColumn title="In Progress" count={2} />
-              <MockTaskColumn title="Done" count={5} />
+            <div className="grid gap-3 md:grid-cols-3">
+              <MockTaskColumn
+                title="To Do"
+                count={4}
+                tasks={[
+                  { title: "Finalize onboarding checklist", meta: "Alex · Today", tone: "indigo" },
+                  { title: "Upload launch assets to Media Hub", meta: "Priya · Tomorrow", tone: "emerald" },
+                ]}
+              />
+              <MockTaskColumn
+                title="In Progress"
+                count={2}
+                tasks={[
+                  { title: "Review workspace role settings", meta: "Marcus · 72%", tone: "amber" },
+                  { title: "Connect task activity updates", meta: "Zara · Live", tone: "indigo" },
+                ]}
+              />
+              <MockTaskColumn
+                title="Done"
+                count={5}
+                tasks={[
+                  { title: "Create product roadmap channel", meta: "Completed", tone: "emerald", done: true },
+                  { title: "Publish support workflow notes", meta: "Completed", tone: "emerald", done: true },
+                ]}
+              />
             </div>
           )}
           {activeTab === "Docs" && (
@@ -361,7 +605,52 @@ function WorkspacePreview() {
             </div>
           )}
           {activeTab === "Calendar" && (
-            <div className="text-gray-400 text-sm">Calendar integration view (coming soon)</div>
+            <div className="grid h-full gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="rounded-2xl border border-indigo-400/15 bg-indigo-400/[0.06] p-4">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-400/25 bg-indigo-400/10 text-indigo-300">
+                    <CalendarDays className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">Calendar Sync</p>
+                    <p className="text-xs text-gray-500">Planned for team timelines</p>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed text-gray-400">
+                  Soon, task deadlines and workspace activity will connect into a clean planning view.
+                </p>
+                <div className="mt-4 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.06] px-3 py-2 text-xs text-emerald-300">
+                  Designed to turn task updates into a shared team schedule.
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  ["Today", "Review launch checklist", "Task deadline"],
+                  ["Tomorrow", "Workspace permissions audit", "Activity reminder"],
+                  ["Friday", "Media Hub cleanup", "Team review"],
+                ].map(([day, title, type], index) => (
+                  <motion.div
+                    key={title}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.08, duration: 0.25 }}
+                    className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-3 rounded-xl border border-white/5 bg-white/[0.04] p-3"
+                  >
+                    <div className="rounded-lg border border-white/5 bg-black/25 px-3 py-2 text-center">
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-indigo-300">{day}</p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-200">{title}</p>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-600">
+                        <Clock className="h-3 w-3" />
+                        {type}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           )}
           {activeTab === "Files" && (
             <div className="grid grid-cols-3 gap-3 text-xs">
@@ -419,17 +708,60 @@ function MockChatMessage({
   );
 }
 
-function MockTaskColumn({ title, count }: { title: string; count: number }) {
+function MockTaskColumn({
+  title,
+  count,
+  tasks,
+}: {
+  title: string;
+  count: number;
+  tasks: {
+    title: string;
+    meta: string;
+    tone: "indigo" | "emerald" | "amber";
+    done?: boolean;
+  }[];
+}) {
+  const toneClasses = {
+    indigo: "border-indigo-400/20 bg-indigo-400/10 text-indigo-300",
+    emerald: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+    amber: "border-amber-400/20 bg-amber-400/10 text-amber-300",
+  };
+
   return (
-    <div className="bg-white/5 rounded-lg p-3">
-      <div className="flex justify-between text-xs mb-2">
+    <div className="rounded-xl border border-white/5 bg-white/[0.04] p-3">
+      <div className="mb-3 flex justify-between text-xs">
         <span className="font-medium text-gray-300">{title}</span>
         <span className="text-gray-600">{count}</span>
       </div>
-      <div className="space-y-1.5">
-        <div className="h-1.5 bg-white/10 rounded-full w-3/4" />
-        <div className="h-1.5 bg-white/10 rounded-full w-1/2" />
-        <div className="h-1.5 bg-white/10 rounded-full w-2/3" />
+      <div className="space-y-2">
+        {tasks.map((task, index) => (
+          <motion.div
+            key={task.title}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.08, duration: 0.25 }}
+            className="rounded-lg border border-white/5 bg-black/20 p-3"
+          >
+            <div className="flex items-start gap-2">
+              <span
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${toneClasses[task.tone]}`}
+              >
+                {task.done ? (
+                  <CircleCheck className="h-3 w-3" />
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                )}
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-medium leading-snug text-gray-200">
+                  {task.title}
+                </p>
+                <p className="mt-1 text-[11px] text-gray-600">{task.meta}</p>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </div>
     </div>
   );
@@ -516,7 +848,7 @@ function TeamCollaboration() {
           </motion.div>
           <div className="space-y-2">
             {["Alex Chen (Owner)", "Priya Singh (Admin)", "Marcus Lee", "Zara Miller"].map(
-              (name, i) => (
+              (name) => (
                 <motion.div
                   variants={itemRight}
                   key={name}
