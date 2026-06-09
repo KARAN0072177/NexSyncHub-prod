@@ -311,7 +311,7 @@ export default function Footer() {
                 </span>
               </Link>
               <p className="text-sm text-slate-400 leading-relaxed max-w-sm font-light">
-                The high-performance workspace layer for engineering ecosystems. Standardizing async alignment with AI-assisted clarity modules.
+                NexSyncHub brings chat, tasks, files, and activity tracking into one workspace so teams can collaborate without switching between tools.
               </p>
             </motion.div>
 
@@ -329,7 +329,7 @@ export default function Footer() {
                     <input
                       type="email"
                       required
-                      placeholder="name@ecosystem.com"
+                      placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={status === "loading"}

@@ -22,29 +22,34 @@ const navLinks = [
   { name: "Home", href: "/", icon: Home },
   { name: "Features", href: "/features", icon: Layers },
   { name: "About", href: "/about", icon: Info },
-  { name: "Help and Support", href: "/support-center", icon: Mail },
+  { name: "Support", href: "/support-center", icon: Mail },
 ];
+
+type SessionUserWithRole = {
+  role?: string;
+};
 
 export default function PublicNavbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const isAdmin = (session?.user as any)?.role === "admin" || (session?.user as any)?.role === "super_admin";
+  const userRole = (session?.user as SessionUserWithRole | undefined)?.role;
+  const isAdmin = userRole === "admin" || userRole === "super_admin";
 
   return (
-    <header className="fixed top-4 inset-x-0 z-50 flex justify-center px-6">
-      <div className="w-full max-w-6xl bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-indigo-500/10 transition-all">
-        <div className="px-6 h-16 flex items-center justify-between">
+    <header className="fixed top-3 inset-x-3 sm:top-4 sm:inset-x-6 z-50 flex justify-center">
+      <div className="w-full max-w-6xl min-w-0 bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-indigo-500/10 transition-all">
+        <div className="h-14 px-3 sm:h-16 sm:px-6 flex items-center justify-between gap-3">
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 group"
+          className="flex min-w-0 items-center gap-2 group"
         >
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
+          <div className="w-8 h-8 shrink-0 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
             <Zap className="w-4 h-4 text-indigo-400" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-white">
+          <span className="truncate text-base font-bold tracking-tight text-white sm:text-xl">
             NexSyncHub
           </span>
         </Link>
@@ -120,7 +125,9 @@ export default function PublicNavbar() {
         {/* Mobile Menu Toggle Button */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden p-2 -mr-2 text-gray-300 hover:text-white transition-colors"
+          className="md:hidden shrink-0 rounded-xl border border-white/10 bg-white/5 p-2 text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={isMobileMenuOpen}
         >
           {isMobileMenuOpen ? (
             <X className="w-6 h-6" />
@@ -139,7 +146,7 @@ export default function PublicNavbar() {
               exit={{ height: 0, opacity: 0 }}
               className="md:hidden overflow-hidden"
             >
-              <div className="border-t border-white/10 px-6 py-6 space-y-4">
+              <div className="border-t border-white/10 px-3 py-4 sm:px-6 sm:py-6 space-y-4">
                 <nav className="flex flex-col gap-2">
                   {navLinks.map((link) => {
                     const isActive = pathname === link.href;
