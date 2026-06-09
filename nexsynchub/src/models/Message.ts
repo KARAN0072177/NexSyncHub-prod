@@ -113,6 +113,11 @@ const MessageSchema = new Schema<IMessage>(
   }
 );
 
+MessageSchema.index({
+  channel: 1,
+  createdAt: -1,
+});
+
 // 🔥 Prevent empty messages
 // (BUT allow system messages)
 

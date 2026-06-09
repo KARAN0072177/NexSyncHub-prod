@@ -37,6 +37,22 @@ type Attachment = {
     size?: number;
 };
 
+type ChannelMessageCache = {
+    messages: any[];
+    cursor: string | null;
+    firstUnreadId: string | null;
+    seenUsers: string[];
+    cachedAt: number;
+};
+
+type OlderMessagesBuffer = {
+    cursor: string;
+    messages: any[];
+    nextCursor: string | null;
+};
+
+const MESSAGE_BATCH_SIZE = 35;
+
 function ChatMessagesSkeleton() {
     const rows = [
         { side: "left", width: "w-[58%]", lines: ["w-44", "w-72", "w-52"] },
@@ -164,6 +180,10 @@ export default function ChatArea({ channel }: { channel: any }) {
     const bottomRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const prevScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+    const channelMessageCacheRef = useRef<Map<string, ChannelMessageCache>>(new Map());
+    const olderMessagesBufferRef = useRef<Map<string, OlderMessagesBuffer>>(new Map());
+    const prefetchingOlderRef = useRef<Set<string>>(new Set());
+    const loadingMoreLockRef = useRef(false);
     const { data: session } = useSession();
 
     const userId = session?.user?.id;
@@ -237,6 +257,47 @@ export default function ChatArea({ channel }: { channel: any }) {
         []
     );
 
+    const prefetchOlderMessages = useCallback(async (
+        channelId: string,
+        cursorToPrefetch: string | null
+    ) => {
+        if (!channelId || !cursorToPrefetch) return;
+
+        const prefetchKey =
+            `${channelId}:${cursorToPrefetch}`;
+        const existingBuffer =
+            olderMessagesBufferRef.current.get(channelId);
+
+        if (
+            existingBuffer?.cursor === cursorToPrefetch ||
+            prefetchingOlderRef.current.has(prefetchKey)
+        ) {
+            return;
+        }
+
+        prefetchingOlderRef.current.add(prefetchKey);
+
+        try {
+            const res = await fetch(
+                `/api/message/list?channelId=${channelId}&cursor=${cursorToPrefetch}&limit=${MESSAGE_BATCH_SIZE}`
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) return;
+
+            olderMessagesBufferRef.current.set(channelId, {
+                cursor: cursorToPrefetch,
+                messages: data.messages ?? [],
+                nextCursor: data.nextCursor ?? null,
+            });
+        } catch (error) {
+            console.error("Failed to prefetch older messages:", error);
+        } finally {
+            prefetchingOlderRef.current.delete(prefetchKey);
+        }
+    }, []);
+
     const searchParams = useSearchParams();
     const highlightMessageId = searchParams.get("message");
 
@@ -285,28 +346,55 @@ export default function ChatArea({ channel }: { channel: any }) {
         if (!channel?._id) return;
         let cancelled =
             false;
+        const channelId =
+            String(channel._id);
+        const cached =
+            channelMessageCacheRef.current.get(channelId);
 
-        setLoadingChannelMessages(true);
-        setFirstUnreadId(null);
+        if (cached) {
+            setMessages(cached.messages);
+            setCursor(cached.cursor);
+            setFirstUnreadId(cached.firstUnreadId);
+            setSeenUsers(new Set(cached.seenUsers));
+            setLoadingChannelMessages(false);
+            prefetchOlderMessages(channelId, cached.cursor);
+        } else {
+            setMessages([]);
+            setCursor(null);
+            setSeenUsers(new Set());
+            setFirstUnreadId(null);
+            setLoadingChannelMessages(true);
+        }
 
         const fetchMessages = async () => {
             try {
-                // Fetch unread count first
-                const unreadRes = await fetch(`/api/channel/unread-counts?workspaceId=${channel.workspace}`);
+                const [unreadRes, res] =
+                    await Promise.all([
+                        fetch(`/api/channel/unread-counts?workspaceId=${channel.workspace}`),
+                        fetch(`/api/message/list?channelId=${channel._id}&limit=${MESSAGE_BATCH_SIZE}`),
+                    ]);
+
                 const unreadData = await unreadRes.json();
                 const unreadCount = unreadData.unreadCounts?.[channel._id] || 0;
 
-                const res = await fetch(`/api/message/list?channelId=${channel._id}`);
                 const data = await res.json();
 
                 if (cancelled) return;
 
                 if (res.ok) {
-                    setMessages(data.messages);
-                    setCursor(data.nextCursor); // ✅ IMPORTANT
+                    const nextMessages =
+                        data.messages ?? [];
+                    const nextCursor =
+                        data.nextCursor ?? null;
+                    const initialSeen = new Set<string>();
+                    let nextFirstUnreadId: string | null =
+                        null;
 
-                    if (data.messages.length > 0) {
-                        const lastMsg = data.messages[data.messages.length - 1];
+                    setMessages(nextMessages);
+                    setCursor(nextCursor);
+
+                    if (nextMessages.length > 0) {
+                        const lastMsg = nextMessages[nextMessages.length - 1];
 
                         // Safely extract from possible backend field names
                         let readers = lastMsg.readBy || lastMsg.seenBy || lastMsg.viewedBy || lastMsg.readers || [];
@@ -314,7 +402,6 @@ export default function ChatArea({ channel }: { channel: any }) {
                             readers = Object.keys(readers); // Handle if backend returns a dictionary map
                         }
 
-                        const initialSeen = new Set<string>();
                         if (Array.isArray(readers)) {
                             readers.forEach((u: any) => {
                                 const id = u?._id || u?.user || u?.id || (typeof u === "string" ? u : null);
@@ -328,14 +415,26 @@ export default function ChatArea({ channel }: { channel: any }) {
                         setSeenUsers(new Set());
                     }
 
-                    if (unreadCount > 0 && data.messages.length > 0) {
-                        setFirstUnreadId(
+                    if (unreadCount > 0 && nextMessages.length > 0) {
+                        nextFirstUnreadId =
                             getFirstUnreadMessageId(
-                                data.messages,
+                                nextMessages,
                                 unreadCount
-                            )
-                        );
+                            );
+                        setFirstUnreadId(nextFirstUnreadId);
+                    } else {
+                        setFirstUnreadId(null);
                     }
+
+                    channelMessageCacheRef.current.set(channelId, {
+                        messages: nextMessages,
+                        cursor: nextCursor,
+                        firstUnreadId: nextFirstUnreadId,
+                        seenUsers: Array.from(initialSeen),
+                        cachedAt: Date.now(),
+                    });
+
+                    prefetchOlderMessages(channelId, nextCursor);
 
                     // 🔥 Mark channel as read since the user just opened it!
                     markChannelRead(channel._id);
@@ -354,42 +453,90 @@ export default function ChatArea({ channel }: { channel: any }) {
         };
     }, [channel._id, channel.workspace, userId, markChannelRead, getFirstUnreadMessageId]);
 
+    useEffect(() => {
+        if (!channel?._id || loadingChannelMessages) return;
+
+        channelMessageCacheRef.current.set(String(channel._id), {
+            messages,
+            cursor,
+            firstUnreadId,
+            seenUsers: Array.from(seenUsers),
+            cachedAt: Date.now(),
+        });
+    }, [channel?._id, messages, cursor, firstUnreadId, seenUsers, loadingChannelMessages]);
+
     // 🔥 Load more messages (pagination)
 
-    const loadMoreMessages = async () => {
-        if (!cursor || loadingMore) return;
+    const loadMoreMessages = useCallback(async () => {
+        if (!cursor || loadingMore || loadingMoreLockRef.current) return;
 
-        setLoadingMore(true);
-
+        const channelId =
+            String(channel._id);
+        const bufferedBatch =
+            olderMessagesBufferRef.current.get(channelId);
         const container = messagesContainerRef.current;
 
-        const res = await fetch(
-            `/api/message/list?channelId=${channel._id}&cursor=${cursor}`
-        );
+        loadingMoreLockRef.current = true;
 
-        const data = await res.json();
-
-        if (res.ok) {
+        if (bufferedBatch?.cursor === cursor) {
             if (container) {
                 prevScrollRef.current = {
                     scrollHeight: container.scrollHeight,
                     scrollTop: container.scrollTop,
                 };
             }
+
+            olderMessagesBufferRef.current.delete(channelId);
+
             setMessages((prev) => {
                 const existingIds = new Set(prev.map((m) => m._id));
-
-                const newMessages = data.messages.filter(
+                const newMessages = bufferedBatch.messages.filter(
                     (m: any) => !existingIds.has(m._id)
                 );
 
                 return [...newMessages, ...prev];
             });
-            setCursor(data.nextCursor);
+            setCursor(bufferedBatch.nextCursor);
+            loadingMoreLockRef.current = false;
+            prefetchOlderMessages(channelId, bufferedBatch.nextCursor);
+            return;
         }
 
-        setLoadingMore(false);
-    };
+        setLoadingMore(true);
+
+        try {
+            const res = await fetch(
+                `/api/message/list?channelId=${channel._id}&cursor=${cursor}&limit=${MESSAGE_BATCH_SIZE}`
+            );
+
+            const data = await res.json();
+
+            if (res.ok) {
+                if (container) {
+                    prevScrollRef.current = {
+                        scrollHeight: container.scrollHeight,
+                        scrollTop: container.scrollTop,
+                    };
+                }
+                setMessages((prev) => {
+                    const existingIds = new Set(prev.map((m) => m._id));
+
+                    const newMessages = (data.messages ?? []).filter(
+                        (m: any) => !existingIds.has(m._id)
+                    );
+
+                    return [...newMessages, ...prev];
+                });
+                const nextCursor =
+                    data.nextCursor ?? null;
+                setCursor(nextCursor);
+                prefetchOlderMessages(channelId, nextCursor);
+            }
+        } finally {
+            setLoadingMore(false);
+            loadingMoreLockRef.current = false;
+        }
+    }, [channel._id, cursor, loadingMore, prefetchOlderMessages]);
 
     // 🔥 Maintain scroll position smoothly before browser repaints
     useLayoutEffect(() => {
@@ -409,7 +556,7 @@ export default function ChatArea({ channel }: { channel: any }) {
             setHoveredMention(null);
             setHoveringReactionDetails(false);
 
-            if (container.scrollTop === 0) {
+            if (container.scrollTop < 180) {
                 loadMoreMessages();
             }
 
@@ -422,7 +569,7 @@ export default function ChatArea({ channel }: { channel: any }) {
         return () => {
             container.removeEventListener("scroll", handleScroll);
         };
-    }, [cursor, loadingMore]);
+    }, [loadMoreMessages]);
 
     // 👥 Fetch members
     useEffect(() => {
@@ -1264,7 +1411,12 @@ export default function ChatArea({ channel }: { channel: any }) {
 
                             {loadingMore && (
                                 <div className="flex justify-center mb-2">
-                                    <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+                                    <div className="flex items-center gap-2 rounded-full border border-indigo-500/15 bg-indigo-500/10 px-3 py-1.5">
+                                        <Loader2 className="w-3.5 h-3.5 text-indigo-300 animate-spin" />
+                                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-200/75">
+                                            Loading older messages
+                                        </span>
+                                    </div>
                                 </div>
                             )}
 
@@ -1939,3 +2091,4 @@ export default function ChatArea({ channel }: { channel: any }) {
         </div>
     );
 }
+

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { socket } from "@/lib/socket";
 import {
@@ -368,12 +369,18 @@ function MediaCard({
         <div className="relative w-full aspect-[16/9] overflow-hidden bg-black/60 shrink-0">
           {evidenceUrl ? (
             <>
-              <img src={evidenceUrl} alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none"
+              <Image src={evidenceUrl} alt=""
+                fill
+                unoptimized
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="absolute inset-0 object-cover opacity-30 pointer-events-none"
                 style={{ filter: "blur(24px) saturate(80%)", transform: "scale(1.15)" }}
               />
-              <img src={evidenceUrl} alt="Evidence"
-                className={`relative z-10 w-full h-full object-contain transition-all duration-700 ease-out ${visible ? "scale-100 blur-0" : "blur-[28px] scale-105"}`}
+              <Image src={evidenceUrl} alt="Evidence"
+                fill
+                unoptimized
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className={`z-10 object-contain transition-all duration-700 ease-out ${visible ? "scale-100 blur-0" : "blur-[28px] scale-105"}`}
               />
               <motion.div
                 className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4"
@@ -456,10 +463,19 @@ function MediaCard({
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl"
               style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
               {log.user.avatar ? (
-                <img src={log.user.avatar} alt="Avatar"
-                  className="w-9 h-9 rounded-xl object-cover shrink-0"
+                <span
+                  className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0"
                   style={{ border: "1px solid rgba(255,255,255,0.1)" }}
-                />
+                >
+                  <Image
+                    src={log.user.avatar}
+                    alt="Avatar"
+                    fill
+                    unoptimized
+                    sizes="36px"
+                    className="object-cover"
+                  />
+                </span>
               ) : (
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
                   style={{ background: T.accentLo, color: T.accent, border: `1px solid ${T.accentMid}` }}>
@@ -722,7 +738,7 @@ function ImagesOnlyLightbox({
                 <button
                   key={log._id}
                   onClick={() => onSelect(thumbIndex)}
-                  className="h-14 w-20 shrink-0 overflow-hidden rounded-xl transition-all"
+                  className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl transition-all"
                   style={{
                     border: `1px solid ${isActive ? T.roseBright : "rgba(255,255,255,0.12)"}`,
                     boxShadow: isActive ? `0 0 20px ${T.roseGlowBright}` : "none",
@@ -730,7 +746,14 @@ function ImagesOnlyLightbox({
                   }}
                   title={`Open image ${thumbIndex + 1}`}
                 >
-                  <img src={thumbUrl} alt="" className="h-full w-full object-cover" />
+                  <Image
+                    src={thumbUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="80px"
+                    className="object-cover"
+                  />
                 </button>
               );
             })}
@@ -1375,10 +1398,13 @@ export default function UnsafeMediaPage() {
                         boxShadow: "0 16px 42px rgba(0,0,0,0.32)",
                       }}
                     >
-                      <img
+                      <Image
                         src={imageUrl}
                         alt={`Unsafe media evidence ${index + 1}`}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                        fill
+                        unoptimized
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                        className="object-cover transition duration-500 group-hover:scale-105"
                         loading="lazy"
                       />
                       <div
@@ -1495,10 +1521,12 @@ export default function UnsafeMediaPage() {
                   <div className="relative lg:w-[55%] h-64 sm:h-80 lg:h-auto flex items-center justify-center overflow-hidden bg-black/60">
                     {selectedEvidenceUrl ? (
                       <>
-                        <img src={selectedEvidenceUrl} alt="Evidence"
-                          loading="eager"
-                          decoding="async"
-                          className="relative z-10 w-full h-full object-contain p-8 sm:p-12"
+                        <Image src={selectedEvidenceUrl} alt="Evidence"
+                          fill
+                          unoptimized
+                          priority
+                          sizes="(max-width: 1024px) 100vw, 55vw"
+                          className="z-10 object-contain p-8 sm:p-12"
                         />
 
                         {/* Bottom overlay */}
@@ -1552,8 +1580,17 @@ export default function UnsafeMediaPage() {
                       <div className="flex items-center gap-4 p-4 rounded-2xl"
                         style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${T.border}` }}>
                         {selectedLog.user.avatar ? (
-                          <img src={selectedLog.user.avatar} className="w-12 h-12 rounded-xl object-cover shrink-0"
-                            style={{ border: "1px solid rgba(255,255,255,0.1)" }} alt="" />
+                          <span className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0"
+                            style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+                            <Image
+                              src={selectedLog.user.avatar}
+                              alt=""
+                              fill
+                              unoptimized
+                              sizes="48px"
+                              className="object-cover"
+                            />
+                          </span>
                         ) : (
                           <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shrink-0"
                             style={{ background: T.accentLo, color: T.accent, fontFamily: "'Space Grotesk',sans-serif" }}>

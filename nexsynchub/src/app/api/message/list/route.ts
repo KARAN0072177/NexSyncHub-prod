@@ -61,7 +61,12 @@ export async function GET(req: Request) {
       );
     }
 
-    const PAGE_SIZE = 20;
+    const requestedLimit =
+      Number(searchParams.get("limit"));
+    const PAGE_SIZE =
+      Number.isFinite(requestedLimit)
+        ? Math.min(Math.max(requestedLimit, 20), 50)
+        : 35;
 
     const query: any = { channel: channelId };
 
