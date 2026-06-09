@@ -36,8 +36,17 @@ function LoginContent() {
 
   const verified = params.get("verified");
 
+  const switchAccount =
+    params.get("switchAccount") === "1";
+
+  const addAccount =
+    params.get("addAccount") === "1";
+
+  const requestedEmail =
+    params.get("email") || "";
+
   const [form, setForm] = useState({
-    email: "",
+    email: requestedEmail,
     password: "",
   });
 
@@ -168,6 +177,16 @@ function LoginContent() {
               <p className="text-sm text-green-400">
                 Email verified successfully!
                 You can login now.
+              </p>
+            </div>
+          )}
+
+          {(switchAccount || addAccount) && (
+            <div className="mb-4 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+              <p className="text-sm text-indigo-200">
+                {switchAccount
+                  ? "Sign in to switch to this account."
+                  : "Sign in with another account to add it to this browser."}
               </p>
             </div>
           )}

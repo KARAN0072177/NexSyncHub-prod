@@ -1,7 +1,9 @@
 import { signOut }
   from "next-auth/react";
 
-export async function logout() {
+export async function logout(
+  callbackUrl = "/login"
+) {
 
   try {
 
@@ -25,8 +27,7 @@ export async function logout() {
   // 🔥 Actual logout
   await signOut({
 
-    callbackUrl:
-      "/login",
+    callbackUrl,
 
   });
 
