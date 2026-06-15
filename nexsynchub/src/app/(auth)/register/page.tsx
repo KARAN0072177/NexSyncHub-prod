@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useState,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Mail,
   Lock,
+  User,
   UserPlus,
   Loader2,
   ArrowRight,
@@ -18,6 +22,7 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const [form, setForm] = useState({
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -38,8 +43,12 @@ export default function RegisterPage() {
       ? "medium"
       : "weak";
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (form.username.trim().length < 3) {
+      setMessage("Username must be at least 3 characters");
+      return;
+    }
     if (form.password !== form.confirmPassword) {
       setMessage("Passwords do not match");
       return;
@@ -67,7 +76,7 @@ export default function RegisterPage() {
       } else {
         setIsSubmitted(true);
       }
-    } catch (err) {
+    } catch {
       setMessage("Network error");
     } finally {
       setLoading(false);
@@ -175,6 +184,37 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                Username
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="karan18"
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-10 pr-4 py-3
+                    text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 
+                    focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                  value={form.username}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      username: e.target.value.toLowerCase().trim(),
+                    })
+                  }
+                  minLength={3}
+                  maxLength={20}
+                  pattern="[a-z0-9._]+"
+                  required
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-gray-500">
+                3-20 characters. Use lowercase letters, numbers, . or _
+              </p>
+            </div>
+
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1.5">

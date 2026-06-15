@@ -1,11 +1,5 @@
 import { resend } from "@/lib/resend";
-
-function getAppUrl() {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:3000"
-  );
-}
+import { getAppUrl } from "@/lib/app-url";
 
 export async function sendNewsletterVerificationEmail({
   email,

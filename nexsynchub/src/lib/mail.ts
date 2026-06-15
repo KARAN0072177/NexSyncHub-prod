@@ -1,10 +1,21 @@
 import { resend } from "./resend";
+import {
+  getAppUrl,
+  normalizeAppUrl,
+} from "@/lib/app-url";
 
-export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
+export async function sendVerificationEmail(
+  email: string,
+  token: string,
+  appUrl = getAppUrl()
+) {
+  const verifyUrl =
+    `${normalizeAppUrl(appUrl)}/verify-email?token=${token}`;
 
   await resend.emails.send({
-    from: "NexSyncHub <noreply@karanart.com>",
+    from:
+      process.env.RESEND_FROM_EMAIL ||
+      "NexSyncHub <noreply@karanart.com>",
     to: email,
     subject: "Verify your email",
     html: `

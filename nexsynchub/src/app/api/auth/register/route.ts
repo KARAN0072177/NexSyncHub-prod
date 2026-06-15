@@ -2,12 +2,12 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { registerSchema } from "@/lib/validators/auth";
 import { generateVerificationToken } from "@/lib/tokens";
-import PlatformSettings from "@/models/PlatformSettings";
 import { getPlatformSettings } from "@/lib/platform-settings";
 
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { sendVerificationEmail } from "@/lib/mail";
+import { getRequestAppUrl } from "@/lib/app-url";
 
 import { createSecurityLog } from "@/lib/security";
 
@@ -70,12 +70,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const { email, password } = parsed.data;
+    const { email, password, username } = parsed.data;
 
     // ✅ Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      $or: [
+        { email },
+        { username },
+      ],
+    });
 
-    if (existingUser) {
+    if (existingUser?.email === email) {
       if (existingUser.isEmailVerified) {
         return NextResponse.json(
           { error: "Email already registered" },
@@ -90,6 +95,13 @@ export async function POST(req: Request) {
     }
 
     // 🔐 Hash password
+    if (existingUser?.username === username) {
+      return NextResponse.json(
+        { error: "Username already taken" },
+        { status: 400 }
+      );
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // 🔑 Generate verification token
@@ -99,6 +111,7 @@ export async function POST(req: Request) {
     const user =
       await User.create({
         email,
+        username,
         password: hashedPassword,
         isEmailVerified: false,
         emailVerificationToken: hashedToken,
@@ -127,7 +140,11 @@ export async function POST(req: Request) {
     });
 
     // after user creation
-    await sendVerificationEmail(email, token);
+    await sendVerificationEmail(
+      email,
+      token,
+      getRequestAppUrl(req)
+    );
 
     return NextResponse.json(
       {
@@ -136,7 +153,7 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("REGISTER ERROR:", error);
 
     return NextResponse.json(
