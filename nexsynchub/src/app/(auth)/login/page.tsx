@@ -7,7 +7,6 @@ import {
 } from "react";
 
 import {
-  getSession,
   signIn,
 } from "next-auth/react";
 
@@ -87,82 +86,21 @@ function LoginContent() {
 
     setError("");
 
+    const targetUrl =
+      getSafeCallbackUrl() ||
+      "/dashboard";
+
     const res = await signIn("credentials", {
       email: form.email,
       password: form.password,
-      redirect: false,
+      callbackUrl: targetUrl,
+      redirect: true,
     });
 
     if (res?.error) {
       setError(res.error);
-    } else {
-      let session =
-        await getSession();
-
-      if (!session) {
-        const sessionRes =
-          await fetch(
-            "/api/auth/session"
-          );
-
-        const contentType =
-          sessionRes.headers.get(
-            "content-type"
-          ) || "";
-
-        if (
-          sessionRes.ok &&
-          contentType.includes(
-            "application/json"
-          )
-        ) {
-          session =
-            await sessionRes.json();
-        }
-      }
-
-      if (!session?.user) {
-        setError(
-          "Signed in, but we could not load your session. Please refresh and try again."
-        );
-        setLoading(false);
-        return;
-      }
-
-      const role =
-        session?.user?.role;
-
-      const username =
-        session?.user?.username;
-
-      if (
-        role === "admin" ||
-        role === "super_admin"
-      ) {
-
-        window.location.assign("/admin");
-
-      }
-
-      else if (!username) {
-
-        window.location.assign(
-          "/set-username"
-        );
-
-      }
-
-      else {
-
-        window.location.assign(
-          getSafeCallbackUrl() ||
-          "/dashboard"
-        );
-
-      }
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (

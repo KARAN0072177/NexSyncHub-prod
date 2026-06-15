@@ -17,7 +17,7 @@ const io = new Server(server, {
     cors: {
         origin: [
             "http://localhost:3000",
-            "https://your-domain.vercel.app"
+            process.env.CLIENT_URL
         ],
         credentials: true
     }
@@ -184,6 +184,10 @@ app.post("/emit", (req, res) => {
 });
 
 
-server.listen(4000, () => {
-    console.log("Socket server running on port 4000");
+const PORT = process.env.PORT || 4000;
+
+server.listen(PORT, () => {
+    console.log(
+        `Socket server running on port ${PORT}`
+    );
 });

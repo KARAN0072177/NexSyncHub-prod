@@ -9,6 +9,25 @@ import bcrypt from "bcryptjs";
 
 import { createSecurityLog } from "@/lib/security";
 
+type AuthUser = {
+  id?: string;
+  username?: string | null;
+  avatar?: string | null;
+  role?: UserRole | null;
+};
+
+type UserRole =
+  | "user"
+  | "admin"
+  | "super_admin";
+
+type SessionUserWithAppFields = {
+  id: string;
+  username?: unknown;
+  avatar?: unknown;
+  role: UserRole;
+};
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -217,24 +236,40 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id;
-        token.username = (user as any).username;
-        token.avatar = (user as any).avatar;
-        token.role = (user as any).role;
+        const authUser =
+          user as AuthUser;
+
+        token.id = authUser.id || "";
+        token.username = authUser.username;
+        token.avatar = authUser.avatar;
+        token.role = authUser.role || "user";
       }
       return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).username = token.username;
-        (session.user as any).avatar = token.avatar;
-        (session.user as any).role = token.role;
+        const sessionUser =
+          session.user as typeof session.user &
+            SessionUserWithAppFields;
+
+        sessionUser.id =
+          typeof token.id === "string"
+            ? token.id
+            : "";
+        sessionUser.username = token.username;
+        sessionUser.avatar = token.avatar;
+        sessionUser.role =
+          token.role === "admin" ||
+          token.role === "super_admin"
+            ? token.role
+            : "user";
       }
       return session;
     },
   },
 
-  secret: process.env.NEXTAUTH_SECRET,
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    process.env.AUTH_SECRET,
 };
