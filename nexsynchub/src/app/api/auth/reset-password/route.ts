@@ -36,10 +36,15 @@ export async function POST(
             confirmPassword,
         } = body;
 
+        const normalizedEmail =
+            String(email || "")
+                .trim()
+                .toLowerCase();
+
         // 🔥 Validate fields
         if (
 
-            !email?.trim() ||
+            !normalizedEmail ||
 
             !password?.trim() ||
 
@@ -99,7 +104,7 @@ export async function POST(
             await User.findOne({
 
                 email:
-                    email.toLowerCase(),
+                    normalizedEmail,
 
             });
 
@@ -222,7 +227,8 @@ export async function POST(
         await resend.emails.send({
 
             from:
-                "NexSyncHub <onboarding@resend.dev>",
+                process.env.RESEND_FROM_EMAIL ||
+                "NexSyncHub <noreply@karanart.com>",
 
             to: user.email,
 

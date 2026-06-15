@@ -38,8 +38,13 @@ export async function POST(
             email,
         } = body;
 
+        const normalizedEmail =
+            String(email || "")
+                .trim()
+                .toLowerCase();
+
         // 🔥 Validate email
-        if (!email?.trim()) {
+        if (!normalizedEmail) {
 
             return NextResponse.json(
                 {
@@ -58,7 +63,7 @@ export async function POST(
             await User.findOne({
 
                 email:
-                    email.toLowerCase(),
+                    normalizedEmail,
 
             });
 
@@ -120,7 +125,8 @@ export async function POST(
         await resend.emails.send({
 
             from:
-                "NexSyncHub <onboarding@resend.dev>",
+                process.env.RESEND_FROM_EMAIL ||
+                "NexSyncHub <noreply@karanart.com>",
 
             to: user.email,
 

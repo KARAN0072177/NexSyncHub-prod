@@ -32,9 +32,14 @@ export async function POST(
             otp,
         } = body;
 
+        const normalizedEmail =
+            String(email || "")
+                .trim()
+                .toLowerCase();
+
         // 🔥 Validate
         if (
-            !email?.trim() ||
+            !normalizedEmail ||
 
             !otp?.trim()
         ) {
@@ -56,7 +61,7 @@ export async function POST(
             await User.findOne({
 
                 email:
-                    email.toLowerCase(),
+                    normalizedEmail,
 
             });
 
