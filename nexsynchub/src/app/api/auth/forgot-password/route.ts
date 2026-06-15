@@ -173,8 +173,7 @@ export async function POST(
             ) || "Unknown Device";
 
         // 🔥 Create security log
-        const securityLog =
-            await createSecurityLog({
+        await createSecurityLog({
 
                 userId:
                     user._id.toString(),
@@ -192,34 +191,6 @@ export async function POST(
             });
 
         // 🔥 Emit realtime event
-        await fetch(
-            "http://localhost:4000/emit",
-            {
-
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/json",
-                },
-
-                body:
-                    JSON.stringify({
-
-                        channelId:
-                            "admin_global",
-
-                        event:
-                            "security-log-created",
-
-                        data:
-                            securityLog,
-
-                    }),
-
-            }
-        );
-
         return NextResponse.json({
 
             success: true,
