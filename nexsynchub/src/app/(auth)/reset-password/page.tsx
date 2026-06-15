@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useState,
 } from "react";
 
@@ -15,8 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-export default function
-ResetPasswordPage() {
+function ResetPasswordContent() {
 
   const router =
     useRouter();
@@ -352,4 +352,13 @@ ResetPasswordPage() {
 
   );
 
+}
+
+export default function
+ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordContent />
+    </Suspense>
+  );
 }

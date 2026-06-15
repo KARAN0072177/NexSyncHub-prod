@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useState,
 } from "react";
@@ -16,8 +17,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 
-export default function
-VerifyResetOTPPage() {
+function VerifyResetOTPContent() {
 
   const router =
     useRouter();
@@ -418,4 +418,13 @@ VerifyResetOTPPage() {
 
   );
 
+}
+
+export default function
+VerifyResetOTPPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyResetOTPContent />
+    </Suspense>
+  );
 }
