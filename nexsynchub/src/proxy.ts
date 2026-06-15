@@ -132,6 +132,10 @@ export default withAuth(
           pathname === "/login" ||
           pathname === "/register" ||
           pathname === "/verify-email" ||
+          pathname === "/forgot-password" ||
+          pathname === "/verify-reset-otp" ||
+          pathname === "/reset-password" ||
+          pathname === "/invite" ||
           pathname === "/features" ||
           pathname === "/support-center" ||
           pathname === "/maintenance" ||
