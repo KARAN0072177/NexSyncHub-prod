@@ -155,6 +155,23 @@ io.on("connection", (socket) => {
 });
 
 
+// ✅ HEALTH CHECK ENDPOINT - Useful for load balancers and monitoring
+
+app.get("/health", (req, res) => {
+
+    res.status(200).json({
+
+        status: "ok",
+
+        service: "socket-server",
+
+        uptime: process.uptime(),
+
+    });
+
+});
+
+
 // ✅ INTERNAL EMIT API
 app.post("/emit", (req, res) => {
 
