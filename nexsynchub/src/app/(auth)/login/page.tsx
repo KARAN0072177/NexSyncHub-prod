@@ -12,7 +12,6 @@ import {
 } from "next-auth/react";
 
 import {
-  useRouter,
   useSearchParams,
 } from "next/navigation";
 
@@ -30,8 +29,6 @@ import {
 } from "lucide-react";
 
 function LoginContent() {
-  const router = useRouter();
-
   const params = useSearchParams();
 
   const verified = params.get("verified");
@@ -44,6 +41,32 @@ function LoginContent() {
 
   const requestedEmail =
     params.get("email") || "";
+
+  const callbackUrl =
+    params.get("callbackUrl");
+
+  const getSafeCallbackUrl = () => {
+    if (!callbackUrl) return "";
+
+    try {
+      const url =
+        new URL(
+          callbackUrl,
+          window.location.origin
+        );
+
+      if (
+        url.origin !==
+        window.location.origin
+      ) {
+        return "";
+      }
+
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return "";
+    }
+  };
 
   const [form, setForm] = useState({
     email: requestedEmail,
@@ -117,13 +140,13 @@ function LoginContent() {
         role === "super_admin"
       ) {
 
-        router.push("/admin");
+        window.location.assign("/admin");
 
       }
 
       else if (!username) {
 
-        router.push(
+        window.location.assign(
           "/set-username"
         );
 
@@ -131,7 +154,8 @@ function LoginContent() {
 
       else {
 
-        router.push(
+        window.location.assign(
+          getSafeCallbackUrl() ||
           "/dashboard"
         );
 

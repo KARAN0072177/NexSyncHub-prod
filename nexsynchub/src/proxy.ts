@@ -116,6 +116,9 @@ export default withAuth(
   },
 
   {
+    secret:
+      process.env.NEXTAUTH_SECRET,
+
     callbacks: {
 
       authorized: ({ req, token }) => {
