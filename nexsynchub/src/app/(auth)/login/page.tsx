@@ -12,6 +12,7 @@ import {
 
 import {
   useSearchParams,
+  useRouter,
 } from "next/navigation";
 
 import Link from "next/link";
@@ -29,6 +30,7 @@ import {
 
 function LoginContent() {
   const params = useSearchParams();
+  const router = useRouter();
 
   const verified = params.get("verified");
 
@@ -39,7 +41,9 @@ function LoginContent() {
     params.get("addAccount") === "1";
 
   const requestedEmail =
-    params.get("email") || "";
+    (params.get("email") || "")
+      .trim()
+      .toLowerCase();
 
   const callbackUrl =
     params.get("callbackUrl");
@@ -90,15 +94,27 @@ function LoginContent() {
       getSafeCallbackUrl() ||
       "/dashboard";
 
-    const res = await signIn("credentials", {
-      email: form.email,
-      password: form.password,
-      callbackUrl: targetUrl,
-      redirect: true,
-    });
+    try {
+      const res = await signIn("credentials", {
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        redirect: false,
+      });
 
-    if (res?.error) {
-      setError(res.error);
+      if (res?.error) {
+        setError(
+          res.error === "CredentialsSignin"
+            ? "Invalid email or password."
+            : res.error
+        );
+        setLoading(false);
+        return;
+      }
+
+      router.replace(targetUrl);
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   };
@@ -168,6 +184,7 @@ function LoginContent() {
 
                 <input
                   type="email"
+                  autoComplete="email"
                   placeholder="you@example.com"
                   className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-10 pr-4 py-3 text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                   value={form.email}
@@ -206,7 +223,8 @@ function LoginContent() {
                       ? "text"
                       : "password"
                   }
-                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  placeholder="Password"
                   className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-10 pr-10 py-3 text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                   value={form.password}
                   onChange={(e) =>
