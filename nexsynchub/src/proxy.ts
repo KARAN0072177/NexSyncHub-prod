@@ -142,6 +142,8 @@ export default withAuth(
           pathname === "/reset-password" ||
           pathname === "/invite" ||
           pathname === "/features" ||
+          pathname === "/about" ||
+          pathname === "/pricing" ||
           pathname === "/support-center" ||
           pathname === "/maintenance" ||
           pathname === "/"

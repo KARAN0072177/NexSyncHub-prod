@@ -155,11 +155,29 @@ export async function POST(req: Request) {
         metadata: {
           workspaceId,
           plan,
+          purchaserId:
+            session.user.id,
+          purchaserEmail:
+            session.user.email || "",
+          purchaserName:
+            session.user.username ||
+            session.user.name ||
+            session.user.email ||
+            "Workspace owner",
         },
         subscription_data: {
           metadata: {
             workspaceId,
             plan,
+            purchaserId:
+              session.user.id,
+            purchaserEmail:
+              session.user.email || "",
+            purchaserName:
+              session.user.username ||
+              session.user.name ||
+              session.user.email ||
+              "Workspace owner",
           },
         },
       });

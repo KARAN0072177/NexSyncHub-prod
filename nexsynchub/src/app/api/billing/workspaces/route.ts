@@ -7,6 +7,7 @@ import Membership from "@/models/Membership";
 import "@/models/Workspace";
 import { getWorkspaceAiUsageSummary } from "@/lib/billing/ai-usage";
 import { getPlanConfig } from "@/lib/billing/plans";
+import { getWorkspaceBillingHistory } from "@/lib/billing/history";
 
 type PopulatedBillingMembership = {
   role: "OWNER" | "ADMIN" | "MEMBER";
@@ -55,10 +56,25 @@ export async function GET() {
           .map(async (membership) => {
             const workspace =
               membership.workspace;
-            const usage =
-              await getWorkspaceAiUsageSummary(
-                String(workspace._id)
-              );
+            const workspaceId =
+              String(workspace._id);
+            const canViewReceipts =
+              membership.role === "OWNER" ||
+              membership.role === "ADMIN";
+            const [
+              usage,
+              billingHistory,
+            ] = await Promise.all([
+              getWorkspaceAiUsageSummary(
+                workspaceId
+              ),
+              getWorkspaceBillingHistory({
+                workspaceId,
+                includeReceiptLinks:
+                  canViewReceipts,
+                limit: 5,
+              }),
+            ]);
             const plan =
               getPlanConfig(
                 workspace.plan
@@ -71,6 +87,7 @@ export async function GET() {
               role: membership.role,
               canManageBilling:
                 membership.role === "OWNER",
+              canViewReceipts,
               plan: {
                 key: plan.key,
                 name: plan.name,
@@ -89,6 +106,7 @@ export async function GET() {
               cancelAtPeriodEnd:
                 Boolean(workspace.cancelAtPeriodEnd),
               usage,
+              billingHistory,
             };
           })
       );

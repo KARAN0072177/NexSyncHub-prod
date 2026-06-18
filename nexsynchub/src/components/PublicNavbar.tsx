@@ -14,6 +14,7 @@ import {
   Zap,
   LayoutDashboard,
   Shield,
+  CreditCard,
   Menu,
   X,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import {
 const navLinks = [
   { name: "Home", href: "/", icon: Home },
   { name: "Features", href: "/features", icon: Layers },
+  { name: "Pricing", href: "/pricing", icon: CreditCard },
   { name: "About", href: "/about", icon: Info },
   { name: "Support", href: "/support-center", icon: Mail },
 ];

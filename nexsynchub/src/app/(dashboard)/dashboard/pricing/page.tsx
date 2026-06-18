@@ -14,8 +14,12 @@ import {
   ArrowUpRight,
   CheckCircle2,
   CreditCard,
+  Download,
+  ExternalLink,
+  FileText,
   Loader2,
   Lock,
+  MailCheck,
   Sparkles,
   Zap,
 } from "lucide-react";
@@ -32,6 +36,7 @@ type BillingWorkspace = {
   avatar?: string;
   role: "OWNER" | "ADMIN" | "MEMBER";
   canManageBilling: boolean;
+  canViewReceipts: boolean;
   subscriptionStatus: string;
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd?: string | null;
@@ -51,6 +56,26 @@ type BillingWorkspace = {
     burstRemaining: number;
     periodEnd: string;
   };
+  billingHistory: BillingHistoryItem[];
+};
+
+type BillingHistoryItem = {
+  _id: string;
+  plan: WorkspacePlanKey;
+  planName: string;
+  billingReason: string;
+  amountPaid: number;
+  amountDue: number;
+  currency: string;
+  paymentStatus: string;
+  invoiceStatus: string;
+  invoiceNumber: string;
+  invoicePdfUrl: string;
+  hostedInvoiceUrl: string;
+  paidAt: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  receiptEmailSentAt: string | null;
 };
 
 const T = {
@@ -100,6 +125,56 @@ function formatDate(value?: string | null) {
       day: "numeric",
       year: "numeric",
     }
+  );
+}
+
+function formatCurrency(
+  amountInMinorUnits: number,
+  currency: string
+) {
+  try {
+    return new Intl.NumberFormat(
+      "en-US",
+      {
+        style: "currency",
+        currency:
+          currency.toUpperCase(),
+      }
+    ).format(
+      amountInMinorUnits / 100
+    );
+  } catch {
+    return `${(
+      amountInMinorUnits / 100
+    ).toFixed(2)} ${currency.toUpperCase()}`;
+  }
+}
+
+function formatBillingReason(
+  reason: string
+) {
+  const labels: Record<
+    string,
+    string
+  > = {
+    subscription_create:
+      "New subscription",
+    subscription_cycle:
+      "Renewal",
+    subscription_update:
+      "Plan update",
+    manual:
+      "Manual invoice",
+  };
+
+  return (
+    labels[reason] ||
+    reason
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (letter) =>
+        letter.toUpperCase()
+      ) ||
+    "Payment"
   );
 }
 
@@ -188,6 +263,226 @@ function StatusBadge({
       />
       {status.replace("_", " ")}
     </span>
+  );
+}
+
+function BillingHistoryPanel({
+  workspace,
+}: {
+  workspace: BillingWorkspace;
+}) {
+  const history =
+    workspace.billingHistory || [];
+
+  return (
+    <div
+      className="border-t px-5 py-5 lg:px-6"
+      style={{
+        borderColor: T.border,
+        background:
+          "linear-gradient(180deg, rgba(3,6,15,0.12), rgba(3,6,15,0.34))",
+      }}
+    >
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-2xl"
+            style={{
+              background:
+                "rgba(61,123,255,0.10)",
+              border: `1px solid ${T.borderHi}`,
+              color: T.blue,
+            }}
+          >
+            <FileText size={16} />
+          </div>
+          <div>
+            <p className="text-sm font-black text-white">
+              Purchase history
+            </p>
+            <p
+              className="text-xs"
+              style={{
+                color: T.muted,
+              }}
+            >
+              Stripe-confirmed payments and receipts for this workspace.
+            </p>
+          </div>
+        </div>
+
+        {!workspace.canViewReceipts && (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest"
+            style={{
+              color: T.muted,
+              border: `1px solid ${T.border}`,
+              background:
+                "rgba(255,255,255,0.035)",
+            }}
+          >
+            <Lock size={12} />
+            links hidden
+          </span>
+        )}
+      </div>
+
+      {history.length === 0 ? (
+        <div
+          className="rounded-2xl p-4 text-sm"
+          style={{
+            background:
+              "rgba(255,255,255,0.035)",
+            border: `1px solid ${T.border}`,
+            color: T.muted,
+          }}
+        >
+          No completed payments recorded yet. Once Stripe confirms a paid
+          invoice, the receipt appears here automatically.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {history.map((item) => {
+            const canOpenReceipt =
+              workspace.canViewReceipts &&
+              (item.invoicePdfUrl ||
+                item.hostedInvoiceUrl);
+
+            return (
+              <div
+                key={item._id}
+                className="flex flex-col gap-4 rounded-2xl p-4 lg:flex-row lg:items-center lg:justify-between"
+                style={{
+                  background:
+                    "rgba(255,255,255,0.035)",
+                  border: `1px solid ${T.border}`,
+                }}
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
+                      style={{
+                        color: T.emerald,
+                        background:
+                          "rgba(16,185,129,0.10)",
+                        border:
+                          "1px solid rgba(16,185,129,0.24)",
+                      }}
+                    >
+                      {item.paymentStatus}
+                    </span>
+                    <span
+                      className="text-xs font-bold uppercase tracking-widest"
+                      style={{
+                        color: T.muted,
+                      }}
+                    >
+                      {formatBillingReason(
+                        item.billingReason
+                      )}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm font-bold text-white">
+                    {item.planName} plan
+                    {" - "}
+                    {formatCurrency(
+                      item.amountPaid,
+                      item.currency
+                    )}
+                  </p>
+                  <p
+                    className="mt-1 text-xs"
+                    style={{
+                      color: T.muted,
+                    }}
+                  >
+                    {formatDate(item.paidAt)}
+                    {item.invoiceNumber
+                      ? ` - Invoice ${item.invoiceNumber}`
+                      : ""}
+                    {item.receiptEmailSentAt
+                      ? " - receipt emailed"
+                      : ""}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {item.receiptEmailSentAt && (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold"
+                      style={{
+                        color: T.emerald,
+                        background:
+                          "rgba(16,185,129,0.10)",
+                        border:
+                          "1px solid rgba(16,185,129,0.20)",
+                      }}
+                    >
+                      <MailCheck size={14} />
+                      Emailed
+                    </span>
+                  )}
+
+                  {workspace.canViewReceipts &&
+                    item.invoicePdfUrl && (
+                      <a
+                        href={item.invoicePdfUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all hover:-translate-y-0.5"
+                        style={{
+                          color: "#FFFFFF",
+                          background:
+                            "linear-gradient(135deg, #3D7BFF, #7C3AED)",
+                        }}
+                      >
+                        <Download size={14} />
+                        Download
+                      </a>
+                    )}
+
+                  {workspace.canViewReceipts &&
+                    item.hostedInvoiceUrl && (
+                      <a
+                        href={item.hostedInvoiceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all hover:-translate-y-0.5"
+                        style={{
+                          color: T.text,
+                          background:
+                            "rgba(255,255,255,0.05)",
+                          border: `1px solid ${T.border}`,
+                        }}
+                      >
+                        <ExternalLink size={14} />
+                        View
+                      </a>
+                    )}
+
+                  {!canOpenReceipt && (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold"
+                      style={{
+                        color: T.muted,
+                        background:
+                          "rgba(255,255,255,0.035)",
+                        border: `1px solid ${T.border}`,
+                      }}
+                    >
+                      <Lock size={14} />
+                      Receipt restricted
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -704,7 +999,7 @@ function BillingContent() {
                               workspace.currentPeriodEnd
                           )}
                           {workspace.cancelAtPeriodEnd
-                            ? " · cancellation scheduled"
+                            ? " - cancellation scheduled"
                             : ""}
                         </p>
                       </div>
@@ -910,6 +1205,10 @@ function BillingContent() {
                         )}
                       </div>
                     </div>
+
+                    <BillingHistoryPanel
+                      workspace={workspace}
+                    />
                   </motion.article>
                 );
               }

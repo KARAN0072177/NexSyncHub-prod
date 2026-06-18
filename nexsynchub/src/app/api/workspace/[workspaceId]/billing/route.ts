@@ -6,6 +6,7 @@ import { handleApiError } from "@/lib/api-error";
 import { getWorkspaceAccess } from "@/lib/billing/access";
 import { getWorkspaceAiUsageSummary } from "@/lib/billing/ai-usage";
 import { getPlanConfig } from "@/lib/billing/plans";
+import { getWorkspaceBillingHistory } from "@/lib/billing/history";
 
 export async function GET(
   req: Request,
@@ -45,10 +46,23 @@ export async function GET(
       );
     }
 
-    const usage =
-      await getWorkspaceAiUsageSummary(
+    const canViewReceipts =
+      membership.role === "OWNER" ||
+      membership.role === "ADMIN";
+    const [
+      usage,
+      billingHistory,
+    ] = await Promise.all([
+      getWorkspaceAiUsageSummary(
         workspaceId
-      );
+      ),
+      getWorkspaceBillingHistory({
+        workspaceId,
+        includeReceiptLinks:
+          canViewReceipts,
+        limit: 10,
+      }),
+    ]);
     const planConfig =
       getPlanConfig(workspace.plan);
 
@@ -78,6 +92,8 @@ export async function GET(
           planConfig.burstCreditsPer5Hours,
       },
       usage,
+      canViewReceipts,
+      billingHistory,
     });
   } catch (error) {
     console.error(
