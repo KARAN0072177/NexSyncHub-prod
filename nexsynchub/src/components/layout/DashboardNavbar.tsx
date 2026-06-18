@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   Bell, Check, ExternalLink, Inbox,
   BellOff, Zap, LayoutDashboard, Compass, User,
+  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,6 +70,7 @@ function formatTime(dateString: string): string {
 const NAV_LINKS = [
   { href: "/dashboard",         label: "Dashboard", Icon: LayoutDashboard },
   { href: "/dashboard/browse",  label: "Browse",    Icon: Compass          },
+  { href: "/dashboard/pricing", label: "Pricing",   Icon: CreditCard       },
   { href: "/dashboard/profile", label: "Profile",   Icon: User             },
 ] as const;
 

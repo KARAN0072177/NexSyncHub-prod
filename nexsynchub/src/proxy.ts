@@ -60,6 +60,10 @@ export default withAuth(
 
       &&
 
+      pathname !== "/api/stripe/webhook"
+
+      &&
+
       !pathname.startsWith("/api/auth")
 
       &&
@@ -128,6 +132,7 @@ export default withAuth(
         // Allow public access to these routes so middleware can handle them
         if (
           pathname.startsWith("/api/auth") ||
+          pathname === "/api/stripe/webhook" ||
           pathname === "/api/platform/public-settings" ||
           pathname === "/login" ||
           pathname === "/register" ||

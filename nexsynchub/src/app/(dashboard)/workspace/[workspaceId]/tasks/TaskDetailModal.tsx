@@ -199,6 +199,8 @@ export default function TaskDetailModal({ taskId, onClose }: any) {
               body:
                 JSON.stringify({
 
+                  taskId,
+
                   text:
                     editedDescription,
 
