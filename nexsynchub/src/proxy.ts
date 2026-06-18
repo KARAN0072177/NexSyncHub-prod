@@ -1,135 +1,92 @@
-import {
-  withAuth,
-} from "next-auth/middleware";
+import { Redis } from "@upstash/redis";
+import { withAuth } from "next-auth/middleware";
 
-import {
-  Redis,
-} from "@upstash/redis";
+const MAINTENANCE_CACHE_TTL_MS = 15_000;
 
 const redis =
-  new Redis({
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+    : null;
 
-    url:
-      process.env
-        .UPSTASH_REDIS_REST_URL!,
+let maintenanceCache: {
+  value: boolean;
+  expiresAt: number;
+} | null = null;
 
-    token:
-      process.env
-        .UPSTASH_REDIS_REST_TOKEN!,
+async function getMaintenanceMode() {
+  const now = Date.now();
 
-  });
+  if (maintenanceCache && maintenanceCache.expiresAt > now) {
+    return maintenanceCache.value;
+  }
+
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const rawMaintenance = await redis.get("maintenance_mode");
+    const value = rawMaintenance === true || rawMaintenance === "true";
+
+    maintenanceCache = {
+      value,
+      expiresAt: now + MAINTENANCE_CACHE_TTL_MS,
+    };
+
+    return value;
+  } catch (error) {
+    console.error("MAINTENANCE MODE READ ERROR:", error);
+    return maintenanceCache?.value ?? false;
+  }
+}
 
 export default withAuth(
-
   async function proxy(req) {
+    const token = req.nextauth.token;
+    const role = token?.role as string;
+    const pathname = req.nextUrl.pathname;
 
-    const token =
-      req.nextauth.token;
+    const isMaintenance = await getMaintenanceMode();
 
-    const role =
-      token?.role as string;
-
-    const pathname =
-      req.nextUrl.pathname;
-
-    // 🔥 Maintenance mode (Strict boolean/string parsing)
-    const rawMaintenance =
-
-      await redis.get(
-        "maintenance_mode"
-      );
-
-    const isMaintenance = rawMaintenance === true || rawMaintenance === "true";
-
-    // 🔥 Maintenance protection
     if (
-
-      isMaintenance
-
-      &&
-
-      role !== "admin"
-
-      &&
-
-      role !== "super_admin"
-
-      &&
-
-      pathname !== "/maintenance"
-
-      &&
-
-      pathname !== "/api/stripe/webhook"
-
-      &&
-
-      !pathname.startsWith("/api/auth")
-
-      &&
-
+      isMaintenance &&
+      role !== "admin" &&
+      role !== "super_admin" &&
+      pathname !== "/maintenance" &&
+      pathname !== "/api/stripe/webhook" &&
+      !pathname.startsWith("/api/auth") &&
       pathname !== "/login"
-
     ) {
-
-      // Return JSON for API routes instead of an HTML redirect
       if (pathname.startsWith("/api/")) {
-        return Response.json({ error: "Platform is under maintenance" }, { status: 503 });
+        return Response.json(
+          { error: "Platform is under maintenance" },
+          { status: 503 }
+        );
       }
 
-      return Response.redirect(
-
-        new URL(
-          "/maintenance",
-          req.url
-        )
-
-      );
-
+      return Response.redirect(new URL("/maintenance", req.url));
     }
 
-    // 🔥 Redirect out of maintenance if it's off
     if (!isMaintenance && pathname === "/maintenance") {
       return Response.redirect(new URL("/", req.url));
     }
 
-    // 🔥 Protect admin routes
-    if (
-      pathname.startsWith(
-        "/admin"
-      )
-    ) {
-
-      // ❌ Block normal users
-      if (
-        role !== "admin" &&
-        role !== "super_admin"
-      ) {
-
-        return Response.redirect(
-          new URL(
-            "/dashboard",
-            req.url
-          )
-        );
-
+    if (pathname.startsWith("/admin")) {
+      if (role !== "admin" && role !== "super_admin") {
+        return Response.redirect(new URL("/dashboard", req.url));
       }
-
     }
-
   },
-
   {
-    secret:
-      process.env.NEXTAUTH_SECRET ||
-      process.env.AUTH_SECRET,
+    secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
 
     callbacks: {
-
       authorized: ({ req, token }) => {
         const pathname = req.nextUrl.pathname;
 
-        // Allow public access to these routes so middleware can handle them
         if (
           pathname.startsWith("/api/auth") ||
           pathname === "/api/stripe/webhook" ||
@@ -153,18 +110,10 @@ export default withAuth(
 
         return !!token;
       },
-
     },
   }
-
 );
 
 export const config = {
-
-  matcher: [
-
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-
-  ],
-
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

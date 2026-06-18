@@ -1,123 +1,115 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { Types } from "mongoose";
 
-import { authOptions } from "@/lib/auth-options";
 import { connectDB } from "@/lib/db";
+import { requireAuth } from "@/lib/auth-guard";
+import { handleApiError } from "@/lib/api-error";
 
 import Membership from "@/models/Membership";
 import Channel from "@/models/Channel";
 import Message from "@/models/Message";
 import ChannelRead from "@/models/ChannelRead";
 
-import { requireAuth } from "@/lib/auth-guard";
-import { handleApiError } from "@/lib/api-error";
-
 export async function GET(req: Request) {
   try {
-
     await connectDB();
 
-    const session =
-      await requireAuth();
-
-    const { searchParams } =
-      new URL(req.url);
-
-    const workspaceId =
-      searchParams.get("workspaceId");
+    const session = await requireAuth();
+    const { searchParams } = new URL(req.url);
+    const workspaceId = searchParams.get("workspaceId");
 
     if (!workspaceId) {
-
       return NextResponse.json(
-        {
-          error:
-            "Workspace ID required",
-        },
-        {
-          status: 400,
-        }
+        { error: "Workspace ID required" },
+        { status: 400 }
       );
-
     }
 
-    // 🔐 Membership check
-    const membership =
-      await Membership.findOne({
-        workspace: workspaceId,
-        user: session.user.id,
-      });
+    const membership = await Membership.findOne({
+      workspace: workspaceId,
+      user: session.user.id,
+    }).select("_id");
 
     if (!membership) {
-
-      return NextResponse.json(
-        {
-          error:
-            "Access denied",
-        },
-        {
-          status: 403,
-        }
-      );
-
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // 🔥 Get workspace channels
-    const channels =
-      await Channel.find({
-        workspace: workspaceId,
-      }).lean();
+    const channels = await Channel.find({
+      workspace: workspaceId,
+    })
+      .select("_id")
+      .lean<{ _id: Types.ObjectId }[]>();
 
-    const unreadCounts:
-      Record<string, number> = {};
+    const unreadCounts: Record<string, number> = {};
+    const channelIds = channels.map((channel) => channel._id);
 
-    for (const channel of channels) {
+    for (const channelId of channelIds) {
+      unreadCounts[String(channelId)] = 0;
+    }
 
-      // 🔥 Read state
-      const readState =
-        await ChannelRead.findOne({
-          user: session.user.id,
-          channel: channel._id,
-        });
+    if (channelIds.length === 0) {
+      return NextResponse.json({ unreadCounts });
+    }
 
-      const lastReadAt =
-        readState?.lastReadAt ||
-        new Date(0);
+    const readStates = await ChannelRead.find({
+      user: session.user.id,
+      channel: {
+        $in: channelIds,
+      },
+    })
+      .select("channel lastReadAt")
+      .lean<{ channel: Types.ObjectId; lastReadAt?: Date }[]>();
 
-      // 🔥 Count unread messages
-      const count =
-        await Message.countDocuments({
-          channel: channel._id,
+    const readStateByChannel = new Map(
+      readStates.map((state) => [
+        String(state.channel),
+        state.lastReadAt || new Date(0),
+      ])
+    );
 
-          createdAt: {
-            $gt: lastReadAt,
+    const senderId = Types.ObjectId.isValid(session.user.id)
+      ? new Types.ObjectId(session.user.id)
+      : session.user.id;
+
+    const unreadConditions = channelIds.map((channelId) => ({
+      channel: channelId,
+      createdAt: {
+        $gt: readStateByChannel.get(String(channelId)) || new Date(0),
+      },
+    }));
+
+    const rows = await Message.aggregate<{
+      _id: Types.ObjectId;
+      count: number;
+    }>([
+      {
+        $match: {
+          channel: {
+            $in: channelIds,
           },
-
-          // optional:
-          // don't count own messages
           sender: {
-            $ne: session.user.id,
+            $ne: senderId,
           },
-        });
+          $or: unreadConditions,
+        },
+      },
+      {
+        $group: {
+          _id: "$channel",
+          count: {
+            $sum: 1,
+          },
+        },
+      },
+    ]);
 
-      unreadCounts[
-        String(channel._id)
-      ] = count;
-
+    for (const row of rows) {
+      unreadCounts[String(row._id)] = row.count;
     }
 
-    return NextResponse.json({
-      unreadCounts,
-    });
-
+    return NextResponse.json({ unreadCounts });
   } catch (error) {
-
-    console.error(
-      "UNREAD COUNT ERROR:",
-      error
-    );
-
-    return handleApiError(
-      error
-    );
+    console.error("UNREAD COUNT ERROR:", error);
+    return handleApiError(error);
   }
 }

@@ -1,196 +1,102 @@
 "use client";
 
-import {
-    useEffect,
-    useState,
-} from "react";
+import { useEffect, useState } from "react";
 
-import BannedModal
-    from "../modal/BannedModal";
+import BannedModal from "../modal/BannedModal";
 
 export default function GlobalBanProvider({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-
-    const [
-        banModal,
-        setBanModal,
-    ] = useState({
-
-        open: false,
-
-        reason: "",
-
-        expiresAt: null as
-            string | null,
-
-    });
-
-    // 🔥 Global banned state
-    const [
-        isBanned,
-        setIsBanned,
-    ] = useState(false);
-
-    // 🔥 Listen globally
-    useEffect(() => {
-
-        const handler =
-            (event: any) => {
-
-                setBanModal({
-
-                    open: true,
-
-                    reason:
-                        event.detail.reason,
-
-                    expiresAt:
-                        event.detail.expiresAt,
-
-                });
-
-                // 🔥 Lock app
-                setIsBanned(true);
-
-            };
-
-        window.addEventListener(
-            "account-banned",
-            handler
-        );
-
-        return () => {
-
-            window.removeEventListener(
-                "account-banned",
-                handler
-            );
-
-        };
-
-    }, []);
-
-    // 🔥 Global fetch interceptor
-    useEffect(() => {
-
-        const originalFetch =
-            window.fetch;
-
-        window.fetch =
-            async (
-                ...args
-            ) => {
-
-                const response =
-                    await originalFetch(
-                        ...args
-                    );
-
-                try {
-
-                    // 🔥 Clone response
-                    const cloned =
-                        response.clone();
-
-                    const data =
-                        await cloned.json();
-
-                    // 🔥 Ban detected
-                    if (
-                        data.code ===
-                        "ACCOUNT_BANNED"
-                    ) {
-
-                        window.dispatchEvent(
-
-                            new CustomEvent(
-
-                                "account-banned",
-
-                                {
-                                    detail: data,
-                                }
-
-                            )
-
-                        );
-
-                    }
-
-                } catch { }
-
-                return response;
-
-            };
-
-        return () => {
-
-            window.fetch =
-                originalFetch;
-
-        };
-
-    }, []);
-
-    return (
-
-        <>
-
-            {/* 🔥 Locked app */}
-            <div
-
-                style={{
-
-                    pointerEvents:
-                        isBanned
-
-                            ? "none"
-
-                            : "auto",
-
-                    userSelect:
-                        isBanned
-
-                            ? "none"
-
-                            : "auto",
-
-                    filter:
-                        isBanned
-
-                            ? "blur(5px)"
-
-                            : "none",
-
-                    transition:
-                        "all 0.3s ease",
-
-                }}
-
-            >
-
-                {children}
-
-            </div>
-
-            {/* 🔥 Global modal */}
-            <BannedModal
-
-                open={banModal.open}
-
-                reason={banModal.reason}
-
-                expiresAt={
-                    banModal.expiresAt
-                }
-
-            />
-
-        </>
-
-    );
-
+  const [banModal, setBanModal] = useState({
+    open: false,
+    reason: "",
+    expiresAt: null as string | null,
+  });
+  const [isBanned, setIsBanned] = useState(false);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+
+      setBanModal({
+        open: true,
+        reason: detail.reason,
+        expiresAt: detail.expiresAt,
+      });
+      setIsBanned(true);
+    };
+
+    window.addEventListener("account-banned", handler);
+
+    return () => {
+      window.removeEventListener("account-banned", handler);
+    };
+  }, []);
+
+  useEffect(() => {
+    const originalFetch = window.fetch;
+
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+
+      try {
+        if (response.ok) {
+          return response;
+        }
+
+        if (
+          response.status !== 401 &&
+          response.status !== 403 &&
+          response.status !== 429
+        ) {
+          return response;
+        }
+
+        const contentType = response.headers.get("content-type") || "";
+
+        if (!contentType.includes("application/json")) {
+          return response;
+        }
+
+        const data = await response.clone().json();
+
+        if (data.code === "ACCOUNT_BANNED") {
+          window.dispatchEvent(
+            new CustomEvent("account-banned", {
+              detail: data,
+            })
+          );
+        }
+      } catch {}
+
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
+
+  return (
+    <>
+      <div
+        style={{
+          pointerEvents: isBanned ? "none" : "auto",
+          userSelect: isBanned ? "none" : "auto",
+          filter: isBanned ? "blur(5px)" : "none",
+          transition: "all 0.3s ease",
+        }}
+      >
+        {children}
+      </div>
+
+      <BannedModal
+        open={banModal.open}
+        reason={banModal.reason}
+        expiresAt={banModal.expiresAt}
+      />
+    </>
+  );
 }

@@ -42,6 +42,28 @@ const T = {
     muted:    "#94A3B8",
 };
 
+type WorkspaceChannel = {
+    _id: string;
+    name?: string;
+    isSystem?: boolean;
+};
+
+type WorkspaceSummary = {
+    name?: string;
+    avatar?: string | null;
+};
+
+type SocketMessage = {
+    channel?: string;
+    sender?:
+        | string
+        | {
+            _id?: string;
+            id?: string;
+        }
+        | null;
+};
+
 export default function WorkspaceSidebar({
     workspaceId,
     role,
@@ -51,7 +73,7 @@ export default function WorkspaceSidebar({
 }) {
 
     const [channels, setChannels] =
-        useState<any[]>([]);
+        useState<WorkspaceChannel[]>([]);
 
     const [unreadCounts, setUnreadCounts] =
         useState<Record<string, number>>({});
@@ -68,7 +90,7 @@ export default function WorkspaceSidebar({
         useState(false);
 
     const [workspace, setWorkspace] =
-        useState<any>(null);
+        useState<WorkspaceSummary | null>(null);
 
     const pathname = usePathname();
 
@@ -80,7 +102,7 @@ export default function WorkspaceSidebar({
     const activeChannelId =
         searchParams.get("channel");
 
-    const getSenderId = useCallback((message: any) => {
+    const getSenderId = useCallback((message: SocketMessage) => {
         const sender =
             message?.sender;
 
@@ -101,22 +123,32 @@ export default function WorkspaceSidebar({
         const fetchChannels =
             async () => {
 
-                const res = await fetch(
-                    `/api/channel/list?workspaceId=${workspaceId}`
-                );
+                const [
+                    res,
+                    unreadRes,
+                    wsRes,
+                ] = await Promise.all([
+                    fetch(
+                        `/api/channel/list?workspaceId=${workspaceId}`
+                    ),
+                    fetch(
+                        `/api/channel/unread-counts?workspaceId=${workspaceId}`
+                    ),
+                    fetch(
+                        `/api/workspace/${workspaceId}`
+                    ),
+                ]);
 
                 const data =
-                    await res.json();
+                    await res.json() as {
+                        channels?: WorkspaceChannel[];
+                    };
 
                 if (res.ok) {
-                    setChannels(data.channels);
+                    setChannels(data.channels || []);
                 }
 
                 // 🔥 Fetch unread counts
-                const unreadRes = await fetch(
-                    `/api/channel/unread-counts?workspaceId=${workspaceId}`
-                );
-
                 const unreadData =
                     await unreadRes.json();
 
@@ -127,12 +159,11 @@ export default function WorkspaceSidebar({
                 }
 
                 // 🔥 Fetch workspace details
-                const wsRes = await fetch(
-                    `/api/workspace/${workspaceId}`
-                );
                 if (wsRes.ok) {
-                    const wsData = await wsRes.json();
-                    setWorkspace(wsData.workspace);
+                    const wsData = await wsRes.json() as {
+                        workspace?: WorkspaceSummary;
+                    };
+                    setWorkspace(wsData.workspace || null);
                 }
 
             };
@@ -145,10 +176,10 @@ export default function WorkspaceSidebar({
     useEffect(() => {
 
         const handler =
-            (event: any) => {
+            (event: Event) => {
 
                 const channelId =
-                    event.detail.channelId;
+                    (event as CustomEvent<{ channelId: string }>).detail.channelId;
 
                 setUnreadCounts(
                     (prev) => ({
@@ -186,7 +217,7 @@ export default function WorkspaceSidebar({
             );
         });
 
-        const handler = (message: any) => {
+        const handler = (message: SocketMessage) => {
             const channelId =
                 String(message?.channel || "");
 
@@ -251,10 +282,10 @@ export default function WorkspaceSidebar({
     useEffect(() => {
 
         const handler =
-            (event: any) => {
+            (event: Event) => {
 
                 const channelId =
-                    event.detail.channelId;
+                    (event as CustomEvent<{ channelId: string }>).detail.channelId;
 
                 setUnreadCounts(
                     (prev) => ({
