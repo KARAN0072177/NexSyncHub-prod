@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { User, Flag, ExternalLink, MoreHorizontal, GripVertical } from "lucide-react";
-import TaskDetailModal from "./TaskDetailModal";
-import { useState } from "react";
 
 /* ─── design tokens (matches members/settings page) ──────────────────────── */
 const T = {
@@ -23,6 +21,42 @@ const T = {
   low:      "#94A3B8",
 };
 
+type Member = {
+  user: {
+    _id: string;
+    username: string;
+  };
+  role?: string;
+};
+
+type Task = {
+  _id: string;
+  title: string;
+  status: "todo" | "in-progress" | "done";
+  priority: "low" | "medium" | "high";
+  createdBy?: { _id: string; username: string };
+  assignee?: { _id: string; username: string };
+  linkedMessage?: string;
+  channel?: string;
+};
+
+type TaskCardProps = {
+  task: Task;
+  updateTask: (
+    taskId: string,
+    updates: {
+      status?: Task["status"];
+      assignee?: string;
+    }
+  ) => void | Promise<void>;
+  members: Member[];
+  workspaceId: string;
+  currentUserId?: string;
+  currentUserRole?: string;
+  onOpenTask?: (taskId: string) => void;
+  isOverlay?: boolean;
+};
+
 export default function TaskCard({
   task,
   updateTask,
@@ -32,7 +66,7 @@ export default function TaskCard({
   currentUserRole,
   onOpenTask,
   isOverlay = false,
-}: any) {
+}: TaskCardProps) {
   const router = useRouter();
 
   const {
@@ -56,8 +90,10 @@ export default function TaskCard({
 
   const isCreator = task.createdBy?._id === currentUserId;
   const isAssignee = task.assignee?._id === currentUserId;
+  const normalizedRole =
+    String(currentUserRole || "").toLowerCase();
   const isAdmin =
-    currentUserRole === "ADMIN" || currentUserRole === "OWNER";
+    normalizedRole === "admin" || normalizedRole === "owner";
 
   const canUpdate = isCreator || isAssignee || isAdmin;
 
@@ -134,7 +170,7 @@ export default function TaskCard({
               }}
             >
               <option value="" className="bg-gray-900">Unassigned</option>
-              {members.map((m: any) => (
+              {members.map((m) => (
                 <option key={m.user._id} value={m.user._id} className="bg-gray-900">
                   {m.user.username}
                 </option>

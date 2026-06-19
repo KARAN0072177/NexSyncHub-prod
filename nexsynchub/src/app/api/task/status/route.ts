@@ -1,347 +1,271 @@
-// src/app/api/task/status/route.ts
+import { after, NextResponse } from "next/server";
 
-import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { requireAuth } from "@/lib/auth-guard";
+import { createAuditLog } from "@/lib/audit";
+import { handleApiError } from "@/lib/api-error";
+import { sendTaskAssignmentNotification } from "@/lib/task-assignment-notification";
+
 import Task from "@/models/Task";
 import Membership from "@/models/Membership";
 import Message from "@/models/Message";
 import Channel from "@/models/Channel";
-import { sendTaskAssignedEmail } from "@/lib/email";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import { createNotification } from "@/lib/notification";
+const TASK_STATUSES = ["todo", "in-progress", "done"] as const;
 
-import { createAuditLog } from "@/lib/audit";
-import { handleApiError } from "@/lib/api-error";
+type TaskStatus = (typeof TASK_STATUSES)[number];
 
-import { sendTaskAssignmentNotification } from "@/lib/task-assignment-notification";
+type TaskStatusRequest = {
+  taskId?: string;
+  status?: TaskStatus;
+  assignee?: string | null;
+};
+
+type MembershipRecord = {
+  role?: string;
+};
+
+type PopulatedMembershipUser = {
+  user?: {
+    _id: unknown;
+    username?: string;
+    email?: string;
+  } | null;
+};
+
+function isTaskStatus(status: unknown): status is TaskStatus {
+  return TASK_STATUSES.includes(status as TaskStatus);
+}
+
+function formatStatusLabel(status: TaskStatus) {
+  if (status === "in-progress") return "In Progress";
+  if (status === "done") return "DONE";
+  return "TODO";
+}
+
+async function emitSocketEvent(body: unknown) {
+  if (!process.env.SOCKET_SERVER_URL) return;
+
+  await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+}
 
 export async function PATCH(req: Request) {
-    try {
-        await connectDB();
-
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
-        }
-
-        const { taskId, status, assignee } = await req.json();
-
-        if (!taskId || (!status && !assignee)) {
-            return NextResponse.json(
-                { error: "Invalid data" },
-                { status: 400 }
-            );
-        }
-
-        const task = await Task.findById(taskId);
-
-        const oldStatus =
-            task.status;
-
-        const oldAssignee =
-            task.assignee?.toString();
-
-        if (!task) {
-            return NextResponse.json(
-                { error: "Task not found" },
-                { status: 404 }
-            );
-        }
-
-        // 🔐 Check membership
-        const membership = await Membership.findOne({
-            user: session.user.id,
-            workspace: task.workspace,
-        });
-
-        // 🔐 PERMISSION CHECK
-
-        const userId = session.user.id;
-
-        const isCreator =
-            task.createdBy?.toString() === userId;
-
-        const isAssignee =
-            task.assignee?.toString() === userId;
-
-        const isAdmin =
-            membership.role === "ADMIN" || membership.role === "OWNER";
-
-        // ❌ NOT ALLOWED
-        if (!isCreator && !isAssignee && !isAdmin) {
-            return NextResponse.json(
-                { error: "You are not allowed to update this task" },
-                { status: 403 }
-            );
-        }
-
-        if (!membership) {
-            return NextResponse.json(
-                { error: "Access denied" },
-                { status: 403 }
-            );
-        }
-
-        // 🔥 Update status
-
-        if (status) {
-            task.status = status;
-        }
-
-        // 🔥 Update assignee
-
-        if (assignee !== undefined) {
-            task.assignee = assignee || null;
-        }
-
-        await task.save();
-
-        // 🔥 Assignment audit
-        if (
-            assignee !== undefined &&
-            oldAssignee !==
-            String(assignee || "")
-        ) {
-
-            await createAuditLog({
-
-                workspaceId:
-                    String(task.workspace),
-
-                actorId:
-                    session.user.id,
-
-                action:
-                    assignee
-                        ? "task_assigned"
-                        : "task_unassigned",
-
-                targetType:
-                    "task",
-
-                targetId:
-                    String(task._id),
-
-                metadata: {
-
-                    taskTitle:
-                        task.title,
-
-                    oldAssignee,
-
-                    newAssignee:
-                        assignee || null,
-
-                },
-
-            });
-
-        }
-
-        // 🔥 Assignment audit
-        if (
-            assignee !== undefined &&
-            oldAssignee !==
-            String(assignee || "")
-        ) {
-
-            await createAuditLog({
-
-                workspaceId:
-                    String(task.workspace),
-
-                actorId:
-                    session.user.id,
-
-                action:
-                    assignee
-                        ? "task_assigned"
-                        : "task_unassigned",
-
-                targetType:
-                    "task",
-
-                targetId:
-                    String(task._id),
-
-                metadata: {
-
-                    taskTitle:
-                        task.title,
-
-                    oldAssignee,
-
-                    newAssignee:
-                        assignee || null,
-
-                },
-
-            });
-
-        }
-
-        // 🔥 POPULATE TASK BEFORE EMIT (CRITICAL FIX)
-        const populatedTask = await Task.findById(task._id)
-            .populate("assignee", "username")
-            .populate("createdBy", "username")
-            .lean();
-
-        // 🔥 EMIT TASK UPDATE
-        try {
-            await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    channelId: task.workspace, // ✅ IMPORTANT
-                    event: "task_updated",
-                    data: populatedTask, // ✅ Send populated task for real-time updates
-                }),
-            });
-        } catch (err) {
-            console.error("Socket emit failed:", err);
-        }
-
-        // 🔥 Get default channel
-        const channel =
-            await Channel.findById(
-                task.channel
-            );
-
-        // 🔥 Build system message
-        let actionText = "";
-
-        // Fetch target user (for assignee)
-        let assigneeUser: any = null;
-
-        if (assignee) {
-            const targetMembership = await Membership.findOne({
-                user: assignee,
-                workspace: task.workspace,
-            }).populate("user");
-
-            assigneeUser = targetMembership?.user;
-        }
-
-        // 🔥 STATUS MESSAGE
-        if (status) {
-            actionText = `${session.user.username} marked "${task.title}" as ${status === "in-progress" ? "In Progress" : status.toUpperCase()
-                }`;
-        }
-
-        // 🔥 ASSIGNMENT MESSAGE
-        if (assignee && assigneeUser) {
-            actionText = `${session.user.username} assigned "${task.title}" to ${assigneeUser.username}`;
-        }
-
-        // 🔥 ASSIGNMENT MESSAGE
-        if (assignee && assigneeUser) {
-            actionText = `${session.user.username} assigned "${task.title}" to ${assigneeUser.username}`;
-        }
-
-        // // 🔥 DEBUG LOGS
-        // console.log("========== TASK ASSIGN DEBUG ==========");
-        // console.log("ASSIGNEE:", assignee);
-        // console.log("ASSIGNEE USER:", assigneeUser);
-        // console.log("TASK TITLE:", task.title);
-        // console.log("SOCKET URL:", process.env.SOCKET_SERVER_URL);
-        // console.log("APP URL:", process.env.NEXT_PUBLIC_APP_URL);
-        // console.log("======================================");
-
-        // 🔥 NOTIFICATION + SOCKET + EMAIL
-        if (assignee && assigneeUser) {
-
-            await sendTaskAssignmentNotification({
-
-                assignee: {
-
-                    _id:
-                        assigneeUser._id.toString(),
-
-                    username:
-                        assigneeUser.username,
-
-                    email:
-                        assigneeUser.email,
-
-                },
-
-                assignedBy:
-                    session.user.username,
-
-                taskId:
-                    task._id.toString(),
-
-                taskTitle:
-                    task.title,
-
-                workspaceId:
-                    task.workspace.toString(),
-
-            });
-
-        }
-
-        // 🔥 CREATE SYSTEM MESSAGE
-        const systemMessage = await Message.create({
-            content: actionText,
-            channel: channel._id,
-            sender: session.user.id,
-            type: "task_activity", // ✅
-            task: task._id,
-        });
-
-        // 🔥 POPULATE MESSAGE (IMPORTANT FIX)
-        const populatedMessage = await Message.findById(systemMessage._id)
-            .populate("sender", "username")
-            .populate("task", "title")
-            .lean();
-
-        // 🔥 EMIT SOCKET
-        await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                channelId: channel._id,
-                message: populatedMessage,
-            }),
-        });
-
-        // 🔥 EMIT TASK ACTIVITY (REAL-TIME)
-        await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                channelId: task._id,   // ✅ IMPORTANT (task room)
-                event: "task_activity",
-                data: populatedMessage,
-            }),
-        });
-
-        // 🔥 GLOBAL WORKSPACE ACTIVITY
-        await fetch(`${process.env.SOCKET_SERVER_URL}/emit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                channelId: task.workspace.toString(), // ✅ workspace room
-                event: "workspace_activity",
-                data: populatedMessage,
-            }),
-        });
-
-        return NextResponse.json({ success: true, task });
-    } catch (error) {
-        console.error("UPDATE TASK STATUS ERROR:", error);
-
-        return handleApiError(
-            error
-        );
+  try {
+    await connectDB();
+
+    const session = await requireAuth();
+    const { taskId, status, assignee } =
+      (await req.json()) as TaskStatusRequest;
+
+    if (!taskId || (!status && assignee === undefined)) {
+      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
+
+    if (status && !isTaskStatus(status)) {
+      return NextResponse.json(
+        { error: "Invalid task status" },
+        { status: 400 }
+      );
+    }
+
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    const membership = await Membership.findOne({
+      user: session.user.id,
+      workspace: task.workspace,
+    })
+      .select("role")
+      .lean<MembershipRecord | null>();
+
+    if (!membership) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    const userId = session.user.id;
+    const oldStatus = task.status as TaskStatus;
+    const oldAssignee = task.assignee?.toString() || "";
+    const normalizedRole = String(membership.role || "").toLowerCase();
+    const isCreator = task.createdBy?.toString() === userId;
+    const isAssignee = task.assignee?.toString() === userId;
+    const isAdmin = normalizedRole === "admin" || normalizedRole === "owner";
+
+    if (!isCreator && !isAssignee && !isAdmin) {
+      return NextResponse.json(
+        { error: "You are not allowed to update this task" },
+        { status: 403 }
+      );
+    }
+
+    if (status) {
+      task.set("status", status);
+    }
+
+    if (assignee !== undefined) {
+      task.set("assignee", assignee || null);
+    }
+
+    await task.save();
+
+    const populatedTask = await Task.findById(task._id)
+      .populate("assignee", "username")
+      .populate("createdBy", "username")
+      .lean();
+
+    const workspaceId = String(task.workspace);
+    const taskObjectId = String(task._id);
+    const taskTitle = task.title;
+    const taskChannelId = task.channel ? String(task.channel) : null;
+    const actorName = session.user.username || "Someone";
+    const assigneeChanged =
+      assignee !== undefined && oldAssignee !== String(assignee || "");
+    const statusChanged =
+      Boolean(status) && status !== oldStatus;
+
+    after(async () => {
+      try {
+        await emitSocketEvent({
+          channelId: workspaceId,
+          event: "task_updated",
+          data: populatedTask,
+        });
+      } catch (error) {
+        console.error("Task update socket failed:", error);
+      }
+
+      if (assigneeChanged) {
+        try {
+          await createAuditLog({
+            workspaceId,
+            actorId: session.user.id,
+            action: assignee ? "task_assigned" : "task_unassigned",
+            targetType: "task",
+            targetId: taskObjectId,
+            metadata: {
+              taskTitle,
+              oldAssignee,
+              newAssignee: assignee || null,
+            },
+          });
+        } catch (error) {
+          console.error("Task assignment audit failed:", error);
+        }
+      }
+
+      let assigneeUser: PopulatedMembershipUser["user"] = null;
+
+      if (assignee) {
+        try {
+          const targetMembership = await Membership.findOne({
+            user: assignee,
+            workspace: workspaceId,
+          })
+            .populate("user", "username email")
+            .lean<PopulatedMembershipUser | null>();
+
+          assigneeUser = targetMembership?.user || null;
+        } catch (error) {
+          console.error("Task assignee lookup failed:", error);
+        }
+      }
+
+      if (assignee && assigneeUser?.email && assigneeUser.username) {
+        try {
+          await sendTaskAssignmentNotification({
+            assignee: {
+              _id: String(assigneeUser._id),
+              username: assigneeUser.username,
+              email: assigneeUser.email,
+            },
+            assignedBy: actorName,
+            taskId: taskObjectId,
+            taskTitle,
+            workspaceId,
+          });
+        } catch (error) {
+          console.error("Task assignment notification failed:", error);
+        }
+      }
+
+      let actionText = "";
+
+      if (statusChanged && status) {
+        actionText = `${actorName} marked "${taskTitle}" as ${formatStatusLabel(
+          status
+        )}`;
+      }
+
+      if (assigneeChanged && assignee && assigneeUser?.username) {
+        actionText = `${actorName} assigned "${taskTitle}" to ${assigneeUser.username}`;
+      }
+
+      if (assigneeChanged && !assignee) {
+        actionText = `${actorName} unassigned "${taskTitle}"`;
+      }
+
+      if (!actionText || !taskChannelId) {
+        return;
+      }
+
+      try {
+        const channel = await Channel.findOne({
+          _id: taskChannelId,
+          workspace: workspaceId,
+        })
+          .select("_id")
+          .lean<{ _id: unknown } | null>();
+
+        if (!channel) return;
+
+        const systemMessage = await Message.create({
+          content: actionText,
+          channel: channel._id,
+          sender: session.user.id,
+          type: "task_activity",
+          task: taskObjectId,
+        });
+
+        const populatedMessage = await Message.findById(systemMessage._id)
+          .populate("sender", "username")
+          .populate("task", "title")
+          .lean();
+
+        await Promise.allSettled([
+          emitSocketEvent({
+            channelId: String(channel._id),
+            message: populatedMessage,
+          }),
+          emitSocketEvent({
+            channelId: taskObjectId,
+            event: "task_activity",
+            data: populatedMessage,
+          }),
+          emitSocketEvent({
+            channelId: workspaceId,
+            event: "workspace_activity",
+            data: populatedMessage,
+          }),
+        ]);
+      } catch (error) {
+        console.error("Task activity message failed:", error);
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      task: populatedTask,
+    });
+  } catch (error) {
+    console.error("UPDATE TASK STATUS ERROR:", error);
+    return handleApiError(error);
+  }
 }

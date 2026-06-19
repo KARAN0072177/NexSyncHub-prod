@@ -1,8 +1,7 @@
 // TaskClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import TaskCard from "./TaskCard";
 import { io } from "socket.io-client";
 import { useSession } from "next-auth/react";
@@ -18,7 +17,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { Plus, Loader2, LayoutGrid, X, AlertTriangle } from "lucide-react";
+import { Plus, LayoutGrid, AlertTriangle } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import TaskDetailModal from "./TaskDetailModal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -60,6 +59,16 @@ type Task = {
   assignee?: { _id: string; username: string };
   linkedMessage?: string;
   channel?: string;
+};
+
+type TaskUpdate = {
+  status?: Task["status"];
+  assignee?: string;
+};
+
+type TaskStatusResponse = {
+  error?: string;
+  task?: Task;
 };
 
 //////////////////////////////////////////////////////
@@ -141,6 +150,7 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const pendingTaskUpdateRef = useRef<Map<string, symbol>>(new Map());
   const searchParams = useSearchParams();
   const initialTaskId = searchParams.get("taskId");
 
@@ -153,8 +163,6 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
   );
 
   const currentUserRole = currentUser?.role;
-
-  const router = useRouter();
 
   // 📩 Fetch tasks
   useEffect(() => {
@@ -180,23 +188,74 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
   // 🔥 UNIVERSAL UPDATE FUNCTION
   const updateTask = async (
     taskId: string,
-    updates: {
-      status?: "todo" | "in-progress" | "done";
-      assignee?: string;
-    }
+    updates: TaskUpdate
   ) => {
+    const requestId = Symbol(taskId);
+    let rollbackTask: Task | null = null;
 
-    console.log("UPDATES SENT:", updates);
+    pendingTaskUpdateRef.current.set(taskId, requestId);
+    setErrorMessage(null);
 
-    const res = await fetch("/api/task/status", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taskId, ...updates }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setErrorMessage(data.error); // Use themed popup instead of alert
-      return;
+    setTasks((prev) =>
+      prev.map((task) => {
+        if (task._id !== taskId) {
+          return task;
+        }
+
+        rollbackTask = task;
+
+        const nextAssignee =
+          updates.assignee !== undefined
+            ? members.find((member) => member.user._id === updates.assignee)
+              ?.user
+            : task.assignee;
+
+        return {
+          ...task,
+          ...(updates.status ? { status: updates.status } : {}),
+          ...(updates.assignee !== undefined
+            ? { assignee: nextAssignee || undefined }
+            : {}),
+        };
+      })
+    );
+
+    try {
+      const res = await fetch("/api/task/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, ...updates }),
+      });
+      const data = (await res.json()) as TaskStatusResponse;
+
+      if (!res.ok) {
+        throw new Error(data.error || "Task update failed");
+      }
+
+      if (data.task && pendingTaskUpdateRef.current.get(taskId) === requestId) {
+        setTasks((prev) =>
+          prev.map((task) =>
+            task._id === taskId ? { ...task, ...data.task } : task
+          )
+        );
+      }
+    } catch (error) {
+      if (
+        rollbackTask &&
+        pendingTaskUpdateRef.current.get(taskId) === requestId
+      ) {
+        setTasks((prev) =>
+          prev.map((task) => (task._id === taskId ? rollbackTask! : task))
+        );
+      }
+
+      setErrorMessage(
+        error instanceof Error ? error.message : "Task update failed"
+      );
+    } finally {
+      if (pendingTaskUpdateRef.current.get(taskId) === requestId) {
+        pendingTaskUpdateRef.current.delete(taskId);
+      }
     }
   };
 
@@ -237,21 +296,23 @@ export default function TasksClient({ workspaceId }: { workspaceId: string }) {
     // Drop on column
     if (!overTask) {
       const newStatus = overId as "todo" | "in-progress" | "done";
+
+      if (!activeTask || activeTask.status === newStatus) {
+        return;
+      }
+
       updateTask(activeId, { status: newStatus });
       return;
     }
 
     // Reorder inside same column
     if (activeTask?.status === overTask?.status) {
-      const columnTasks = tasks.filter((t) => t.status === activeTask.status);
-      const oldIndex = columnTasks.findIndex((t) => t._id === activeId);
-      const newIndex = columnTasks.findIndex((t) => t._id === overId);
-      const newColumnTasks = arrayMove(columnTasks, oldIndex, newIndex);
-      const updatedTasks = tasks.map((t) => {
-        const found = newColumnTasks.find((nt) => nt._id === t._id);
-        return found || t;
-      });
-      setTasks(updatedTasks);
+      const oldIndex = tasks.findIndex((t) => t._id === activeId);
+      const newIndex = tasks.findIndex((t) => t._id === overId);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setTasks((prev) => arrayMove(prev, oldIndex, newIndex));
+      }
     }
     // Move between columns
     else if (activeTask && overTask) {
