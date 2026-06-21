@@ -437,22 +437,11 @@ export default function DashboardNavbar() {
           <div className="flex items-center gap-6">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5 group">
-              <motion.div
-                whileHover={{ scale: 1.06, rotate: -5 }}
-                whileTap={{ scale: 0.94 }}
-                className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{
-                  background: `linear-gradient(135deg, ${T.blue}28, ${T.violet}18)`,
-                  border: `1px solid ${T.borderHi}`,
-                  boxShadow: `0 0 14px ${T.blueGlow}`,
-                }}
-              >
-                <Zap size={16} style={{ color: T.blue }} />
-              </motion.div>
-              <span className="text-[15px] font-black text-white tracking-tight hidden sm:block"
-                style={{ fontFamily: "'Syne',sans-serif", letterSpacing: "-0.02em" }}>
-                NexSync<span style={{ color: T.blue }}>Hub</span>
-              </span>
+              <img
+                src="/navlogo.png"
+                alt="NexSyncHub"
+                className="h-8 w-auto object-contain"
+              />
             </Link>
 
             {/* Divider */}

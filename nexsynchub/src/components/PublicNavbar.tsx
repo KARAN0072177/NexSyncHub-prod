@@ -48,15 +48,12 @@ export default function PublicNavbar() {
           href="/"
           className="flex min-w-0 items-center gap-2 group"
         >
-          <div className="w-8 h-8 shrink-0 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
-            <Zap className="w-4 h-4 text-indigo-400" />
-          </div>
-          <span className="truncate text-base font-bold tracking-tight text-white sm:text-xl">
-            NexSyncHub
-          </span>
+          <img
+            src="/navlogo.png"
+            alt="NexSyncHub"
+            className="h-8 w-auto object-contain"
+          />
         </Link>
-
-        {/* Center Links - Pill shaped inner nav */}
         <nav className="hidden md:flex items-center gap-1 p-1.5 rounded-full border border-white/5 bg-white/[0.02]">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;

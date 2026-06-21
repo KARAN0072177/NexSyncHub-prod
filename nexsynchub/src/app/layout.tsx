@@ -38,7 +38,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nexsynchub.com"),
+  metadataBase: new URL("https://www.nexsynchub.com"),
   title: {
     default: "NexSyncHub | Real-time Collaboration Workspace",
     template: "%s | NexSyncHub",
@@ -72,15 +72,24 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://nexsynchub.com",
+    url: "https://www.nexsynchub.com",
     title: "NexSyncHub | Real-time Collaboration Workspace",
     description: "NexSyncHub brings chat, tasks, documents, and workspaces into one calm, fast, and focused environment. Built for teams that ship.",
     siteName: "NexSyncHub",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "NexSyncHub Team Workspace",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "NexSyncHub | Real-time Collaboration Workspace",
     description: "NexSyncHub brings chat, tasks, documents, and workspaces into one calm, fast, and focused environment. Built for teams that ship.",
+    images: ["/og-image.png"],
   },
   icons: {
     icon: "/favicon.ico",
