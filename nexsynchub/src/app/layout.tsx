@@ -79,7 +79,7 @@ export const metadata: Metadata = {
     siteName: "NexSyncHub",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://nexsynchub.com/og-image.png",
         width: 1200,
         height: 630,
         alt: "NexSyncHub Team Workspace",
