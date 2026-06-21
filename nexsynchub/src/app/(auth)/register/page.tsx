@@ -6,6 +6,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Turnstile from "@/components/global/Turnstile";
 import {
   Mail,
   Lock,
@@ -34,6 +35,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationDisabled, setRegistrationDisabled] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const passwordMatch = form.password === form.confirmPassword;
   const passwordStrength =
@@ -62,7 +64,7 @@ export default function RegisterPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken }),
       });
 
       const data = await res.json();
@@ -321,10 +323,13 @@ export default function RegisterPage() {
               </div>
             )}
 
+            {/* Turnstile Captcha */}
+            <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !turnstileToken}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed 
                 text-white rounded-xl py-3 px-4 font-medium transition-all flex items-center justify-center gap-2
                 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30"

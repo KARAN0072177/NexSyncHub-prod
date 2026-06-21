@@ -5,6 +5,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import Turnstile from "@/components/global/Turnstile";
 
 import {
   signIn,
@@ -83,6 +84,8 @@ function LoginContent() {
   const [showPassword, setShowPassword] =
     useState(false);
 
+  const [turnstileToken, setTurnstileToken] = useState("");
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -98,6 +101,7 @@ function LoginContent() {
       const res = await signIn("credentials", {
         email: form.email.trim().toLowerCase(),
         password: form.password,
+        turnstileToken,
         redirect: false,
       });
 
@@ -264,10 +268,13 @@ function LoginContent() {
               </div>
             )}
 
+            {/* Turnstile Captcha */}
+            <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !turnstileToken}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl py-3 px-4 font-medium transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30"
             >
               {loading ? (

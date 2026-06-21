@@ -3,6 +3,7 @@
 import {
   useState,
 } from "react";
+import Turnstile from "@/components/global/Turnstile";
 
 import {
   useRouter,
@@ -40,6 +41,8 @@ ForgotPasswordPage() {
     setError,
   ] = useState("");
 
+  const [turnstileToken, setTurnstileToken] = useState("");
+
   // 🔥 Submit
   const handleSubmit =
     async (
@@ -74,9 +77,8 @@ ForgotPasswordPage() {
 
               body:
                 JSON.stringify({
-
                   email,
-
+                  turnstileToken,
                 }),
 
             }
@@ -251,12 +253,15 @@ ForgotPasswordPage() {
 
           )}
 
+          {/* Turnstile Captcha */}
+          <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+
           {/* Submit */}
           <button
             type="submit"
 
             disabled={
-              loading
+              loading || !turnstileToken
             }
 
             className="w-full h-12 rounded-2xl bg-indigo-500 hover:bg-indigo-600 transition font-semibold flex items-center justify-center gap-2 disabled:opacity-50"

@@ -20,7 +20,7 @@ import {
 import { resend }
     from "@/lib/resend";
 
-import { createSecurityLog } from "@/lib/security";
+import { createSecurityLog, verifyTurnstile } from "@/lib/security";
 
 export async function POST(
     req: Request
@@ -31,12 +31,17 @@ export async function POST(
         await connectDB();
 
         // 🔥 Parse body
-        const body =
-            await req.json();
+        const body = await req.json();
+        const { email, turnstileToken } = body;
 
-        const {
-            email,
-        } = body;
+        const ip = req.headers.get("x-forwarded-for") || "Unknown IP";
+
+        // Verify Captcha
+        try {
+            await verifyTurnstile(turnstileToken, ip);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: 400 });
+        }
 
         const normalizedEmail =
             String(email || "")
@@ -168,10 +173,6 @@ export async function POST(
         });
 
         // 🔥 Request info
-        const ip =
-            req.headers.get(
-                "x-forwarded-for"
-            ) || "Unknown IP";
 
         const userAgent =
             req.headers.get(

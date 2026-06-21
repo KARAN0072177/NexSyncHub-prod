@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import { createSecurityLog } from "@/lib/security";
+import { createSecurityLog, verifyTurnstile } from "@/lib/security";
 import {
   clearLoginFailures,
   formatRetryAfter,
@@ -72,7 +72,6 @@ async function throwRateLimitError({
     )}.`
   );
 }
-
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -80,6 +79,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: {},
         password: {},
+        turnstileToken: {},
       },
 
       async authorize(credentials, req) {
@@ -91,9 +91,11 @@ export const authOptions: NextAuthOptions = {
           .trim()
           .toLowerCase();
         const password = String(credentials?.password || "");
+        const turnstileToken = String(credentials?.turnstileToken || "");
+
+        await verifyTurnstile(turnstileToken, ip);
 
         const ipLock = await getLoginIpLock(ip);
-
         if (ipLock.locked) {
           await throwRateLimitError({
             email: normalizedEmail,

@@ -1,5 +1,6 @@
 import type { Metadata }
   from "next";
+import Script from "next/script";
 
 import {
   Geist,
@@ -113,6 +114,10 @@ export default function RootLayout({
     >
 
       <body className="min-h-full flex flex-col">
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+          strategy="afterInteractive"
+        />
 
         <AuthProvider>
 

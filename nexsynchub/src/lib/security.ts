@@ -143,3 +143,38 @@ export async function createSecurityLog({
   }
 
 }
+
+// 🔐 Cloudflare Turnstile token verifier
+export async function verifyTurnstile(token: string, ip?: string) {
+  const secretKey = process.env.TURNSTILE_SECRET_KEY;
+  if (!secretKey) {
+    console.warn("Missing TURNSTILE_SECRET_KEY in environment variables. Skipping validation.");
+    return true;
+  }
+
+  if (!token) {
+    throw new Error("Security verification missing. Please complete the captcha.");
+  }
+
+  try {
+    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: secretKey,
+        response: token,
+        remoteip: ip,
+      }),
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error("Security verification failed. Please try again.");
+    }
+    return true;
+  } catch (error: any) {
+    console.error("Turnstile verification error:", error);
+    throw new Error(error.message || "Security check failed. Please refresh the page.");
+  }
+}
+

@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import { sendVerificationEmail } from "@/lib/mail";
 import { getRequestAppUrl } from "@/lib/app-url";
 
-import { createSecurityLog } from "@/lib/security";
+import { createSecurityLog, verifyTurnstile } from "@/lib/security";
 
 export async function POST(req: Request) {
   try {
@@ -60,6 +60,13 @@ export async function POST(req: Request) {
       "Unknown";
 
     const body = await req.json();
+
+    // Verify Captcha
+    try {
+      await verifyTurnstile(body.turnstileToken, ip);
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
 
     // ✅ Validate input
     const parsed = registerSchema.safeParse(body);
