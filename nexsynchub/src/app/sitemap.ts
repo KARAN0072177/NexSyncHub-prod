@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://nexsynchub.com";
+  const baseUrl = "https://www.nexsynchub.com";
   const routes = ["", "/about", "/features", "/pricing", "/support-center"];
 
   return routes.map((route) => ({
