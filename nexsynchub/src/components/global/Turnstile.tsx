@@ -13,6 +13,15 @@ interface TurnstileProps {
 export default function Turnstile({ onVerify, options = {} }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const onVerifyRef = useRef(onVerify);
+
+  // Keep onVerify ref updated to avoid triggering effect when parent function changes
+  useEffect(() => {
+    onVerifyRef.current = onVerify;
+  }, [onVerify]);
+
+  const theme = options.theme || "dark";
+  const size = options.size || "normal";
 
   useEffect(() => {
     let active = true;
@@ -30,6 +39,7 @@ export default function Turnstile({ onVerify, options = {} }: TurnstileProps) {
       if (widgetIdRef.current) {
         try {
           window.turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
         } catch (e) {
           console.error(e);
         }
@@ -39,10 +49,10 @@ export default function Turnstile({ onVerify, options = {} }: TurnstileProps) {
         const id = window.turnstile.render(containerRef.current, {
           sitekey,
           callback: (token: string) => {
-            if (active) onVerify(token);
+            if (active) onVerifyRef.current(token);
           },
-          theme: options.theme || "dark",
-          size: options.size || "normal",
+          theme,
+          size,
         });
         widgetIdRef.current = id;
       } catch (error) {
@@ -68,6 +78,7 @@ export default function Turnstile({ onVerify, options = {} }: TurnstileProps) {
         if (widgetIdRef.current && window.turnstile) {
           try {
             window.turnstile.remove(widgetIdRef.current);
+            widgetIdRef.current = null;
           } catch (e) {
             console.error(e);
           }
@@ -80,12 +91,13 @@ export default function Turnstile({ onVerify, options = {} }: TurnstileProps) {
       if (widgetIdRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
         } catch (e) {
           console.error(e);
         }
       }
     };
-  }, [onVerify, options.theme, options.size]);
+  }, [theme, size]);
 
   return <div ref={containerRef} className="flex justify-center my-2 min-h-[65px]" />;
 }

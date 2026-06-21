@@ -36,6 +36,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationDisabled, setRegistrationDisabled] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [showCaptcha, setShowCaptcha] = useState(false);
 
   const passwordMatch = form.password === form.confirmPassword;
   const passwordStrength =
@@ -200,12 +201,14 @@ export default function RegisterPage() {
                     text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 
                     focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                   value={form.username}
-                  onChange={(e) =>
+                  onFocus={() => setShowCaptcha(true)}
+                  onChange={(e) => {
+                    setShowCaptcha(true);
                     setForm({
                       ...form,
                       username: e.target.value.toLowerCase().trim(),
-                    })
-                  }
+                    });
+                  }}
                   minLength={3}
                   maxLength={20}
                   pattern="[a-z0-9._]+"
@@ -231,7 +234,11 @@ export default function RegisterPage() {
                     text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 
                     focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onFocus={() => setShowCaptcha(true)}
+                  onChange={(e) => {
+                    setShowCaptcha(true);
+                    setForm({ ...form, email: e.target.value });
+                  }}
                   required
                 />
               </div>
@@ -251,7 +258,11 @@ export default function RegisterPage() {
                     text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 
                     focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                   value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onFocus={() => setShowCaptcha(true)}
+                  onChange={(e) => {
+                    setShowCaptcha(true);
+                    setForm({ ...form, password: e.target.value });
+                  }}
                   required
                 />
                 <button
@@ -298,7 +309,11 @@ export default function RegisterPage() {
                         : "border-gray-700 focus:ring-indigo-500/50 focus:border-indigo-500/50"
                     }`}
                   value={form.confirmPassword}
-                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  onFocus={() => setShowCaptcha(true)}
+                  onChange={(e) => {
+                    setShowCaptcha(true);
+                    setForm({ ...form, confirmPassword: e.target.value });
+                  }}
                   required
                 />
                 <button
@@ -324,7 +339,9 @@ export default function RegisterPage() {
             )}
 
             {/* Turnstile Captcha */}
-            <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+            {showCaptcha && (
+              <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+            )}
 
             {/* Submit */}
             <button

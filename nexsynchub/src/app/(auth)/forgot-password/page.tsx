@@ -42,6 +42,7 @@ ForgotPasswordPage() {
   ] = useState("");
 
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [showCaptcha, setShowCaptcha] = useState(false);
 
   // 🔥 Submit
   const handleSubmit =
@@ -212,11 +213,13 @@ ForgotPasswordPage() {
 
               value={email}
 
-              onChange={(e) =>
+              onFocus={() => setShowCaptcha(true)}
+              onChange={(e) => {
+                setShowCaptcha(true);
                 setEmail(
                   e.target.value
-                )
-              }
+                );
+              }}
 
               placeholder="you@example.com"
 
@@ -254,7 +257,9 @@ ForgotPasswordPage() {
           )}
 
           {/* Turnstile Captcha */}
-          <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+          {showCaptcha && (
+            <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+          )}
 
           {/* Submit */}
           <button

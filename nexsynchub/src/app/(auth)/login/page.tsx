@@ -85,6 +85,7 @@ function LoginContent() {
     useState(false);
 
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [showCaptcha, setShowCaptcha] = useState(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -192,12 +193,14 @@ function LoginContent() {
                   placeholder="you@example.com"
                   className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-10 pr-4 py-3 text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                   value={form.email}
-                  onChange={(e) =>
+                  onFocus={() => setShowCaptcha(true)}
+                  onChange={(e) => {
+                    setShowCaptcha(true);
                     setForm({
                       ...form,
                       email: e.target.value,
-                    })
-                  }
+                    });
+                  }}
                   required
                 />
               </div>
@@ -231,13 +234,15 @@ function LoginContent() {
                   placeholder="Password"
                   className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-10 pr-10 py-3 text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                   value={form.password}
-                  onChange={(e) =>
+                  onFocus={() => setShowCaptcha(true)}
+                  onChange={(e) => {
+                    setShowCaptcha(true);
                     setForm({
                       ...form,
                       password:
                         e.target.value,
-                    })
-                  }
+                    });
+                  }}
                   required
                 />
 
@@ -269,7 +274,9 @@ function LoginContent() {
             )}
 
             {/* Turnstile Captcha */}
-            <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+            {showCaptcha && (
+              <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+            )}
 
             {/* Submit */}
             <button
