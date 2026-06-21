@@ -103,7 +103,9 @@ export default withAuth(
           pathname === "/pricing" ||
           pathname === "/support-center" ||
           pathname === "/maintenance" ||
-          pathname === "/"
+          pathname === "/" ||
+          pathname === "/sitemap.xml" ||
+          pathname === "/robots.txt"
         ) {
           return true;
         }
@@ -115,5 +117,7 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+  ],
 };
