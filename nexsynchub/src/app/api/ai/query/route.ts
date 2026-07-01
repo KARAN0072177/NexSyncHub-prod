@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-guard";
 import { handleApiError } from "@/lib/api-error";
 import { redis } from "@/lib/redis";
+import { connectDB } from "@/lib/db";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
@@ -34,6 +35,8 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 export async function POST(req: Request) {
   try {
+    await connectDB();
+
     // 1. Authenticate user
     const session = await requireAuth();
     const user = session.user;
@@ -87,7 +90,7 @@ export async function POST(req: Request) {
     }
 
     // 5. Load embedding vector cache
-    const cachePath = path.join(process.cwd(), ".cache", "knowledge-embeddings.json");
+    const cachePath = path.join(process.cwd(), "cache", "knowledge-embeddings.json");
     if (!fs.existsSync(cachePath)) {
       console.error("Knowledge embeddings vector store not generated at: " + cachePath);
       return NextResponse.json(

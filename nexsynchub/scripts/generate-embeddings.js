@@ -10,7 +10,7 @@ const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 150;
 
 const knowledgeDir = path.join(__dirname, "..", "knowledge");
-const cacheDir = path.join(__dirname, "..", ".cache");
+const cacheDir = path.join(__dirname, "..", "cache");
 const cacheFile = path.join(cacheDir, "knowledge-embeddings.json");
 
 function getHeadingAtPosition(cleanText, startIndex) {
