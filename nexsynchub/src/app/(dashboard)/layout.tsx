@@ -2,6 +2,8 @@ import { getAuthSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import { AiAssistantProvider } from "@/providers/AiAssistantProvider";
+import AiAssistant from "@/components/global/AiAssistant";
 
 export default async function DashboardLayout({
   children,
@@ -29,5 +31,10 @@ export default async function DashboardLayout({
     redirect("/set-username");
   }
 
-  return <>{children}</>;
+  return (
+    <AiAssistantProvider>
+      {children}
+      <AiAssistant />
+    </AiAssistantProvider>
+  );
 }

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "read-knowledge": "node scripts/read-knowledge.js",
+    "generate-embeddings": "node scripts/generate-embeddings.js"
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.1048.0",
