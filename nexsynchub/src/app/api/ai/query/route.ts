@@ -4,34 +4,12 @@ import { handleApiError } from "@/lib/api-error";
 import { redis } from "@/lib/redis";
 import { connectDB } from "@/lib/db";
 import { z } from "zod";
-import fs from "fs";
-import path from "path";
 import OpenAI from "openai";
+import KnowledgeChunk from "@/models/KnowledgeChunk";
 
 const querySchema = z.object({
   message: z.string().trim().min(3).max(500),
 });
-
-function hasPermission(user: any, visibility: string): boolean {
-  if (visibility === "all") return true;
-  const userRole = user.role || "user";
-  if (visibility === "super_admin") return userRole === "super_admin";
-  if (visibility === "admin") return userRole === "admin" || userRole === "super_admin";
-  return false;
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0;
-  let magA = 0;
-  let magB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    magA += a[i] ** 2;
-    magB += b[i] ** 2;
-  }
-  const mag = Math.sqrt(magA) * Math.sqrt(magB);
-  return mag === 0 ? 0 : dot / mag;
-}
 
 export async function POST(req: Request) {
   try {
@@ -89,28 +67,7 @@ export async function POST(req: Request) {
       return NextResponse.json(typeof cachedResponse === "string" ? JSON.parse(cachedResponse) : cachedResponse);
     }
 
-    // 5. Load embedding vector cache
-    const cachePath = path.join(process.cwd(), "cache", "knowledge-embeddings.json");
-    if (!fs.existsSync(cachePath)) {
-      console.error("Knowledge embeddings vector store not generated at: " + cachePath);
-      return NextResponse.json(
-        { error: "Vector database cache not configured. Please build embeddings first." },
-        { status: 500 }
-      );
-    }
-
-    const chunks = JSON.parse(fs.readFileSync(cachePath, "utf8"));
-
-    // 6. Permission filtering
-    const visibleChunks = chunks.filter((chunk: any) => hasPermission(user, chunk.visibility));
-
-    if (visibleChunks.length === 0) {
-      return NextResponse.json(
-        { answer: "I don't know based on the available documentation.", confidence: 0, sources: [] }
-      );
-    }
-
-    // 7. Get OpenAI API Client & Query Embedding
+    // 5. Get OpenAI API Client & Query Embedding
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
@@ -121,32 +78,59 @@ export async function POST(req: Request) {
     });
     const questionEmbedding = queryResponse.data[0].embedding;
 
-    // 8. Calculate similarity & Rank Chunks
-    const scoredChunks = visibleChunks.map((chunk: any) => ({
-      chunk,
-      score: cosineSimilarity(questionEmbedding, chunk.embedding),
-    }));
+    // 6. Build Permission Filter based on platform user roles (V1.5 future-proofing)
+    const allowedVisibilities = ["public", "authenticated", "workspace"];
+    if (userRole === "admin") {
+      allowedVisibilities.push("admin");
+    } else if (userRole === "super_admin") {
+      allowedVisibilities.push("admin", "super_admin");
+    }
 
-    scoredChunks.sort((a: any, b: any) => b.score - a.score);
-    
-    // Inspect top 5 candidates, filter by MIN_CONFIDENCE (0.72), and keep the best 3
-    const MIN_CONFIDENCE = 0.72;
-    const candidates = scoredChunks.slice(0, 5);
-    const validMatches = candidates.filter((m: any) => m.score >= MIN_CONFIDENCE);
+    // 7. Perform MongoDB Atlas Vector Search Aggregation
+    const results = await KnowledgeChunk.aggregate([
+      {
+        $vectorSearch: {
+          index: "knowledge_vector_index",
+          path: "embedding",
+          queryVector: questionEmbedding,
+          numCandidates: 100, // Search candidates pool size
+          limit: 5, // Retrieve top 5 matching candidates
+          filter: {
+            visibility: { $in: allowedVisibilities }
+          }
+        }
+      },
+      {
+        $project: {
+          chunkId: 1,
+          source: 1,
+          section: 1,
+          heading: 1,
+          category: 1,
+          text: 1,
+          workspaceId: 1,
+          score: { $meta: "vectorSearchScore" } // similarity score
+        }
+      }
+    ]);
+
+    // Inspect top 5 candidates, filter by MIN_CONFIDENCE (configurable), and keep the best 3
+    const MIN_CONFIDENCE = Number(process.env.RAG_MIN_SCORE) || 0.72;
+    const validMatches = results.filter((m: any) => m.score >= MIN_CONFIDENCE);
     const topMatches = validMatches.slice(0, 3);
-    const confidence = scoredChunks[0]?.score || 0;
+    const confidence = results[0]?.score || 0;
 
     let answer = "";
     let sources: any[] = [];
 
-    // 9. Immediate Refusal Check
+    // 8. Immediate Refusal Check
     if (topMatches.length === 0) {
       // Below similarity threshold: Refuse answer directly without LLM call
       answer = "I don't know based on the available documentation.";
     } else {
       // Build Grounding Context
       const context = topMatches
-        .map((m: any) => `Source: ${m.chunk.id}\nSection: ${m.chunk.section}\n\n${m.chunk.text}`)
+        .map((m: any) => `Source: ${m.chunkId}\nSection: ${m.section}\n\n${m.text}`)
         .join("\n\n---\n\n");
 
       const systemPrompt = `You are the official NexSyncHub AI assistant.
@@ -180,11 +164,11 @@ Always cite the relevant source sections.`;
 
       if (answer !== "I don't know based on the available documentation.") {
         const rawSources = topMatches.map((m: any) => ({
-          id: m.chunk.id,
-          source: m.chunk.source,
-          section: m.chunk.section,
-          category: m.chunk.category,
-          text: m.chunk.text,
+          id: m.chunkId,
+          source: m.source,
+          section: m.section,
+          category: m.category,
+          text: m.text,
           score: m.score,
         }));
         

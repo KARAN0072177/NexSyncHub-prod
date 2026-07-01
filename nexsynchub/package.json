@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/generate-embeddings.js && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "read-knowledge": "node scripts/read-knowledge.js",
-    "generate-embeddings": "node scripts/generate-embeddings.js"
+    "generate-knowledge": "node scripts/generate-embeddings.js"
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.1048.0",
