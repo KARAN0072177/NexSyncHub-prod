@@ -1,6 +1,6 @@
-import type { Metadata }
-  from "next";
+import type { Metadata } from "next";
 import Script from "next/script";
+import { headers } from "next/headers";
 
 import {
   Geist,
@@ -19,23 +19,13 @@ import GlobalAnnouncement
   from "@/components/global/GlobalAnnouncement";
 
 const geistSans = Geist({
-
-  variable:
-    "--font-geist-sans",
-
-  subsets:
-    ["latin"],
-
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-
-  variable:
-    "--font-geist-mono",
-
-  subsets:
-    ["latin"],
-
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -99,24 +89,24 @@ export const metadata: Metadata = {
   },
 };
 
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const nonce = headersList.get("x-nonce") || undefined;
 
   return (
-
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-
       <body className="min-h-full flex flex-col">
         <Script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
           strategy="afterInteractive"
+          nonce={nonce}
         />
 
         <AuthProvider>
