@@ -9,6 +9,7 @@ import {
   clearLoginFailures,
   formatRetryAfter,
   getLoginIpLock,
+  getLoginEmailLock,
   recordLoginFailure,
 } from "@/lib/login-rate-limit";
 
@@ -96,11 +97,13 @@ export const authOptions: NextAuthOptions = {
         await verifyTurnstile(turnstileToken, ip);
 
         const ipLock = await getLoginIpLock(ip);
-        if (ipLock.locked) {
+        const emailLock = await getLoginEmailLock(normalizedEmail);
+        if (ipLock.locked || emailLock.locked) {
+          const retryAfterSeconds = Math.max(ipLock.retryAfterSeconds, emailLock.retryAfterSeconds);
           await throwRateLimitError({
             email: normalizedEmail,
             ip,
-            retryAfterSeconds: ipLock.retryAfterSeconds,
+            retryAfterSeconds,
             userAgent,
           });
         }
@@ -110,7 +113,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
-          const rateLimit = await recordLoginFailure(ip);
+          const rateLimit = await recordLoginFailure(ip, normalizedEmail);
 
           await createSecurityLog({
             action: "auth_login_failed",
@@ -139,7 +142,7 @@ export const authOptions: NextAuthOptions = {
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
-          const rateLimit = await recordLoginFailure(ip);
+          const rateLimit = await recordLoginFailure(ip, normalizedEmail);
 
           await createSecurityLog({
             userId: user._id.toString(),
@@ -200,7 +203,7 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        await clearLoginFailures(ip);
+        await clearLoginFailures(ip, normalizedEmail);
 
         await createSecurityLog({
           userId: user._id.toString(),

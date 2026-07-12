@@ -1,4 +1,5 @@
 import User from "@/models/User";
+import { connectDB } from "@/lib/db";
 
 type BanPayload = {
   code: "ACCOUNT_BANNED";
@@ -29,6 +30,7 @@ export function clearBanCacheForUser(userId: string) {
 }
 
 export async function checkBan(userId: string) {
+  await connectDB();
   const now = Date.now();
   const cached = banCache.get(userId);
 

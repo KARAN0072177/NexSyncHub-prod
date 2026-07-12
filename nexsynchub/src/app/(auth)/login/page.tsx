@@ -86,6 +86,7 @@ function LoginContent() {
 
   const [turnstileToken, setTurnstileToken] = useState("");
   const [showCaptcha, setShowCaptcha] = useState(false);
+  const [captchaKey, setCaptchaKey] = useState(0);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -113,6 +114,8 @@ function LoginContent() {
             : res.error
         );
         setLoading(false);
+        setTurnstileToken("");
+        setCaptchaKey((prev) => prev + 1);
         return;
       }
 
@@ -121,6 +124,8 @@ function LoginContent() {
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
+      setTurnstileToken("");
+      setCaptchaKey((prev) => prev + 1);
     }
   };
 
@@ -275,7 +280,7 @@ function LoginContent() {
 
             {/* Turnstile Captcha */}
             {showCaptcha && (
-              <Turnstile onVerify={(token) => setTurnstileToken(token)} />
+              <Turnstile key={captchaKey} onVerify={(token) => setTurnstileToken(token)} />
             )}
 
             {/* Submit */}
