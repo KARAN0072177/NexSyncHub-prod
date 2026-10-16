@@ -7,11 +7,12 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   Bell, Check, ExternalLink, Inbox,
   BellOff, Zap, LayoutDashboard, Compass, User,
-  CreditCard,
+  CreditCard, Volume2, VolumeX,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import NavbarUserMenu from "../dashboard/NavbarUserMenu";
+import { useDesktopNotifications } from "@/providers/DesktopNotificationProvider";
 
 /* ─── Design Tokens ── Electric Blue / Deep Navy ─────────────────────────── */
 const T = {
@@ -215,13 +216,27 @@ function BellButton({ unread, onClick, active }: { unread: number; onClick: () =
 
 /* ─── Notification Dropdown ──────────────────────────────────────────────── */
 function NotifDropdown({
-  notifications, unread, onItemClick, onMarkAll, onViewAll,
+  notifications,
+  unread,
+  onItemClick,
+  onMarkAll,
+  onViewAll,
+  soundEnabled,
+  onToggleSound,
+  onTestMention,
+  permission,
+  onRequestPermission,
 }: {
   notifications: any[];
   unread: number;
   onItemClick: (n: any) => void;
   onMarkAll: () => void;
   onViewAll: () => void;
+  soundEnabled: boolean;
+  onToggleSound: () => void;
+  onTestMention: () => void;
+  permission: NotificationPermission;
+  onRequestPermission: () => Promise<NotificationPermission>;
 }) {
   return (
     <motion.div
@@ -269,23 +284,36 @@ function NotifDropdown({
           )}
         </div>
 
-        {unread > 0 && (
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={onMarkAll}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-            style={{
-              background: T.emeraldLo,
-              border: `1px solid ${T.emeraldMid}`,
-              color: T.emerald,
-              fontFamily: "'JetBrains Mono',monospace",
-            }}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onToggleSound}
+            type="button"
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5 cursor-pointer"
+            style={{ color: soundEnabled ? T.blue : T.textMuted }}
+            title={soundEnabled ? "Mention sound alerts: On (Click to mute)" : "Mention sound alerts: Muted (Click to unmute)"}
+            aria-label={soundEnabled ? "Mute notification sounds" : "Unmute notification sounds"}
           >
-            <Check size={10} strokeWidth={2.5} />
-            Mark all read
-          </motion.button>
-        )}
+            {soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
+          </button>
+
+          {unread > 0 && (
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={onMarkAll}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+              style={{
+                background: T.emeraldLo,
+                border: `1px solid ${T.emeraldMid}`,
+                color: T.emerald,
+                fontFamily: "'JetBrains Mono',monospace",
+              }}
+            >
+              <Check size={10} strokeWidth={2.5} />
+              Mark all read
+            </motion.button>
+          )}
+        </div>
       </div>
 
       {/* List */}
@@ -315,7 +343,28 @@ function NotifDropdown({
       </div>
 
       {/* Footer */}
-      <div className="p-2.5" style={{ borderTop: `1px solid ${T.border}` }}>
+      <div className="p-2.5 flex flex-col gap-2" style={{ borderTop: `1px solid ${T.border}` }}>
+        <div className="flex items-center justify-between px-1 text-[10px]">
+          <button
+            onClick={onTestMention}
+            type="button"
+            className="flex items-center gap-1 font-medium transition-colors cursor-pointer hover:underline"
+            style={{ color: T.blue }}
+            title="Preview mention chime and desktop alert"
+          >
+            <Volume2 size={11} /> Test Mention Alert
+          </button>
+          {permission !== "granted" && (
+            <button
+              onClick={onRequestPermission}
+              type="button"
+              className="flex items-center gap-1 font-semibold transition-colors cursor-pointer hover:underline text-amber-400"
+            >
+              <Bell size={11} /> Enable Desktop Alerts
+            </button>
+          )}
+        </div>
+
         <motion.button
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
@@ -341,6 +390,13 @@ function NotifDropdown({
 /* ─── MAIN NAVBAR ────────────────────────────────────────────────────────── */
 export default function DashboardNavbar() {
   const { data: session } = useSession();
+  const {
+    soundEnabled,
+    toggleSound,
+    testMentionAlert,
+    permission,
+    requestPermission,
+  } = useDesktopNotifications();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -474,6 +530,11 @@ export default function DashboardNavbar() {
                   onItemClick={handleClick}
                   onMarkAll={markAllAsRead}
                   onViewAll={() => { router.push("/dashboard/notifications"); setOpen(false); }}
+                  soundEnabled={soundEnabled}
+                  onToggleSound={toggleSound}
+                  onTestMention={testMentionAlert}
+                  permission={permission}
+                  onRequestPermission={requestPermission}
                 />
               )}
             </AnimatePresence>

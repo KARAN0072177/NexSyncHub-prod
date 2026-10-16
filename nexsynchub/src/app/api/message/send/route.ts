@@ -34,18 +34,22 @@ type PlainMessage = {
   [key: string]: unknown;
 };
 
-type MentionedMember = {
+type WorkspaceMemberDoc = {
+  role?: string;
   user?: {
     _id?: unknown;
     username?: string;
   } | null;
 };
 
-type MentionedRecipient = {
+type MentionReason = "direct" | "admin" | "all";
+
+type ResolvedMentionRecipient = {
   user: {
     _id: unknown;
     username: string;
   };
+  reason: MentionReason;
 };
 
 const s3 = new S3Client({
@@ -154,39 +158,86 @@ export async function POST(req: Request) {
 
     const messageContent = content || "";
     const mentionedUsernames = extractMentionedUsernames(messageContent);
+    const hasAllMention =
+      mentionedUsernames.includes("all") || /(?:^|\s)@all(?:\b|[^\w])/i.test(messageContent);
+    const hasAdminMention =
+      mentionedUsernames.includes("admin") || /(?:^|\s)@admin(?:\b|[^\w])/i.test(messageContent);
+    const specificUsernames = mentionedUsernames.filter(
+      (username) => username !== "all" && username !== "admin"
+    );
+    const hasAnyMention = hasAllMention || hasAdminMention || specificUsernames.length > 0;
 
     after(async () => {
-      if (mentionedUsernames.length > 0) {
+      if (hasAnyMention) {
         try {
-          const mentionedMembers = await Membership.find({
+          const workspaceMembers = await Membership.find({
             workspace: channel.workspace,
             user: { $ne: session.user.id },
           })
             .populate("user", "username")
-            .lean<MentionedMember[]>();
+            .lean<WorkspaceMemberDoc[]>();
 
-          const mentionedRecipients = mentionedMembers.filter(
-            (member): member is MentionedRecipient => {
-              const user = member.user;
+          const recipientsMap = new Map<string, ResolvedMentionRecipient>();
 
-              if (!user?._id || !user.username) {
-                return false;
+          for (const member of workspaceMembers) {
+            const user = member.user;
+            if (!user?._id || !user.username) continue;
+
+            const memberUserId = String(user._id);
+            const memberUsername = user.username.toLowerCase();
+            const normalizedRole = String(member.role || "").toLowerCase();
+            const isAdmin = normalizedRole === "admin" || normalizedRole === "owner";
+
+            if (specificUsernames.includes(memberUsername)) {
+              recipientsMap.set(memberUserId, {
+                user: {
+                  _id: user._id,
+                  username: user.username,
+                },
+                reason: "direct",
+              });
+            } else if (hasAdminMention && isAdmin) {
+              if (!recipientsMap.has(memberUserId)) {
+                recipientsMap.set(memberUserId, {
+                  user: {
+                    _id: user._id,
+                    username: user.username,
+                  },
+                  reason: "admin",
+                });
               }
-
-              return mentionedUsernames.includes(user.username.toLowerCase());
+            } else if (hasAllMention) {
+              if (!recipientsMap.has(memberUserId)) {
+                recipientsMap.set(memberUserId, {
+                  user: {
+                    _id: user._id,
+                    username: user.username,
+                  },
+                  reason: "all",
+                });
+              }
             }
-          );
+          }
 
           const senderName =
             plainMessage.sender?.username || session.user.username || "Someone";
-          const notificationContent = `${senderName} mentioned you in #${
-            channel.name
-          }: "${createMessagePreview(messageContent)}"`;
           const notificationLink = `/workspace/${channel.workspace}?channel=${channelId}&message=${message._id}`;
+          const previewText = createMessagePreview(messageContent);
 
           await Promise.all(
-            mentionedRecipients.map(async (member) => {
-              const recipientId = String(member.user._id);
+            Array.from(recipientsMap.values()).map(async (recipient) => {
+              const recipientId = String(recipient.user._id);
+
+              let notificationTitle = `${senderName} mentioned you in #${channel.name}`;
+              let notificationContent = `${senderName} mentioned you in #${channel.name}: "${previewText}"`;
+
+              if (recipient.reason === "all") {
+                notificationTitle = `${senderName} mentioned @all in #${channel.name}`;
+                notificationContent = `${senderName} mentioned @all in #${channel.name}: "${previewText}"`;
+              } else if (recipient.reason === "admin") {
+                notificationTitle = `${senderName} mentioned @admin in #${channel.name}`;
+                notificationContent = `${senderName} mentioned @admin in #${channel.name}: "${previewText}"`;
+              }
 
               const notification = await createNotification({
                 user: recipientId,
@@ -205,9 +256,12 @@ export async function POST(req: Request) {
                   data: {
                     _id: notification._id,
                     type: notification.type,
+                    title: notificationTitle,
                     content: notification.content,
                     link: notification.link,
-                    workspace: notification.workspace,
+                    workspace: channel.workspace,
+                    sender: senderName,
+                    channelName: channel.name,
                     isRead: notification.isRead,
                     createdAt: notification.createdAt,
                   },

@@ -8,9 +8,10 @@ import { logout } from "@/lib/client/logout";
 import {
   ChevronUp, User, Settings, Bell, LogOut,
   LayoutDashboard, Check, ExternalLink, Inbox,
-  BellOff, Zap, Crown, Shield,
+  BellOff, Zap, Crown, Shield, Volume2, VolumeX,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDesktopNotifications } from "@/providers/DesktopNotificationProvider";
 
 const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!);
 
@@ -133,6 +134,13 @@ function MenuItem({ icon:Icon, label, onClick, danger }: {
 export default function UserMenu() {
   const { data:session, status } = useSession();
   const router = useRouter();
+  const {
+    soundEnabled,
+    toggleSound,
+    testMentionAlert,
+    permission,
+    requestPermission,
+  } = useDesktopNotifications();
   const [open, setOpen]                         = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications]       = useState<any[]>([]);
@@ -307,13 +315,27 @@ export default function UserMenu() {
                   </span>
                 )}
               </div>
-              {unread > 0 && (
-                <button onClick={markAllAsRead}
-                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all"
-                  style={{ background:T.emerald+"18", border:`1px solid ${T.emerald}30`, color:T.emerald }}>
-                  <Check size={10} strokeWidth={2.5} /> Read all
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={toggleSound}
+                  type="button"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5 cursor-pointer"
+                  style={{ color: soundEnabled ? T.accent : T.muted }}
+                  title={soundEnabled ? "Mention sound: On (Click to mute)" : "Mention sound: Muted (Click to unmute)"}
+                  aria-label={soundEnabled ? "Mute notification sounds" : "Unmute notification sounds"}
+                >
+                  {soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
                 </button>
-              )}
+
+                {unread > 0 && (
+                  <button onClick={markAllAsRead}
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all"
+                    style={{ background:T.emerald+"18", border:`1px solid ${T.emerald}30`, color:T.emerald }}>
+                    <Check size={10} strokeWidth={2.5} /> Read all
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* list */}
@@ -341,7 +363,28 @@ export default function UserMenu() {
             </div>
 
             {/* footer */}
-            <div className="p-2.5" style={{ borderTop:`1px solid ${T.border}` }}>
+            <div className="p-2.5 flex flex-col gap-2" style={{ borderTop:`1px solid ${T.border}` }}>
+              <div className="flex items-center justify-between px-1 text-[10px]">
+                <button
+                  onClick={testMentionAlert}
+                  type="button"
+                  className="flex items-center gap-1 font-medium transition-colors cursor-pointer hover:underline"
+                  style={{ color: T.accent }}
+                  title="Preview mention chime and desktop alert"
+                >
+                  <Volume2 size={11} /> Test Mention Alert
+                </button>
+                {permission !== "granted" && (
+                  <button
+                    onClick={requestPermission}
+                    type="button"
+                    className="flex items-center gap-1 font-semibold transition-colors cursor-pointer hover:underline text-amber-400"
+                  >
+                    <Bell size={11} /> Enable Desktop Alerts
+                  </button>
+                )}
+              </div>
+
               <button
                 onClick={() => { router.push("/dashboard/notifications"); setNotificationsOpen(false); }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all"
