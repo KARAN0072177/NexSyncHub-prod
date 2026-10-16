@@ -8,10 +8,10 @@ export const redis =
 
     url:
       process.env
-        .UPSTASH_REDIS_REST_URL!,
+        .UPSTASH_REDIS_REST_URL || "https://dummy-redis.upstash.io",
 
     token:
       process.env
-        .UPSTASH_REDIS_REST_TOKEN!,
+        .UPSTASH_REDIS_REST_TOKEN || "dummy_token_for_build",
 
   });

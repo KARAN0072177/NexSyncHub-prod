@@ -23,6 +23,32 @@ jobs:
       run:
         working-directory: nexsynchub
 
+    env:
+      CI: true
+      MONGODB_URI: ${{ secrets.MONGODB_URI || 'mongodb://localhost:27017/ci_build' }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci_dummy_nextauth_secret_key_32chars_long' }}
+      NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
+      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
+      NEXT_PUBLIC_SOCKET_URL: ${{ secrets.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000' }}
+      SOCKET_SERVER_URL: ${{ secrets.SOCKET_SERVER_URL || 'http://localhost:4000' }}
+      NEXT_PUBLIC_TURNSTILE_SITEKEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITEKEY || '1x00000000000000000000AA' }}
+      TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA' }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY || 're_ci_dummy_resend_api_key_12345678' }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL || 'NexSyncHub <noreply@example.com>' }}
+      SUPPORT_EMAIL: ${{ secrets.SUPPORT_EMAIL || 'support@example.com' }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL || 'https://dummy-redis.upstash.io' }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN || 'dummy_redis_token_for_ci_build' }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-ci-dummy-openai-key-for-build-12345' }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_ci_dummy_stripe_secret_key' }}
+      STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_PUBLIC_KEY || 'pk_test_ci_dummy_stripe_public_key' }}
+      STRIPE_PRO_PRICE_ID: ${{ secrets.STRIPE_PRO_PRICE_ID || 'price_ci_dummy_pro' }}
+      STRIPE_BUSINESS_PRICE_ID: ${{ secrets.STRIPE_BUSINESS_PRICE_ID || 'price_ci_dummy_biz' }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_ci_dummy_stripe_webhook_secret' }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID || 'dummy_aws_key' }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || 'dummy_aws_secret' }}
+      AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME || 'ci-dummy-bucket' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,14 +72,6 @@ jobs:
 
       - name: Build application
         run: npm run build
-        env:
-          CI: true
-          MONGODB_URI: ${{ secrets.MONGODB_URI || 'mongodb://localhost:27017/ci_build' }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci_dummy_nextauth_secret_key_32chars_long' }}
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
-          NEXT_PUBLIC_SOCKET_URL: ${{ secrets.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000' }}
-          NEXT_PUBLIC_TURNSTILE_SITEKEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITEKEY || '1x00000000000000000000AA' }}
 
   validate-socket:
     name: Validate Socket Server
