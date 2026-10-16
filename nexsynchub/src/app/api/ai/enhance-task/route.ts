@@ -17,7 +17,7 @@ import {
 } from "@/lib/billing/ai-usage";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || "dummy_openai_key_for_build",
 });
 
 export async function POST(req: Request) {

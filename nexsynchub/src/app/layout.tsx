@@ -18,6 +18,9 @@ import GlobalBanProvider
 import GlobalAnnouncement
   from "@/components/global/GlobalAnnouncement";
 
+import DesktopNotificationProvider
+  from "@/providers/DesktopNotificationProvider";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -115,12 +118,14 @@ export default async function RootLayout({
 
             <GlobalAnnouncement />
 
-            {/* 🔥 MAIN CONTENT */}
-            <main className="flex-1">
+            <DesktopNotificationProvider>
+              {/* 🔥 MAIN CONTENT */}
+              <main className="flex-1">
 
-              {children}
+                {children}
 
-            </main>
+              </main>
+            </DesktopNotificationProvider>
 
           </GlobalBanProvider>
 

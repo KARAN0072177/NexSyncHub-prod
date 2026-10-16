@@ -6,6 +6,6 @@ export const openai =
 
     apiKey:
       process.env
-        .OPENAI_API_KEY,
+        .OPENAI_API_KEY || "dummy_openai_key_for_build",
 
   });

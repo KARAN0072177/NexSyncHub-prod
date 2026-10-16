@@ -964,17 +964,52 @@ export default function ChatArea({ channel }: { channel: any }) {
 
             setMentionQuery(query);
 
-            const filtered =
-                members.filter((m) =>
-                    m.user.username
+            const specialSuggestions: any[] = [];
+
+            if ("all".startsWith(query) || "all".includes(query)) {
+                specialSuggestions.push({
+                    kind: "special",
+                    key: "special-all",
+                    tag: "all",
+                    label: "@all",
+                    description: "Notify everyone in this workspace",
+                    roleTag: "EVERYONE",
+                });
+            }
+
+            if ("admin".startsWith(query) || "admin".includes(query)) {
+                specialSuggestions.push({
+                    kind: "special",
+                    key: "special-admin",
+                    tag: "admin",
+                    label: "@admin",
+                    description: "Notify workspace admins",
+                    roleTag: "ADMINS",
+                });
+            }
+
+            const memberSuggestions: any[] = members
+                .filter((m) =>
+                    m.user?.username
                         ?.toLowerCase()
                         .includes(query)
-                );
+                )
+                .map((m) => ({
+                    kind: "member",
+                    key: m.user?._id || m.user?.username,
+                    tag: m.user?.username || "",
+                    member: m,
+                }));
 
-            setFilteredMentions(filtered);
+            const combined = [
+                ...specialSuggestions,
+                ...memberSuggestions,
+            ];
+
+            setFilteredMentions(combined);
 
             setShowMentions(
-                filtered.length > 0
+                combined.length > 0
             );
 
             setMentionIndex(0);
@@ -1027,13 +1062,13 @@ export default function ChatArea({ channel }: { channel: any }) {
     };
 
     const selectMention = (
-        username: string
+        tag: string
     ) => {
 
         const newContent =
             content.replace(
                 /@([a-zA-Z0-9_]*)$/,
-                `@${username} `
+                `@${tag} `
             );
 
         setContent(newContent);
@@ -1200,6 +1235,34 @@ export default function ChatArea({ channel }: { channel: any }) {
 
         return parts.map((part, index) => {
             if (part.startsWith('@')) {
+                const lower = part.toLowerCase();
+
+                if (lower === "@all") {
+                    return (
+                        <span
+                            key={index}
+                            className="inline-flex items-center gap-1 font-semibold rounded-md px-1.5 py-0.5 bg-indigo-500/25 text-indigo-300 border border-indigo-500/40 text-xs sm:text-sm tracking-wide shadow-sm align-baseline select-none"
+                            title="Workspace broadcast to all members"
+                        >
+                            <Users size={12} className="shrink-0 text-indigo-400" />
+                            @all
+                        </span>
+                    );
+                }
+
+                if (lower === "@admin") {
+                    return (
+                        <span
+                            key={index}
+                            className="inline-flex items-center gap-1 font-semibold rounded-md px-1.5 py-0.5 bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs sm:text-sm tracking-wide shadow-sm align-baseline select-none"
+                            title="Workspace broadcast to admins"
+                        >
+                            <BadgeCheck size={12} className="shrink-0 text-amber-400" />
+                            @admin
+                        </span>
+                    );
+                }
+
                 const mentionedUsername = part.substring(1);
                 const mentionedMember = getMentionedMember(mentionedUsername);
                 const mentionedUser = mentionedMember?.user;
@@ -1709,114 +1772,139 @@ export default function ChatArea({ channel }: { channel: any }) {
                     <div className="flex-1 relative">
 
                         {showMentions && (
-
                             <div
                                 className="
-      absolute
-      bottom-14
-      left-0
-      w-72
-      max-h-60
-      overflow-y-auto
-      bg-gray-900
-      border
-      border-gray-700
-      rounded-xl
-      shadow-2xl
-      z-50
-      p-1
-    "
+                                    absolute
+                                    bottom-14
+                                    left-0
+                                    w-80
+                                    max-h-72
+                                    overflow-y-auto
+                                    bg-gray-900/95
+                                    border
+                                    border-gray-700/80
+                                    backdrop-blur-xl
+                                    rounded-2xl
+                                    shadow-2xl
+                                    z-50
+                                    p-1.5
+                                    space-y-1
+                                    scrollbar-thin scrollbar-thumb-gray-700
+                                "
                             >
+                                {filteredMentions.map((item: any, index: number) => {
+                                    const active = index === mentionIndex;
 
-                                {filteredMentions.map(
-                                    (member, index) => {
-
-                                        const active =
-                                            index === mentionIndex;
-
+                                    if (item.kind === "special") {
+                                        const isAll = item.tag === "all";
                                         return (
-
                                             <button
-                                                key={member.user._id}
+                                                key={item.key}
                                                 type="button"
-                                                onClick={() =>
-                                                    selectMention(
-                                                        member.user.username
-                                                    )
-                                                }
+                                                onClick={() => selectMention(item.tag)}
                                                 className={`
-              w-full
-              flex
-              items-center
-              gap-3
-              px-3
-              py-2
-              rounded-lg
-              transition-all
-              text-left
-              ${active
-                                                        ? "bg-indigo-600/20 border border-indigo-500/30"
-                                                        : "hover:bg-gray-800"
+                                                    w-full
+                                                    flex
+                                                    items-center
+                                                    gap-3
+                                                    px-3
+                                                    py-2.5
+                                                    rounded-xl
+                                                    transition-all
+                                                    text-left
+                                                    ${active
+                                                        ? isAll
+                                                            ? "bg-indigo-600/25 border border-indigo-500/40 shadow-sm"
+                                                            : "bg-amber-600/25 border border-amber-500/40 shadow-sm"
+                                                        : "hover:bg-gray-800/80 border border-transparent"
                                                     }
-            `}
+                                                `}
                                             >
-
-                                                {member.user.avatar ? (
-
-                                                    <img
-                                                        src={
-                                                            member.user.avatar
+                                                <div
+                                                    className={`
+                                                        w-8
+                                                        h-8
+                                                        rounded-xl
+                                                        flex
+                                                        items-center
+                                                        justify-center
+                                                        shrink-0
+                                                        ${isAll
+                                                            ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                                                            : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                                                         }
-                                                        alt="avatar"
-                                                        className="
-                  w-8
-                  h-8
-                  rounded-full
-                  object-cover
-                "
-                                                    />
-
-                                                ) : (
-
-                                                    <div
-                                                        className="
-                  w-8
-                  h-8
-                  rounded-full
-                  bg-gray-700
-                  flex
-                  items-center
-                  justify-center
-                  text-xs
-                  text-white
-                "
-                                                    >
-                                                        {member.user.username?.[0]?.toUpperCase()}
-                                                    </div>
-
-                                                )}
-
-                                                <div className="flex flex-col">
-
-                                                    <span className="text-sm text-white font-medium">
-                                                        {member.user.username}
-                                                    </span>
-
-                                                    <span className="text-xs text-gray-400">
-                                                        {member.role}
-                                                    </span>
-
+                                                    `}
+                                                >
+                                                    {isAll ? <Users size={16} /> : <BadgeCheck size={16} />}
                                                 </div>
 
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <span className={`text-sm font-semibold ${isAll ? "text-indigo-200" : "text-amber-200"}`}>
+                                                            {item.label}
+                                                        </span>
+                                                        <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${
+                                                            isAll ? "bg-indigo-500/20 text-indigo-300" : "bg-amber-500/20 text-amber-300"
+                                                        }`}>
+                                                            {item.roleTag}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-400 truncate">
+                                                        {item.description}
+                                                    </p>
+                                                </div>
                                             </button>
-
                                         );
-
                                     }
-                                )}
 
+                                    const member = item.member || item;
+                                    if (!member || !member.user) return null;
+
+                                    return (
+                                        <button
+                                            key={item.key || member.user._id}
+                                            type="button"
+                                            onClick={() => selectMention(item.tag || member.user.username)}
+                                            className={`
+                                                w-full
+                                                flex
+                                                items-center
+                                                gap-3
+                                                px-3
+                                                py-2
+                                                rounded-xl
+                                                transition-all
+                                                text-left
+                                                ${active
+                                                    ? "bg-indigo-600/20 border border-indigo-500/30 shadow-sm"
+                                                    : "hover:bg-gray-800/80 border border-transparent"
+                                                }
+                                            `}
+                                        >
+                                            {member.user.avatar ? (
+                                                <img
+                                                    src={member.user.avatar}
+                                                    alt="avatar"
+                                                    className="w-8 h-8 rounded-full object-cover shrink-0 border border-gray-700"
+                                                />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-gray-700/80 shrink-0 flex items-center justify-center text-xs font-semibold text-white border border-gray-600/50">
+                                                    {member.user.username?.[0]?.toUpperCase() || "?"}
+                                                </div>
+                                            )}
+
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-sm text-white font-medium truncate">
+                                                    {member.user.username}
+                                                </span>
+                                                <span className="text-xs text-gray-400 capitalize">
+                                                    {member.role?.toLowerCase() || "member"}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
-
                         )}
 
                         <textarea
@@ -1862,15 +1950,20 @@ export default function ChatArea({ channel }: { channel: any }) {
 
                                     }
 
-                                    if (e.key === "Enter") {
+                                    if (e.key === "Enter" || e.key === "Tab") {
 
                                         e.preventDefault();
 
-                                        selectMention(
-                                            filteredMentions[
-                                                mentionIndex
-                                            ].user.username
-                                        );
+                                        const selectedItem =
+                                            filteredMentions[mentionIndex];
+
+                                        if (selectedItem) {
+                                            selectMention(
+                                                selectedItem.tag ||
+                                                selectedItem.user?.username ||
+                                                ""
+                                            );
+                                        }
 
                                         return;
 
